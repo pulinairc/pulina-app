@@ -1,60 +1,64 @@
-# Changelog
+### 0.5.0: 2026-11-07
 
-## 0.1.0 - 7.11.2026
+* Add inline YouTube, video and audio
+* Add a you label on own messages
+* Add releases with Linux and macOS builds
+* Change images to a smaller box
+* Change accent to pink and mint
+* Change the app icon to a plant
+* Change README badges to brand colours
+* Fix Settings layout and switches
+* Remove the mute switch from the channel editor
+* Remove /clear and /quote from the / menu
+* Update the demo GIF
 
-- Add first prototype
-- Add Tokyo Night theme and channel header
-- Add lobby-server for history next to irssi
-- Fix server history permissions and Rust check
-- Add SSH tunnel to lobby-server
-- Fix numeric entities in link previews
-- Fix first channel pick after connecting
-- Add install instructions for other users
-- Change link cards to a full-height picture
-- Fix the header hover box
-- Remove the system title bar
-- Add instant black tooltips
-- Change nick colours to one per user
-- Add reactions and replies on hover
-- Add irssi commands and a / menu
-- Add people with photos, colours and nick aliases
-- Add unread line and jumping to unread
-- Change the person editor layout
-- Change theme to neutral charcoal, squircle photos
-- Change People list to a minimal one
-- Change hover menu to glass emoji and action rows
-- Change reading to manual with Mark as read
-- Fix automatic colour to follow the photo
-- Fix round photos to fill the squircle
-- Add channel pictures and colours
-- Add a tool to import photos from a folder
-- Change the app icon to the new colours
-- Change README to a presentable one with a demo
-- Add a full emoji picker, actions only on hover
-- Fix photo alignment with the name
-- Change link cards to one line per field
-- Change the demo to the current hover menu
-- Add seconds to timestamps
-- Change stacked lines to a little more air
-- Add muting channels
-- Fix cards showing for pages with only a title
-- Remove the arrow next to the channel name
-- Add a bell to mute and unmute quickly
-- Fix photo tops to line up with the name
-- Change Mark as read to a floating pill with a count
-- Fix photos sitting too low next to names
-- Fix pill heights, neutral Mark read
-- Fix freeze when opening People
-- Fix pasting a photo into a person
-- Add an emoji button to the message box
-- Fix emoji search to put whole words first
-- Add desktop notifications for mentions
-- Add attachments through a file host
-- Add a file host script and setup guide
-- Fix Settings layout and switches
-- Change images to a smaller box with a height cap
-- Add inline YouTube, video and audio
-- Add a you label on your own messages
-- Fix mute switch alignment in the channel editor
-- Remove the mute switch from the channel editor
-- Remove /clear and /quote from the / menu
+### 0.4.0: 2026-11-07
+
+* Add a full emoji picker
+* Add an emoji button to the message box
+* Add seconds to timestamps
+* Add muting channels with a header bell
+* Add desktop notifications for mentions
+* Add attachments through a file host
+* Add a file host script and setup guide
+* Change link cards to one line per field
+* Change Mark as read to a floating pill
+* Change stacked lines to a little more air
+* Fix photo alignment with names
+* Fix cards for pages with only a title
+* Fix freeze when opening People
+* Fix pasting a photo into a person
+* Remove the arrow next to the channel name
+
+### 0.3.0: 2026-11-07
+
+* Add channel pictures and colours
+* Add a tool to import photos from a folder
+* Change theme to charcoal with squircle photos
+* Change People to a minimal list and editor
+* Change hover menu to glass rows
+* Change reading to manual with Mark as read
+* Change the app icon to the new colours
+* Change README to a presentable one with a demo
+* Fix automatic colour to follow the photo
+
+### 0.2.0: 2026-11-07
+
+* Add reactions and replies on hover
+* Add irssi commands and a / menu
+* Add people with photos, colours and nick aliases
+* Add synced storage for people and settings
+* Add unread line and jumping to unread
+* Add instant black tooltips
+* Change nick colours to one per user
+* Change link cards to a full-height picture
+* Fix the header hover box
+* Remove the system title bar
+
+### 0.1.0: 2026-11-07
+
+* Add first prototype
+* Add Tokyo Night theme and channel header
+* Add lobby-server for history next to irssi
+* Add SSH tunnel to lobby-server
+* Add install instructions for other users
