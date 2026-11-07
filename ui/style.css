@@ -227,6 +227,7 @@ button:focus:not(:focus-visible) { outline: none; }
 
 .text { overflow-wrap: anywhere; white-space: pre-wrap; }
 .text.notice { color: var(--dim); }
+.text.own { color: #fff; }
 .text.action { font-style: italic; color: var(--dim); }
 
 .mention {

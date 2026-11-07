@@ -1,5 +1,6 @@
 ### 0.5.1: 2026-11-07
 
+* Change own messages to white text
 * Remove the you label from own messages
 
 ### 0.5.0: 2026-11-07

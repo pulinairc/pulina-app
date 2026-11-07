@@ -611,6 +611,7 @@ function newGroup(l) {
 
 function row(l) {
   const r = h('div', `text ${l.kind}`);
+  r.classList.toggle('own', l.own || l.nick === state.me[l.net]);
   r.dataset.tip = clock(l.ts);
   r.line = l;
 
