@@ -15,3 +15,4 @@
 - Remove the system title bar
 - Add instant black tooltips
 - Change nick colours to one per user
+- Add reactions and replies on hover

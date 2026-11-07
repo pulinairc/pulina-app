@@ -7,8 +7,8 @@ export const CHAT_KINDS = new Set(['msg', 'action', 'notice']);
 const NAMES_SHOWN = 3;
 // Nick colours are spread over the whole hue circle, minus purple (kept free for nothing
 // to clash with), at one lightness that reads well on the dark background.
-const PURPLE_FROM = 250;
-const PURPLE_SPAN = 70;
+const PURPLE_FROM = 235;
+const PURPLE_SPAN = 85;
 const NICK_SATURATION = 70;
 const NICK_LIGHTNESS = 68;
 const FORMATTING = /[\x02\x0f\x11\x16\x1d\x1e\x1f]|\x03(\d{1,2}(,\d{1,2})?)?/g;
@@ -148,4 +148,19 @@ export function completeNick(prefix, members, previous = '') {
   if (!matches.length) return null;
   const i = matches.indexOf(previous);
   return matches[(i + 1) % matches.length];
+}
+
+const REACTION_RE = /^([^\s:,]+)[:,]\s*((?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|️|‍)+)\s*$/u;
+const ADDRESS_RE = /^([^\s:,]+)[:,]\s+([\s\S]+)$/u;
+
+/** "nick: 😂" is how a reaction travels over IRC. */
+export function parseReaction(text) {
+  const m = stripFormatting(text).match(REACTION_RE);
+  return m ? { nick: m[1], emoji: m[2] } : null;
+}
+
+/** "nick: text" is how a reply travels over IRC. */
+export function parseAddress(text) {
+  const m = text.match(ADDRESS_RE);
+  return m ? { nick: m[1], rest: m[2] } : null;
 }

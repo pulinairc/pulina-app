@@ -1,6 +1,6 @@
 import {
   CHAT_KINDS, EVENT_KINDS, clock, completeNick, continues, dayLabel, initial,
-  isChannel, mentions, nickColor, sameDay, shortUrl, summarize, tokenize,
+  isChannel, mentions, nickColor, parseAddress, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -11,12 +11,18 @@ const MAX_LINES = 2000;
 const BOTTOM_SLACK_PX = 48;
 const LAST_BUFFER_KEY = 'lobby.current';
 const FIRST_PICK_DELAY_MS = 400;
+const QUICK_REACTIONS = ['👍', '😂', '❤️', '🔥', '😮'];
+const REACTION_USE_KEY = 'lobby.reactions';
+// A "nick: text" line shows the nick's previous message as a quote when it is this recent.
+const REPLY_WINDOW_MS = 30 * 60 * 1000;
+const QUOTE_CHARS = 120;
 
 const $ = (id) => document.getElementById(id);
 const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'),
+  replying: $('replying'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
   switcher: $('switcher'), filter: $('filter'), list: $('list'),
   settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'),
 };
@@ -273,7 +279,7 @@ function toBottom() {
 
 function renderLog() {
   el.col.replaceChildren();
-  view = { lastLine: null, group: null, events: null };
+  view = { lastLine: null, group: null, events: null, lastByNick: new Map() };
   const b = state.buffers.get(state.current);
   if (!b) return;
   for (const l of b.lines) appendLine(l, false);
@@ -283,6 +289,15 @@ function renderLog() {
 function appendLine(l, live) {
   const pinned = atBottom();
   const prev = view.lastLine;
+
+  // "nick: 😂" becomes a reaction under that nick's last message.
+  const reaction = l.kind === 'msg' ? parseReaction(l.text) : null;
+  const reacted = reaction && view.lastByNick.get(reaction.nick.toLowerCase());
+  if (reacted) {
+    addReaction(reacted, reaction.emoji, l.nick, l.own);
+    if (live && pinned) toBottom();
+    return;
+  }
 
   if (!prev || !sameDay(prev.ts, l.ts)) {
     el.col.append(h('div', 'day', dayLabel(l.ts)));
@@ -334,9 +349,20 @@ function newGroup(l) {
 function row(l) {
   const r = h('div', `text ${l.kind}`);
   r.dataset.tip = clock(l.ts);
+  r.line = l;
+
+  // "nick: text" right after that nick spoke reads as a reply: show what it answers.
+  let text = l.text;
+  const addr = l.kind === 'msg' ? parseAddress(l.text) : null;
+  const quoted = (l.own && replyHints.get(l.text)) || (addr && view.lastByNick.get(addr.nick.toLowerCase()));
+  if (addr && quoted && quoted.line !== l && l.ts - quoted.line.ts < REPLY_WINDOW_MS) {
+    r.append(quoteNode(quoted));
+    text = addr.rest;
+  }
+  replyHints.delete(l.text);
 
   let firstUrl = null;
-  const tokens = tokenize(l.text, state.me[l.net]);
+  const tokens = tokenize(text, state.me[l.net]);
   for (const t of tokens) {
     if (t.type === 'url') {
       const a = h('a', 'link', shortUrl(t.value));
@@ -353,8 +379,134 @@ function row(l) {
   // A message that is only a link gets replaced by its card.
   r.dataset.onlyLink = String(tokens.length === 1 && tokens[0].type === 'url');
   if (firstUrl) attachPreview(firstUrl, r);
+  view.lastByNick.set(l.nick.toLowerCase(), { line: l, row: r });
   return r;
 }
+
+function quoteNode(target) {
+  const q = h('button', 'quote');
+  q.type = 'button';
+  q.classList.toggle('mine', target.line.own || target.line.nick === state.me[target.line.net]);
+  const name = h('span', 'quote-nick', target.line.nick);
+  name.style.color = nickColor(target.line.nick);
+  q.append(name, h('span', 'quote-text', stripFormatting(target.line.text).slice(0, QUOTE_CHARS)));
+  q.addEventListener('click', () => {
+    if (!target.row?.isConnected) return;
+    target.row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    target.row.classList.add('flash');
+    setTimeout(() => target.row.classList.remove('flash'), 1200);
+  });
+  return q;
+}
+
+// Reactions and replies
+
+const replyHints = new Map();
+let replying = null;
+
+function addReaction(target, emoji, nick, own) {
+  target.reactions ??= new Map();
+  const who = target.reactions.get(emoji) ?? new Set();
+  who.add(nick);
+  target.reactions.set(emoji, who);
+  if (own) (target.mine ??= new Set()).add(emoji);
+
+  let box = target.row.querySelector(':scope > .reacts');
+  if (!box) {
+    box = h('div', 'reacts');
+    target.row.append(box);
+  }
+  box.replaceChildren(...[...target.reactions].map(([e, nicks]) => {
+    const chip = h('button', 'react', nicks.size > 1 ? `${e} ${nicks.size}` : e);
+    chip.type = 'button';
+    chip.dataset.tip = [...nicks].join(', ');
+    chip.classList.toggle('mine', Boolean(target.mine?.has(e)));
+    chip.addEventListener('click', () => react(target.line, e));
+    return chip;
+  }));
+}
+
+function topReactions() {
+  let counts = {};
+  try { counts = JSON.parse(localStorage.getItem(REACTION_USE_KEY) || '{}'); } catch { /* storage may be unavailable */ }
+  const used = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([e]) => e);
+  return [...new Set([...used, ...QUICK_REACTIONS])].slice(0, QUICK_REACTIONS.length);
+}
+
+function countReaction(emoji) {
+  try {
+    const counts = JSON.parse(localStorage.getItem(REACTION_USE_KEY) || '{}');
+    counts[emoji] = (counts[emoji] || 0) + 1;
+    localStorage.setItem(REACTION_USE_KEY, JSON.stringify(counts));
+  } catch { /* storage may be unavailable */ }
+}
+
+async function react(line, emoji) {
+  const b = state.buffers.get(state.current);
+  if (!b) return;
+  countReaction(emoji);
+  try {
+    await invoke('send', { net: b.net, buffer: b.name, text: `${line.nick}: ${emoji}` });
+  } catch (e) {
+    renderStatus(String(e));
+  }
+}
+
+function startReply(line) {
+  replying = line;
+  el.replyNick.textContent = line.nick;
+  el.replyNick.style.color = nickColor(line.nick);
+  el.replyText.textContent = stripFormatting(line.text);
+  el.replying.hidden = false;
+  const prefix = `${line.nick}: `;
+  if (!el.input.value.startsWith(prefix)) el.input.value = prefix + el.input.value;
+  el.input.focus();
+  el.input.setSelectionRange(el.input.value.length, el.input.value.length);
+}
+
+function stopReply() {
+  if (replying && el.input.value === `${replying.nick}: `) el.input.value = '';
+  replying = null;
+  el.replying.hidden = true;
+}
+
+// One action bar, moved to whichever line the pointer is on.
+const actions = h('div', 'actions');
+function actionButton(label, content, onClick) {
+  const b = h('button', 'act');
+  b.type = 'button';
+  b.setAttribute('aria-label', label);
+  b.dataset.tip = label;
+  if (typeof content === 'string') b.textContent = content;
+  else b.append(content);
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const line = actions.parentElement?.line;
+    if (line) onClick(line);
+  });
+  return b;
+}
+
+function replyIcon() {
+  const t = document.createElement('template');
+  t.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
+  return t.content.firstChild;
+}
+
+function fillActions() {
+  actions.replaceChildren(
+    ...topReactions().map((e) => actionButton(`React ${e}`, e, (line) => react(line, e))),
+    actionButton('Reply', replyIcon(), startReply),
+  );
+}
+
+el.col.addEventListener('pointerover', (e) => {
+  const r = e.target.closest('.text');
+  if (!r || !r.line || actions.parentElement === r) return;
+  fillActions();
+  r.append(actions);
+});
+el.log.addEventListener('pointerleave', () => actions.remove());
 
 function note(l) {
   if (l.kind === 'topic') return h('div', 'events', `${l.nick} changed the topic to “${l.text}”`);
@@ -422,9 +574,13 @@ async function send() {
   const b = state.buffers.get(state.current);
   if (!text.trim() || !b) return;
   try {
+    if (replying && text.startsWith(`${replying.nick}: `)) {
+      replyHints.set(text, { line: replying, row: findRow(replying) });
+    }
     await invoke('send', { net: b.net, buffer: b.name, text });
     lastSent = text;
     el.input.value = '';
+    stopReply();
     renderStatus();
   } catch (e) {
     renderStatus(String(e));
@@ -446,6 +602,15 @@ function complete() {
   el.input.value = value.slice(0, completion.start) + nick + suffix;
 }
 
+function findRow(line) {
+  return [...el.col.querySelectorAll('.text')].find((r) => r.line === line) || null;
+}
+
+el.replyClose.addEventListener('click', () => {
+  stopReply();
+  el.input.focus();
+});
+
 el.form.addEventListener('submit', (e) => {
   e.preventDefault();
   send();
@@ -458,6 +623,11 @@ el.input.addEventListener('keydown', (e) => {
     return;
   }
   completion = null;
+  if (e.key === 'Escape' && replying) {
+    e.preventDefault();
+    stopReply();
+    return;
+  }
   if (e.key === 'ArrowUp' && !el.input.value && lastSent) {
     e.preventDefault();
     el.input.value = lastSent;

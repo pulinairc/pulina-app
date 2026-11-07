@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -33,7 +33,7 @@ test('nick colours ignore trailing underscores and avoid purple', () => {
   const nicks = ['rolle', 'snowfake', 'mustikkasoppa', 'kummitus', 'milla', 'jaska', 'tiina', 'mikko', 'anna', 'pekka'];
   for (const n of nicks) {
     const h = nickHue(n);
-    assert.ok(h < 250 || h >= 320, `${n} got purple hue ${h}`);
+    assert.ok(h < 235 || h >= 320, `${n} got purple hue ${h}`);
   }
   assert.ok(new Set(nicks.map(nickColor)).size >= 9);
 });
@@ -56,4 +56,14 @@ test('shortens links for reading', () => {
   assert.equal(shortUrl('https://example.org/a/b'), 'example.org/a/b');
   assert.equal(shortUrl('https://example.org/a-very-long-article-name-that-goes-on'), 'example.org/a-very-long-article-name-th…');
   assert.equal(shortUrl('not a url'), 'not a url');
+});
+
+test('reads reactions and replies sent as plain IRC text', () => {
+  assert.deepEqual(parseReaction('mustikkasoppa: 😂'), { nick: 'mustikkasoppa', emoji: '😂' });
+  assert.deepEqual(parseReaction('rolle, 👍🏽'), { nick: 'rolle', emoji: '👍🏽' });
+  assert.equal(parseReaction('rolle: haha 😂'), null);
+  assert.equal(parseReaction('rolle: 123'), null);
+  assert.deepEqual(parseAddress('snowfake: no niin'), { nick: 'snowfake', rest: 'no niin' });
+  assert.equal(parseAddress('https://example.org'), null);
+  assert.equal(parseAddress('no niin'), null);
 });

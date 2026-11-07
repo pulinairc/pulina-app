@@ -25,6 +25,14 @@
   <div id="status" role="status" hidden></div>
   <main id="log"><div id="col"></div></main>
   <form id="composer">
+    <div id="replying" hidden>
+      <span class="rq-label">Replying to</span>
+      <span id="reply-nick"></span>
+      <span id="reply-text"></span>
+      <button id="reply-close" type="button" aria-label="Cancel reply" data-tip="Cancel reply">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
     <label for="input" class="sr">Message</label>
     <input id="input" autocomplete="off" spellcheck="true" placeholder="Message">
   </form>
