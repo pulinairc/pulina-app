@@ -29,7 +29,7 @@
 - **People:** a photo, a colour and any number of nicks per person, matched by pattern or ident and host
 - **Unread that stays put:** a red New line, jump buttons, and nothing marked read until you say so
 - **Attachments:** paste, drop or pick a file, and its address goes into your message, through a file host of your own
-- **Notifications:** desktop notifications for mentions and private messages, quiet for muted channels
+- **Notifications:** desktop notifications with the sender's photo for mentions and private messages, quiet for muted channels
 - **irssi muscle memory:** `/wc`, `/whois`, `/names` and the rest, with a `/` menu, `Alt+1…9` and `Alt+A`
 - **Same everywhere:** people, channel pictures, read positions and settings live on your server and follow you between devices
 - **Self-hosted, no bouncer:** irssi stays in charge, Lobby reads through irssiproxy and talks to your own server over SSH
@@ -152,7 +152,7 @@ Restart Lobby after changing the config.
 
 **Reactions and replies.** Point at a message for your favourite emojis, more emojis, reply and a menu. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a reaction under that person's message. A reply goes out as `nick: text` and shows the message it answers.
 
-**Unread.** A red New line marks where unread messages start. Nothing is marked read on its own: click Mark as read on the line, or press `Shift+Esc`.
+**Unread.** A red New line marks where unread messages start. Nothing is marked read on its own: click the checkmark at the end of the New line, the Mark read button at the top, or press `Shift+Esc`.
 
 **People.** Click a name or photo in the chat, or open the gear and People. `Kaisla` also covers `Kaisla_` and `Kaisla-`, `Kaisla*` covers any ending, and `kaisla@*.example.net` matches by ident and host. The colour follows the photo unless you pick one. Click the channel icon in the header to give a channel its own picture or colour, or to mute it. A muted channel adds nothing to unread counts or jumps, except when someone mentions you. `/mute` and `/unmute` work too.
 
