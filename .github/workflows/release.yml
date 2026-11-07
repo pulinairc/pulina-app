@@ -23,7 +23,7 @@ jobs:
       - name: Get version from CHANGELOG
         id: version
         run: |
-          VERSION=$(grep -m1 '^## ' CHANGELOG.md | sed 's/## \([0-9.]*\).*/\1/')
+          VERSION=$(grep -m1 '^### ' CHANGELOG.md | sed 's/### \([0-9.]*\).*/\1/')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Found version: $VERSION"
 
@@ -44,7 +44,7 @@ jobs:
       # changelog is never run as a shell command.
       - name: Extract release notes
         if: steps.check.outputs.exists == 'false'
-        run: awk '/^## [0-9]/{if(p) exit; p=1; next} p' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
+        run: awk '/^### [0-9]/{if(p) exit; p=1; next} p' CHANGELOG.md > "$RUNNER_TEMP/release-notes.md"
 
       - name: Create release
         if: steps.check.outputs.exists == 'false'
