@@ -3,6 +3,7 @@
 mod config;
 mod preview;
 mod remote;
+mod tunnel;
 
 use lobby_core::hub::{Event, Hub, Snapshot};
 use lobby_core::protocol::ClientMsg;

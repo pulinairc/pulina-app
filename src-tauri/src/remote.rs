@@ -1,6 +1,7 @@
 //! A link to lobby-server: history and live events come from there instead of local connections.
 
 use crate::config::ServerLink;
+use crate::tunnel::Tunnel;
 use futures_util::{SinkExt, StreamExt};
 use lobby_core::hub::{Event, Snapshot};
 use lobby_core::protocol::{ClientMsg, ServerMsg};
@@ -82,7 +83,19 @@ impl Remote {
     }
 
     async fn run(&self, app: &AppHandle) -> Result<(), String> {
-        let (ws, _) = tokio_tungstenite::connect_async(self.link.url.as_str()).await.map_err(|e| e.to_string())?;
+        // Held for the whole connection: dropping it closes the ssh tunnel.
+        let mut _tunnel = None;
+        let url = match &self.link.ssh {
+            Some(host) => {
+                let tunnel = Tunnel::open(host, self.link.remote_port()).await?;
+                let url = format!("ws://127.0.0.1:{}", tunnel.port);
+                _tunnel = Some(tunnel);
+                url
+            }
+            None => self.link.url.clone().ok_or("set url or ssh under [server]")?,
+        };
+
+        let (ws, _) = tokio_tungstenite::connect_async(url.as_str()).await.map_err(|e| e.to_string())?;
         let (mut sink, mut stream) = ws.split();
 
         let hello = serde_json::to_string(&ClientMsg::Hello { token: self.link.token() }).map_err(|e| e.to_string())?;

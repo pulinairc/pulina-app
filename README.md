@@ -19,7 +19,7 @@ flowchart LR
         proxy -- "localhost, one port per network" --> server["lobby-server<br/>SQLite history"]
     end
 
-    server -- "WebSocket with a token<br/>TLS by your reverse proxy or SSH tunnel" --> mac[Lobby on macOS]
+    server -- "WebSocket with a token<br/>through SSH or a TLS reverse proxy" --> mac[Lobby on macOS]
     server --> linux[Lobby on Linux]
     proxy -. "direct mode, no history" .-> direct[Lobby]
 ```
@@ -93,13 +93,15 @@ journalctl --user -u lobby-server -f
 
 lobby-server only listens on `127.0.0.1`, and refuses other addresses unless you say otherwise, because the token and your messages would travel unencrypted. Pick one:
 
-**SSH tunnel**, nothing to set up on the server:
+**Through SSH**, nothing to set up on the server. Lobby opens the tunnel itself with your usual SSH keys and keeps it up:
 
-```sh
-ssh -N -L 7667:127.0.0.1:7667 your-shell-host
+```toml
+[server]
+ssh = "you@your-shell-host"
+token_file = "~/.config/lobby/server.token"
 ```
 
-and use `url = "ws://127.0.0.1:7667"` in the app.
+The key must work without a prompt, as in `ssh -o BatchMode=yes you@your-shell-host true`.
 
 **Reverse proxy with TLS**, for use from anywhere. With Caddy:
 
@@ -136,13 +138,16 @@ On first start Lobby writes a config template and shows its path. The gear in th
 - Linux: `~/.config/lobby/config.toml`
 - macOS: `~/Library/Application Support/lobby/config.toml`
 
-Server mode:
+Server mode, through SSH or at an address of its own:
 
 ```toml
 [server]
-url = "wss://lobby.example.org"
+ssh = "you@your-shell-host"
+# url = "wss://lobby.example.org"
 token_file = "~/.config/lobby/server.token"
 ```
+
+Copy the token from `~/.config/lobby-server/token` on the server to `~/.config/lobby/server.token` on your computer.
 
 Direct mode:
 

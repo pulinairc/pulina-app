@@ -6,10 +6,13 @@ use std::path::PathBuf;
 
 const TEMPLATE: &str = r#"# Lobby config.
 #
-# With a lobby-server (keeps history while Lobby is closed):
+# With a lobby-server (keeps history while Lobby is closed), through SSH:
 # [server]
-# url = "wss://lobby.example.org"
+# ssh = "you@shell.example.org"
 # token_file = "~/.config/lobby/server.token"
+#
+# or at an address of its own, behind a TLS reverse proxy:
+# url = "wss://lobby.example.org"
 #
 # Or straight to IRC or irssiproxy (history only while Lobby runs):
 nick = "yournick"
@@ -31,14 +34,25 @@ pub struct Config {
     pub server: Option<ServerLink>,
 }
 
+const DEFAULT_SERVER_PORT: u16 = 7667;
+
 #[derive(Deserialize, Clone)]
 pub struct ServerLink {
-    pub url: String,
+    /// `ws://` or `wss://` address, when the server is reachable directly.
+    pub url: Option<String>,
+    /// SSH destination like `you@shell.example.org`: Lobby opens a tunnel itself.
+    pub ssh: Option<String>,
+    /// The server's port on that host, for the tunnel.
+    pub port: Option<u16>,
     pub token: Option<String>,
     pub token_file: Option<String>,
 }
 
 impl ServerLink {
+    pub fn remote_port(&self) -> u16 {
+        self.port.unwrap_or(DEFAULT_SERVER_PORT)
+    }
+
     pub fn token(&self) -> String {
         self.token.clone().or_else(|| read_secret(self.token_file.as_deref()?)).unwrap_or_default()
     }
@@ -79,7 +93,9 @@ mod tests {
         assert_eq!(config.networks.len(), 1);
         assert!(config.server.is_none());
 
-        let config: Config = toml::from_str("[server]\nurl = \"ws://127.0.0.1:7667\"\ntoken = \"t\"").unwrap();
-        assert_eq!(config.server.unwrap().token(), "t");
+        let config: Config = toml::from_str("[server]\nssh = \"me@host\"\ntoken = \"t\"").unwrap();
+        let link = config.server.unwrap();
+        assert_eq!(link.token(), "t");
+        assert_eq!(link.remote_port(), DEFAULT_SERVER_PORT);
     }
 }
