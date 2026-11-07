@@ -1,3 +1,7 @@
+### 0.5.5: 2026-11-08
+
+* Change the icon background to a lighter grey
+
 ### 0.5.4: 2026-11-08
 
 * Change the demo to a full-colour WebP
