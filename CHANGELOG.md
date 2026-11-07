@@ -27,3 +27,4 @@
 - Fix automatic colour to follow the photo
 - Fix round photos to fill the squircle
 - Add channel pictures and colours
+- Add a tool to import photos from a folder
