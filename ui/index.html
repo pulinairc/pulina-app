@@ -56,10 +56,61 @@
       <div id="connections"></div>
     </section>
     <section>
+      <button id="open-people" class="wide-btn" type="button">People and photos</button>
+    </section>
+    <section>
       <h3>Config file</h3>
       <p id="config-path" class="mono"></p>
       <p class="hint">Networks and the server address live here for now. People and photos get their own page next.</p>
     </section>
+  </dialog>
+  <dialog id="people" aria-labelledby="people-title">
+    <div class="sheet-head">
+      <button id="people-back" class="icon-btn" type="button" aria-label="Back to people" data-tip="Back" hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+      </button>
+      <h2 id="people-title">People</h2>
+      <button id="people-close" class="icon-btn" type="button" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div id="people-list-view">
+      <button id="person-new" class="wide-btn" type="button">New person</button>
+      <div id="people-list"></div>
+      <p class="hint">Photos and colours are kept on your lobby-server, so every device shows the same.</p>
+    </div>
+
+    <form id="person-edit" hidden>
+      <div class="person-top">
+        <button id="person-photo" class="photo-btn" type="button" aria-label="Choose a photo" data-tip="Choose a photo, or paste one"></button>
+        <div class="person-photo-actions">
+          <button id="person-photo-pick" class="small-btn" type="button">Change photo</button>
+          <button id="person-photo-remove" class="small-btn" type="button">Remove photo</button>
+        </div>
+        <input id="person-file" type="file" accept="image/*" hidden>
+      </div>
+
+      <label for="person-name">Name</label>
+      <input id="person-name" class="field" autocomplete="off">
+
+      <label for="person-color">Colour</label>
+      <div class="color-row">
+        <input id="person-color" type="color">
+        <button id="person-color-photo" class="small-btn" type="button">From photo</button>
+        <button id="person-color-auto" class="small-btn" type="button">Automatic</button>
+      </div>
+
+      <label for="person-nick">Nicks</label>
+      <div id="person-nicks" class="chips"></div>
+      <input id="person-nick" class="field" autocomplete="off" placeholder="Add a nick and press Enter">
+      <p class="hint">Kaisla also covers Kaisla_ and Kaisla-. Kaisla* covers anything starting with Kaisla. kaisla@*.example.net matches by ident and host.</p>
+
+      <div class="person-buttons">
+        <button id="person-delete" class="small-btn danger" type="button">Delete</button>
+        <button id="person-save" class="primary-btn" type="submit">Save</button>
+      </div>
+    </form>
   </dialog>
 </body>
 </html>

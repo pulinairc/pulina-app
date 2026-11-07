@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -74,4 +74,24 @@ test('slash menu matches typed commands', () => {
   assert.equal(commandMatches('/me waves'), null);
   assert.equal(commandMatches('hello'), null);
   assert.deepEqual(commandMatches('/zzz'), []);
+});
+
+test('finds the person behind a nick', () => {
+  const kaisla = { id: 1, nicks: ['Kaisla'] };
+  const jaska = { id: 2, nicks: ['jaska*'] };
+  const anna = { id: 3, nicks: ['*!anna@*.example.net'] };
+  const people = [kaisla, jaska, anna];
+  assert.equal(personFor(people, 'Kaisla_'), kaisla);
+  assert.equal(personFor(people, 'kaisla-'), kaisla);
+  assert.equal(personFor(people, 'jaska|away'), jaska);
+  assert.equal(personFor(people, 'annukka', 'anna@home.example.net'), anna);
+  assert.equal(personFor(people, 'annukka', 'anna@elsewhere.org'), null);
+  assert.equal(personFor(people, 'mikko'), null);
+  assert.ok(glob('Setsu*', 'setsu|away'));
+});
+
+test('photo colours keep their hue', () => {
+  assert.equal(colorFromRgb(200, 40, 40), 'hsl(0 67% 68%)');
+  assert.equal(colorFromRgb(40, 90, 200), 'hsl(221 67% 68%)');
+  assert.equal(colorFromRgb(128, 128, 128), 'hsl(0 45% 68%)');
 });

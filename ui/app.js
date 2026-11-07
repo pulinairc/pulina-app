@@ -1,6 +1,6 @@
 import {
   CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel, initial,
-  isChannel, mentions, nickColor, parseAddress, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize,
+  colorFromRgb, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -12,7 +12,10 @@ const BOTTOM_SLACK_PX = 48;
 const LAST_BUFFER_KEY = 'lobby.current';
 const FIRST_PICK_DELAY_MS = 400;
 const QUICK_REACTIONS = ['👍', '😂', '❤️', '🔥', '😮'];
-const REACTION_USE_KEY = 'lobby.reactions';
+const REACTION_SETTING = 'reactions';
+const PHOTO_PX = 160;
+const PHOTO_QUALITY = 0.85;
+const COLOR_SAMPLE_PX = 24;
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.
 const REPLY_WINDOW_MS = 30 * 60 * 1000;
 const QUOTE_CHARS = 120;
@@ -24,12 +27,18 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'),
-  slash: $('slash'), replying: $('replying'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
+  slash: $('slash'), replying: $('replying'),
+  openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
+  peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
+  personEdit: $('person-edit'), personPhoto: $('person-photo'), personPhotoPick: $('person-photo-pick'),
+  personPhotoRemove: $('person-photo-remove'), personFile: $('person-file'), personName: $('person-name'),
+  personColor: $('person-color'), personColorPhoto: $('person-color-photo'), personColorAuto: $('person-color-auto'),
+  personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
   switcher: $('switcher'), filter: $('filter'), list: $('list'),
   settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'),
 };
 
-const state = { networks: [], buffers: new Map(), current: null, me: {}, conn: {}, configPath: '' };
+const state = { networks: [], buffers: new Map(), current: null, me: {}, conn: {}, configPath: '', people: [], settings: {} };
 const previews = new Map();
 let view = null;
 let completion = null;
@@ -47,6 +56,34 @@ function h(tag, cls, text) {
   if (cls) node.className = cls;
   if (text !== undefined) node.textContent = text;
   return node;
+}
+
+// Who a nick is: their person's name, colour and photo when one matches.
+
+function identity(nick, mask = '') {
+  const person = personFor(state.people, nick, mask);
+  return {
+    person,
+    name: person?.name || nick,
+    color: person?.color || nickColor(nick),
+    photo: person?.photo || '',
+  };
+}
+
+function avatar(nick, mask, cls = 'av') {
+  const who = identity(nick, mask);
+  const av = h('div', cls);
+  if (who.photo) {
+    av.classList.add('photo');
+    const img = h('img');
+    img.src = who.photo;
+    img.alt = '';
+    av.append(img);
+  } else {
+    av.textContent = initial(who.name);
+    av.style.background = who.color;
+  }
+  return av;
 }
 
 // Buffers
@@ -128,8 +165,9 @@ function icon(b, node) {
   node.style.background = '';
   node.style.color = '';
   if (isPrivate(b)) {
-    node.textContent = initial(b.name);
-    node.style.background = nickColor(b.name);
+    const who = identity(b.name);
+    node.textContent = initial(who.name);
+    node.style.background = who.color;
     node.style.color = 'var(--bg)';
   } else {
     node.textContent = b.name === '' ? '~' : '#';
@@ -337,15 +375,17 @@ function appendLine(l, live) {
 
 function newGroup(l) {
   const group = h('div', 'group');
-  const color = nickColor(l.nick);
-  const av = h('div', 'av', initial(l.nick));
-  av.style.background = color;
-  av.setAttribute('aria-hidden', 'true');
+  const who = identity(l.nick, l.mask);
+  const av = avatar(l.nick, l.mask);
+  av.dataset.tip = 'Edit person';
+  av.addEventListener('click', () => openPerson(l.nick, l.mask));
 
   const body = h('div', 'gb');
   const head = h('div', 'hd');
-  const name = h('span', 'nm', l.nick);
-  name.style.color = color;
+  const name = h('span', 'nm', who.name);
+  name.style.color = who.color;
+  name.dataset.tip = who.name === l.nick ? l.nick : `${l.nick} · ${l.mask || 'IRC'}`;
+  name.addEventListener('click', () => openPerson(l.nick, l.mask));
   head.append(name, h('span', 'tm', clock(l.ts)));
   body.append(head);
   group.append(av, body);
@@ -395,7 +435,7 @@ function quoteNode(target) {
   q.type = 'button';
   q.classList.toggle('mine', target.line.own || target.line.nick === state.me[target.line.net]);
   const name = h('span', 'quote-nick', target.line.nick);
-  name.style.color = nickColor(target.line.nick);
+  name.style.color = identity(target.line.nick, target.line.mask).color;
   q.append(name, h('span', 'quote-text', stripFormatting(target.line.text).slice(0, QUOTE_CHARS)));
   q.addEventListener('click', () => {
     if (!target.row?.isConnected) return;
@@ -433,19 +473,26 @@ function addReaction(target, emoji, nick, own) {
   }));
 }
 
+function reactionCounts() {
+  try { return JSON.parse(state.settings[REACTION_SETTING] || '{}'); } catch { return {}; }
+}
+
 function topReactions() {
-  let counts = {};
-  try { counts = JSON.parse(localStorage.getItem(REACTION_USE_KEY) || '{}'); } catch { /* storage may be unavailable */ }
+  const counts = reactionCounts();
   const used = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([e]) => e);
   return [...new Set([...used, ...QUICK_REACTIONS])].slice(0, QUICK_REACTIONS.length);
 }
 
+// Settings live on lobby-server (or locally in direct mode), so every device shares them.
+function saveSetting(key, value) {
+  state.settings[key] = value;
+  invoke('set_setting', { key, value }).catch((e) => renderStatus(String(e)));
+}
+
 function countReaction(emoji) {
-  try {
-    const counts = JSON.parse(localStorage.getItem(REACTION_USE_KEY) || '{}');
-    counts[emoji] = (counts[emoji] || 0) + 1;
-    localStorage.setItem(REACTION_USE_KEY, JSON.stringify(counts));
-  } catch { /* storage may be unavailable */ }
+  const counts = reactionCounts();
+  counts[emoji] = (counts[emoji] || 0) + 1;
+  saveSetting(REACTION_SETTING, JSON.stringify(counts));
 }
 
 async function react(line, emoji) {
@@ -462,7 +509,7 @@ async function react(line, emoji) {
 function startReply(line) {
   replying = line;
   el.replyNick.textContent = line.nick;
-  el.replyNick.style.color = nickColor(line.nick);
+  el.replyNick.style.color = identity(line.nick, line.mask).color;
   el.replyText.textContent = stripFormatting(line.text);
   el.replying.hidden = false;
   const prefix = `${line.nick}: `;
@@ -797,6 +844,8 @@ function applyStatus(st) {
     if (n.nick) state.me[n.name] = n.nick;
   }
   for (const info of st.channels) onBuffer(info);
+  state.people = st.people || [];
+  state.settings = st.settings || {};
   renderStatus(st.error || undefined);
 }
 
@@ -808,6 +857,13 @@ async function start() {
     state.conn[e.payload.net] = e.payload.state;
     renderStatus();
   });
+  await listen('people', (e) => {
+    state.people = e.payload;
+    renderHeader();
+    renderLog();
+    if (el.people.open && !el.peopleList.hidden) renderPeople();
+  });
+  await listen('setting', (e) => { state.settings[e.payload.key] = e.payload.value; });
   // A lobby-server connection came back: fetch what was missed.
   await listen('resync', async () => {
     applyStatus(await invoke('status'));
@@ -874,3 +930,251 @@ document.addEventListener('pointermove', (e) => {
 document.addEventListener('pointerdown', hideTip);
 el.log.addEventListener('scroll', hideTip, { passive: true });
 document.addEventListener('pointerleave', hideTip);
+
+
+// People: photos, colours and nicks, edited here and stored on lobby-server.
+
+let editing = null;
+let editingFromChat = false;
+
+function personSubtitle(p) {
+  return p.nicks.length ? p.nicks.join(', ') : 'No nicks yet';
+}
+
+function renderPeople() {
+  const rows = state.people.map((p) => {
+    const row = h('button', 'person-row');
+    row.type = 'button';
+    const who = h('span', 'who');
+    who.append(h('span', '', p.name), h('span', '', personSubtitle(p)));
+    row.append(personAvatar(p, 'av'), who);
+    row.addEventListener('click', () => editPerson(p));
+    return row;
+  });
+  el.peopleItems.replaceChildren(...(rows.length ? rows : [h('p', 'hint', 'Nobody yet. Click a name in the chat, or add someone here.')]));
+}
+
+function personAvatar(p, cls) {
+  const av = h('div', cls);
+  const color = p.color || nickColor(p.nicks[0] || p.name || '?');
+  if (p.photo) {
+    av.classList.add('photo');
+    const img = h('img');
+    img.src = p.photo;
+    img.alt = '';
+    av.append(img);
+  } else {
+    av.textContent = initial(p.name || p.nicks[0] || '?');
+    av.style.background = color;
+  }
+  return av;
+}
+
+function showList() {
+  editing = null;
+  editingFromChat = false;
+  el.peopleTitle.textContent = 'People';
+  el.peopleBack.hidden = true;
+  el.personEdit.hidden = true;
+  el.peopleList.hidden = false;
+  renderPeople();
+}
+
+function editPerson(p) {
+  editing = structuredClone(p);
+  el.peopleTitle.textContent = p.id ? p.name : 'New person';
+  el.peopleBack.hidden = false;
+  el.peopleList.hidden = true;
+  el.personEdit.hidden = false;
+  el.personDelete.hidden = !p.id;
+  el.personName.value = editing.name;
+  renderEditor();
+  el.personName.focus();
+}
+
+function renderEditor() {
+  const p = editing;
+  const color = p.color || nickColor(p.nicks[0] || p.name || '?');
+  el.personPhoto.replaceChildren();
+  el.personPhoto.style.background = color;
+  if (p.photo) {
+    const img = h('img');
+    img.src = p.photo;
+    img.alt = '';
+    el.personPhoto.append(img);
+  } else {
+    el.personPhoto.textContent = initial(el.personName.value || p.nicks[0] || '?');
+  }
+  el.personPhotoRemove.hidden = !p.photo;
+  el.personColorPhoto.hidden = !p.photo;
+  el.personColor.value = toHex(color);
+  el.personNicks.replaceChildren(...p.nicks.map((n, i) => {
+    const chip = h('span', 'chip', n);
+    const x = h('button', '', '×');
+    x.type = 'button';
+    x.setAttribute('aria-label', `Remove ${n}`);
+    x.addEventListener('click', () => {
+      p.nicks.splice(i, 1);
+      renderEditor();
+    });
+    chip.append(x);
+    return chip;
+  }));
+}
+
+/** Any CSS colour as #rrggbb, for the colour input. */
+function toHex(color) {
+  const c = document.createElement('canvas').getContext('2d');
+  c.fillStyle = color;
+  return c.fillStyle.startsWith('#') ? c.fillStyle : '#7aa2f7';
+}
+
+function openPerson(nick, mask) {
+  const found = personFor(state.people, nick, mask);
+  el.people.showModal();
+  editPerson(found || { id: 0, name: nick, color: '', photo: '', nicks: [nick] });
+  editingFromChat = true;
+}
+
+// Read as a data URL: the page's content policy allows data: images but not blob: ones.
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Could not read the file'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Not an image'));
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/** Square-crop and shrink a picture so it travels and stores cheaply. */
+async function photoFrom(file) {
+  const img = await loadImage(file);
+  const side = Math.min(img.naturalWidth, img.naturalHeight);
+  const canvas = document.createElement('canvas');
+  canvas.width = PHOTO_PX;
+  canvas.height = PHOTO_PX;
+  canvas.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, PHOTO_PX, PHOTO_PX);
+  return canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
+}
+
+/** The photo's average colour, made readable on the dark background. */
+function colorOfPhoto(src) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = COLOR_SAMPLE_PX;
+      canvas.height = COLOR_SAMPLE_PX;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, COLOR_SAMPLE_PX, COLOR_SAMPLE_PX);
+      const data = ctx.getImageData(0, 0, COLOR_SAMPLE_PX, COLOR_SAMPLE_PX).data;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let weight = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        const max = Math.max(data[i], data[i + 1], data[i + 2]);
+        const min = Math.min(data[i], data[i + 1], data[i + 2]);
+        const w = 1 + (max - min);
+        r += data[i] * w;
+        g += data[i + 1] * w;
+        b += data[i + 2] * w;
+        weight += w;
+      }
+      resolve(colorFromRgb(r / weight, g / weight, b / weight));
+    };
+    img.onerror = () => resolve('');
+    img.src = src;
+  });
+}
+
+async function setPhoto(file) {
+  if (!editing || !file?.type.startsWith('image/')) return;
+  try {
+    editing.photo = await photoFrom(file);
+    editing.color = await colorOfPhoto(editing.photo);
+    renderEditor();
+  } catch (e) {
+    renderStatus(String(e));
+  }
+}
+
+el.openPeople.addEventListener('click', () => {
+  el.settings.close();
+  el.people.showModal();
+  showList();
+});
+el.peopleClose.addEventListener('click', () => el.people.close());
+el.peopleBack.addEventListener('click', showList);
+el.people.addEventListener('click', (e) => {
+  if (e.target === el.people) el.people.close();
+});
+el.personNew.addEventListener('click', () => editPerson({ id: 0, name: '', color: '', photo: '', nicks: [] }));
+el.personPhoto.addEventListener('click', () => el.personFile.click());
+el.personPhotoPick.addEventListener('click', () => el.personFile.click());
+el.personFile.addEventListener('change', () => {
+  setPhoto(el.personFile.files[0]);
+  el.personFile.value = '';
+});
+el.people.addEventListener('paste', (e) => {
+  const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
+  if (!file || !editing) return;
+  e.preventDefault();
+  setPhoto(file);
+});
+el.personPhotoRemove.addEventListener('click', () => {
+  editing.photo = '';
+  renderEditor();
+});
+el.personColor.addEventListener('input', () => {
+  editing.color = el.personColor.value;
+  renderEditor();
+});
+el.personColorPhoto.addEventListener('click', async () => {
+  editing.color = await colorOfPhoto(editing.photo);
+  renderEditor();
+});
+el.personColorAuto.addEventListener('click', () => {
+  editing.color = '';
+  renderEditor();
+});
+el.personName.addEventListener('input', () => {
+  if (!editing.photo) el.personPhoto.textContent = initial(el.personName.value || editing.nicks[0] || '?');
+});
+el.personNick.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const nick = el.personNick.value.trim();
+  if (nick && !editing.nicks.includes(nick)) editing.nicks.push(nick);
+  el.personNick.value = '';
+  renderEditor();
+});
+el.personEdit.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pending = el.personNick.value.trim();
+  if (pending && !editing.nicks.includes(pending)) editing.nicks.push(pending);
+  el.personNick.value = '';
+  editing.name = el.personName.value.trim() || editing.nicks[0] || 'Someone';
+  try {
+    await invoke('save_person', { person: editing });
+    if (editingFromChat) el.people.close();
+    else showList();
+  } catch (err) {
+    renderStatus(String(err));
+  }
+});
+el.personDelete.addEventListener('click', async () => {
+  if (!editing?.id) return;
+  try {
+    await invoke('delete_person', { id: editing.id });
+    showList();
+  } catch (err) {
+    renderStatus(String(err));
+  }
+});
+el.people.addEventListener('close', () => el.input.focus());

@@ -197,3 +197,53 @@ export function commandMatches(input) {
   const q = m[1].toLowerCase();
   return COMMANDS.filter((c) => c.name.startsWith(q));
 }
+
+const NICK_TAIL = /[_\-`|^]+$/;
+
+function normNick(nick) {
+  return nick.toLowerCase().replace(NICK_TAIL, '');
+}
+
+/** Shell-style pattern: * is anything, ? is one character. Case-insensitive. */
+export function glob(pattern, text) {
+  const re = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  return new RegExp(`^${re}$`, 'i').test(text);
+}
+
+/**
+ * The person a nick belongs to. Patterns are nicks ("Setsu"), nick globs ("Setsu*")
+ * or ident@host globs ("*!setsu@*.example.net" or "setsu@*"). Trailing _ - ` | ^ on a
+ * nick are ignored, so "Setsu" also covers "Setsu_".
+ */
+export function personFor(people, nick, mask = '') {
+  const plain = normNick(nick);
+  for (const person of people) {
+    for (const pattern of person.nicks) {
+      if (pattern.includes('@')) {
+        if (mask && glob(pattern.split('!').pop(), mask)) return person;
+      } else if (glob(pattern, nick) || glob(normNick(pattern), plain)) {
+        return person;
+      }
+    }
+  }
+  return null;
+}
+
+/** A readable name colour from an average photo colour: keep the hue, fix the lightness. */
+export function colorFromRgb(r, g, b) {
+  const max = Math.max(r, g, b) / 255;
+  const min = Math.min(r, g, b) / 255;
+  const l = (max + min) / 2;
+  const d = max - min;
+  let hue = 0;
+  if (d) {
+    const [R, G, B] = [r / 255, g / 255, b / 255];
+    if (max === R) hue = ((G - B) / d) % 6;
+    else if (max === G) hue = (B - R) / d + 2;
+    else hue = (R - G) / d + 4;
+    hue = Math.round(hue * 60 + 360) % 360;
+  }
+  const sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
+  const s = Math.round(Math.min(Math.max(sat * 100, 45), 80));
+  return `hsl(${hue} ${s}% ${NICK_LIGHTNESS}%)`;
+}
