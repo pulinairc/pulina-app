@@ -46,3 +46,5 @@
 - Fix pill heights, neutral Mark read
 - Fix freeze when opening People
 - Fix pasting a photo into a person
+- Add an emoji button to the message box
+- Fix emoji search to put whole words first

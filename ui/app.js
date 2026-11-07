@@ -1758,13 +1758,18 @@ async function buildPicker() {
     results.hidden = !query;
     for (const sec of scroll.querySelectorAll('section:not([data-cat="results"])')) sec.hidden = Boolean(query);
     if (!query) return;
-    const found = [];
+    // Best first: a whole word matches, then the name starts with it, then a word does, then any part.
+    const scored = [];
     for (const c of data) {
       for (const [native, words] of c.emojis) {
-        if (words.includes(query)) found.push(emojiButton(native, words.split(' ')[0]));
-        if (found.length >= SEARCH_LIMIT) break;
+        if (!words.includes(query)) continue;
+        const list = words.split(' ');
+        const score = list.includes(query) ? 0 : words.startsWith(query) ? 1 : list.some((w) => w.startsWith(query)) ? 2 : 3;
+        scored.push([score, native, words]);
       }
     }
+    scored.sort((a, b) => a[0] - b[0]);
+    const found = scored.slice(0, SEARCH_LIMIT).map(([, native, words]) => emojiButton(native, words.split(' ')[0]));
     results.querySelector('.picker-grid').replaceChildren(...found);
     scroll.scrollTop = 0;
   }
