@@ -1230,6 +1230,19 @@ function applySlash(c) {
 el.input.addEventListener('input', () => {
   slashPick = 0;
   renderSlash();
+  fitInput();
+});
+
+function fitInput() {
+  el.input.style.height = 'auto';
+  el.input.style.height = `${el.input.scrollHeight}px`;
+}
+
+// Text set from code (sending, replies, history) resizes the box too.
+const textValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
+Object.defineProperty(el.input, 'value', {
+  get() { return textValue.get.call(this); },
+  set(v) { textValue.set.call(this, v); fitInput(); },
 });
 
 el.input.addEventListener('keydown', (e) => {
@@ -1255,6 +1268,12 @@ el.input.addEventListener('keydown', (e) => {
   if (e.key === 'Tab') {
     e.preventDefault();
     complete();
+    return;
+  }
+  // Enter sends, Shift+Enter starts a new line (sent as its own IRC line).
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+    e.preventDefault();
+    el.form.requestSubmit();
     return;
   }
   completion = null;
@@ -1372,6 +1391,7 @@ el.emojiBtn.addEventListener('click', (e) => {
   const end = el.input.selectionEnd ?? start;
   openPicker(el.emojiBtn, (emoji) => {
     el.input.setRangeText(emoji, start, end, 'end');
+    fitInput();
     el.input.focus();
   });
 });
@@ -2102,6 +2122,7 @@ function insertAtCursor(text) {
   const before = el.input.value.slice(0, start);
   const spaced = (before && !before.endsWith(' ') ? ' ' : '') + text + ' ';
   el.input.setRangeText(spaced, start, end, 'end');
+  fitInput();
   el.input.focus();
 }
 

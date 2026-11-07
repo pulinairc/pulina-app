@@ -488,7 +488,7 @@ a:hover { text-decoration-color: var(--dim); }
 
 .composer-box {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   max-width: var(--column);
   margin: 0 auto;
   padding: 0 4px 0 14px;
@@ -501,15 +501,19 @@ a:hover { text-decoration-color: var(--dim); }
 body.dropping .composer-box { border-color: var(--accent); }
 
 
+/* One line until the message wraps, then it grows up to about six lines. */
 #input {
   flex: 1;
   min-width: 0;
+  max-height: calc(6 * 1.45em + 20px);
   padding: 10px 0;
   border: 0;
   background: transparent;
   color: var(--strong);
   font: inherit;
+  line-height: 1.45;
   outline: none;
+  resize: none;
 }
 
 .box-btn {
