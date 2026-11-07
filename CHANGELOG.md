@@ -1,6 +1,7 @@
 ### 0.5.3: 2026-11-07
 
 * Fix message box icons sitting off centre
+* Update the demo GIF with a smoother backdrop
 
 ### 0.5.2: 2026-11-07
 
