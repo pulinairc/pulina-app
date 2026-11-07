@@ -911,7 +911,8 @@ dialog:focus { outline: none; }
 }
 
 #unread-bar .jump { position: static; transform: none; white-space: nowrap; }
-#mark-read { color: var(--new); }
+#mark-read { color: var(--text); }
+#mark-read svg { color: var(--ok); }
 
 .jump {
   position: absolute;
@@ -920,7 +921,9 @@ dialog:focus { outline: none; }
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 4px 12px 4px 10px;
+  height: 28px;
+  padding: 0 12px 0 10px;
+  line-height: 1;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--panel);

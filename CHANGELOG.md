@@ -43,3 +43,4 @@
 - Fix photo tops to line up with the name
 - Change Mark as read to a floating pill with a count
 - Fix photos sitting too low next to names
+- Fix pill heights, neutral Mark read
