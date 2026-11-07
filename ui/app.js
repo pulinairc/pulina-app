@@ -38,6 +38,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
+  markRead: $('mark-read'), markReadLabel: $('mark-read-label'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -1100,12 +1101,15 @@ document.addEventListener('click', (e) => {
 function separatorNode() {
   const sep = h('div', 'unread-sep');
   sep.setAttribute('role', 'separator');
-  const done = h('button', 'mark-read', 'Mark as read');
-  done.type = 'button';
-  done.dataset.tip = 'Shift+Esc';
-  done.addEventListener('click', markCurrentRead);
-  sep.append(h('span', 'sep-label', 'New'), done);
+  sep.append(h('span', 'sep-label', 'New'));
   return sep;
+}
+
+/** Messages after the read position in this channel. */
+function unreadCount(b) {
+  const seen = readMap[b.key];
+  if (seen === undefined) return 0;
+  return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own).length;
 }
 
 function markCurrentRead() {
@@ -1131,7 +1135,13 @@ function updateJumps() {
   const sepAbove = sep && sep.getBoundingClientRect().bottom < el.log.getBoundingClientRect().top;
   el.jumpUnread.hidden = !sepAbove;
   el.jumpLatest.hidden = atBottom();
+  const b = state.buffers.get(state.current);
+  const count = b ? unreadCount(b) : 0;
+  el.markRead.hidden = count === 0;
+  el.markReadLabel.textContent = `Mark ${count} ${count === 1 ? 'message' : 'messages'} read`;
 }
+
+el.markRead.addEventListener('click', markCurrentRead);
 
 el.jumpUnread.addEventListener('click', () => {
   if (view?.separator) view.separator.scrollIntoView({ block: 'start', behavior: 'smooth' });
