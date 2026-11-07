@@ -58,98 +58,53 @@ Early. Works: server and direct mode, history, grouped messages, link previews, 
 
 Coming: profile photos and nick aliases, attachments, emoji picker, notifications, an iPhone version, and more sources next to irssiproxy (WeeChat relay, Matrix and Beeper, and a way to plug in your own).
 
-## Installing lobby-server
+## Installing
 
-On the machine where irssi runs:
+Lobby is built from source for now. There are no ready-made packages yet.
+
+### 1. Build tools
+
+Rust 1.85 or newer, from [rustup.rs](https://rustup.rs) or your package manager.
+
+Linux also needs WebKitGTK 4.1 and a C compiler:
+
+| System | Command |
+|--------|---------|
+| Arch | `sudo pacman -S --needed base-devel webkit2gtk-4.1` |
+| Debian, Ubuntu | `sudo apt install build-essential libwebkit2gtk-4.1-dev` |
+| Fedora | `sudo dnf install webkit2gtk4.1-devel gcc` |
+
+macOS needs the Xcode command line tools: `xcode-select --install`.
+
+### 2. Build and run the app
 
 ```sh
 git clone https://github.com/rollecode/lobby
 cd lobby
-./server/install.sh
+cargo build --release -p lobby
+./target/release/lobby
 ```
 
-The installer builds lobby-server, creates `~/.config/lobby-server/config.toml` and a random token, and sets up a systemd user service. Put your irssiproxy ports in the config:
+To update later: `git pull`, then build again.
 
-```toml
-nick = "yournick"
-listen = "127.0.0.1:7667"
+### 3. Point it at your chat
 
-[[network]]
-name = "IRCnet"
-host = "127.0.0.1"
-port = 45000
-password_file = "~/.config/lobby-server/irssiproxy.pass"
-```
-
-Then:
-
-```sh
-systemctl --user start lobby-server
-loginctl enable-linger $USER   # keep running after you log out
-journalctl --user -u lobby-server -f
-```
-
-### Reaching it from your computer
-
-lobby-server only listens on `127.0.0.1`, and refuses other addresses unless you say otherwise, because the token and your messages would travel unencrypted. Pick one:
-
-**Through SSH**, nothing to set up on the server. Lobby opens the tunnel itself with your usual SSH keys and keeps it up:
-
-```toml
-[server]
-ssh = "you@your-shell-host"
-token_file = "~/.config/lobby/server.token"
-```
-
-The key must work without a prompt, as in `ssh -o BatchMode=yes you@your-shell-host true`.
-
-**Reverse proxy with TLS**, for use from anywhere. With Caddy:
-
-```
-lobby.example.org {
-    reverse_proxy 127.0.0.1:7667
-}
-```
-
-With nginx, inside a `server` block that already has TLS:
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:7667;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_read_timeout 1h;
-}
-```
-
-and use `url = "wss://lobby.example.org"`.
-
-## Running the app
-
-You need Rust and, on Linux, `webkit2gtk-4.1`.
-
-```sh
-cargo run -p lobby
-```
-
-On first start Lobby writes a config template and shows its path. The gear in the top right shows it too.
+On first start Lobby writes a config template and shows where it is. The gear in the top right shows the path too.
 
 - Linux: `~/.config/lobby/config.toml`
 - macOS: `~/Library/Application Support/lobby/config.toml`
 
-Server mode, through SSH or at an address of its own:
+**Server mode**, with history. Set up lobby-server first ([instructions](server/README.md)), then:
 
 ```toml
 [server]
 ssh = "you@your-shell-host"
-# url = "wss://lobby.example.org"
 token_file = "~/.config/lobby/server.token"
 ```
 
-Copy the token from `~/.config/lobby-server/token` on the server to `~/.config/lobby/server.token` on your computer.
+`ssh` makes Lobby open an SSH tunnel to the server itself, using your usual SSH key. If you have put lobby-server behind a web server with TLS instead, use `url = "wss://lobby.example.org"`.
 
-Direct mode:
+**Direct mode**, without history, straight to irssiproxy or any IRC server:
 
 ```toml
 nick = "yournick"
@@ -160,6 +115,18 @@ host = "irc.example.org"
 port = 6667
 password_file = "~/.config/lobby/ircnet.pass"
 ```
+
+Restart Lobby after changing the config.
+
+### lobby-server
+
+See [server/README.md](server/README.md): turning on irssi's proxy, installing, configuring, connecting the app, updating and removing.
+
+### Troubleshooting
+
+- **The window stays empty on Linux**: try starting it with `WEBKIT_DISABLE_DMABUF_RENDERER=1 ./target/release/lobby`. This has helped with some graphics drivers.
+- **An orange line under the header**: it names the network or server that is not connected, and why.
+- **Nothing shows up at all**: open the gear, check the config path, and compare the file with the examples above.
 
 ## Using it
 
