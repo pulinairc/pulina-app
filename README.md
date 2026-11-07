@@ -29,6 +29,8 @@
 - **Reactions and replies:** sent as plain IRC (`nick: 😂`, `nick: text`) and shown as reactions and quotes in Lobby
 - **People:** a photo, a colour and any number of nicks per person, matched by pattern or ident and host
 - **Unread that stays put:** a red New line, jump buttons, and nothing marked read until you say so
+- **Attachments:** paste, drop or pick a file, and its address goes into your message, through a file host of your own
+- **Notifications:** desktop notifications for mentions and private messages, quiet for muted channels
 - **irssi muscle memory:** `/wc`, `/whois`, `/names` and the rest, with a `/` menu, `Alt+1…9` and `Alt+A`
 - **Same everywhere:** people, channel pictures, read positions and settings live on your server and follow you between devices
 - **Self-hosted, no bouncer:** irssi stays in charge, Lobby reads through irssiproxy and talks to your own server over SSH
@@ -143,6 +145,40 @@ Restart Lobby after changing the config.
 **People.** Click a name or photo in the chat, or open the gear and People. `Kaisla` also covers `Kaisla_` and `Kaisla-`, `Kaisla*` covers any ending, and `kaisla@*.example.net` matches by ident and host. The colour follows the photo unless you pick one. Click the channel icon in the header to give a channel its own picture or colour, or to mute it. A muted channel adds nothing to unread counts or jumps, except when someone mentions you. `/mute` and `/unmute` work too.
 
 **Commands.** Type `/` for the menu. `/me`, `/msg`, `/query`, `/join`, `/part`, `/wc`, `/topic`, `/names`, `/whois`, `/nick`, `/away`, `/notice`, `/invite`, `/kick`, `/op`, `/deop`, `/voice`, `/devoice`, `/clear`, `/say` and `/quote` work as in irssi. Anything else is sent as is. `/quit` is off, because through irssiproxy it would disconnect irssi from the network.
+
+**Attachments.** Paste an image into the message box, drop files on the window, or use the paperclip. The file goes to your file host and its address is put into your message, so everyone on IRC can open it. Set the host's address under Settings, File host for attachments.
+
+<details>
+<summary><strong>Running a file host for attachments</strong></summary>
+
+Lobby uploads the way Halloy and soju-style hosts expect, so one host serves all of them:
+
+- `POST` the file as the raw request body to the host's address
+- `Content-Type` is the file's type, `Content-Disposition` carries its name (`attachment; filename*=UTF-8''name.png`)
+- The host answers `201 Created` with the file's address in `Location`
+
+[tools/filehost/upload.php](tools/filehost/upload.php) is a complete host in one PHP file. It keeps only images, PDFs and plain text, and needs a secret key in the address. Put it on any web server with PHP, set `KEY`, `BASE_URL` and `STORE` at the top, and allow uploads of 20 MB. With nginx:
+
+```nginx
+server {
+    server_name files.example.org;
+    root /var/www/files;
+    client_max_body_size 20m;
+
+    location = /upload.php {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+    }
+
+    location ^~ /u/ {
+        add_header X-Content-Type-Options nosniff;
+    }
+}
+```
+
+Then set `https://files.example.org/upload.php?k=YOUR_KEY` in Lobby's Settings. The address is stored on your lobby-server like other settings, so every device uses it.
+
+</details>
 
 <details>
 <summary><strong>Importing a folder of photos</strong></summary>

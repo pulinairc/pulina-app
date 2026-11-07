@@ -49,3 +49,5 @@
 - Add an emoji button to the message box
 - Fix emoji search to put whole words first
 - Add desktop notifications for mentions
+- Add attachments through a file host
+- Add a file host script and setup guide
