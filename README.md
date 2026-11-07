@@ -135,6 +135,9 @@ See [server/README.md](server/README.md): turning on irssi's proxy, installing, 
 - `Alt+Left` and `Alt+Right`: previous and next channel
 - `Tab`: complete a nick
 - `Up` in an empty input: bring back the last message
+- `Alt+A`, or the unread counter in the header: jump to the next channel with unread messages, mentions first
+
+A red **New** line marks where you stopped reading, and the channel opens there. Buttons in the chat jump back up to it or down to the latest. Where you stopped reading is stored like other settings, so it carries over between devices.
 
 **Reactions and replies.** Point at a message for a row of emojis and a reply button. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a small reaction under that person's message. Replying puts `nick: ` in front of your text and shows what you are answering. Lobby shows the quote, other clients see the plain line.
 

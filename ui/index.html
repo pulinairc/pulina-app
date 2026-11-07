@@ -23,7 +23,17 @@
     </button>
   </header>
   <div id="status" role="status" hidden></div>
-  <main id="log"><div id="col"></div></main>
+  <div id="logwrap">
+    <main id="log"><div id="col"></div></main>
+    <button id="jump-unread" class="jump" type="button" hidden>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      Unread
+    </button>
+    <button id="jump-latest" class="jump" type="button" hidden>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+      Latest
+    </button>
+  </div>
   <form id="composer">
     <div id="slash" role="listbox" aria-label="Commands" hidden></div>
     <div id="replying" hidden>

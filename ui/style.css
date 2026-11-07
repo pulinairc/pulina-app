@@ -13,6 +13,7 @@
   --mention: #ff9e64;
   --mention-bg: #3a2a22;
   --private: #73daca;
+  --new: #f7768e;
   --avatar: 24px;
   --column: 720px;
   color-scheme: dark;
@@ -723,3 +724,53 @@ dialog::backdrop { background: rgb(10 10 16 / 55%); }
 .chip button:hover { color: var(--strong); }
 .person-buttons { display: flex; justify-content: space-between; margin-top: 14px; }
 .person-buttons .primary-btn { margin-left: auto; }
+
+/* Unread: the "New" line and the jump buttons */
+
+#logwrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+#logwrap #log { min-height: 0; }
+
+.unread-sep {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--new);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.unread-sep::before {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--new);
+}
+
+.jump {
+  position: absolute;
+  left: 50%;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 12px 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  transform: translateX(-50%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+}
+
+.jump:hover { border-color: #3b4261; color: var(--strong); }
+.jump[hidden] { display: none; }
+#jump-unread { top: 10px; color: var(--new); }
+#jump-latest { bottom: 10px; }

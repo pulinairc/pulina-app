@@ -19,6 +19,10 @@ const COLOR_SAMPLE_PX = 24;
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.
 const REPLY_WINDOW_MS = 30 * 60 * 1000;
 const QUOTE_CHARS = 120;
+const READ_SETTING = 'read';
+const READ_SAVE_DELAY_MS = 1500;
+// Leave this much of the earlier chat visible above the "New" line when opening at it.
+const SEPARATOR_MARGIN_PX = 48;
 // Server answers (WHOIS, errors) show in the open window when a command was sent this recently.
 const COMMAND_ANSWER_MS = 15000;
 
@@ -26,7 +30,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), status: $('status'), log: $('log'), col: $('col'),
-  form: $('composer'), input: $('input'),
+  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -86,6 +90,54 @@ function avatar(nick, mask, cls = 'av') {
   return av;
 }
 
+// Read markers: the last line id seen per channel, stored as a setting so every device agrees.
+
+let readMap = {};
+let readSaveTimer = null;
+
+function lastId(b) {
+  for (let i = b.lines.length - 1; i >= 0; i -= 1) if (b.lines[i].id) return b.lines[i].id;
+  return 0;
+}
+
+function saveReadSoon() {
+  clearTimeout(readSaveTimer);
+  readSaveTimer = setTimeout(() => saveSetting(READ_SETTING, JSON.stringify(readMap)), READ_SAVE_DELAY_MS);
+}
+
+function markRead(b) {
+  const last = lastId(b);
+  if (last > (readMap[b.key] || 0)) {
+    readMap[b.key] = last;
+    saveReadSoon();
+  }
+  if (b.unread || b.mention) {
+    b.unread = 0;
+    b.mention = false;
+    renderHeader();
+  }
+}
+
+/** Count what is newer than the read marker; a channel never seen before counts as read. */
+function recountUnread(b) {
+  if (readMap[b.key] === undefined) {
+    readMap[b.key] = lastId(b);
+    return;
+  }
+  const seen = readMap[b.key];
+  const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own);
+  b.unread = fresh.length;
+  b.mention = fresh.length > 0 && (isPrivate(b) || fresh.some((l) => mentions(l.text, state.me[l.net])));
+}
+
+function applyReadSetting(value) {
+  let incoming = {};
+  try { incoming = JSON.parse(value || '{}'); } catch { /* keep what we have */ }
+  for (const [k, id] of Object.entries(incoming)) readMap[k] = Math.max(readMap[k] || 0, id);
+  for (const b of state.buffers.values()) if (b.key !== state.current) recountUnread(b);
+  renderHeader();
+}
+
 // Buffers
 
 function buffer(net, name) {
@@ -107,7 +159,12 @@ async function loadHistory(b) {
   if (!fresh.length) return;
   for (const l of fresh) b.ids.add(l.id);
   b.lines = [...b.lines, ...fresh].sort((x, y) => (x.id || Infinity) - (y.id || Infinity)).slice(-MAX_LINES);
-  if (state.current === b.key) renderLog();
+  if (state.current === b.key) {
+    renderLog();
+    return;
+  }
+  recountUnread(b);
+  renderHeader();
 }
 
 function trackMembers(b, l) {
@@ -134,7 +191,12 @@ function onLine(l) {
 
   const visible = state.current === b.key;
   if (visible) appendLine(l, true);
-  if (!CHAT_KINDS.has(l.kind) || l.own || (visible && document.hasFocus())) return;
+  if (visible && document.hasFocus() && atBottom()) {
+    markRead(b);
+    return;
+  }
+  if (visible) updateJumps();
+  if (!CHAT_KINDS.has(l.kind) || l.own) return;
 
   b.unread += 1;
   if (isPrivate(b) || mentions(l.text, state.me[l.net])) b.mention = true;
@@ -206,7 +268,11 @@ function renderStatus(message) {
 function select(k) {
   const b = state.buffers.get(k);
   if (!b) return;
+  const previous = state.buffers.get(state.current);
+  if (previous && previous !== b) markRead(previous);
   state.current = k;
+  // The "New" line goes where reading stopped, and stays put while this channel is open.
+  b.separatorAfter = b.unread ? readMap[b.key] : null;
   b.unread = 0;
   b.mention = false;
   try { localStorage.setItem(LAST_BUFFER_KEY, k); } catch { /* storage may be unavailable */ }
@@ -269,7 +335,7 @@ function pick(k) {
 }
 
 el.title.addEventListener('click', openSwitcher);
-el.unread.addEventListener('click', openSwitcher);
+el.unread.addEventListener('click', jumpToUnreadChannel);
 el.filter.addEventListener('input', () => {
   picked = 0;
   renderList();
@@ -324,11 +390,19 @@ function toBottom() {
 
 function renderLog() {
   el.col.replaceChildren();
-  view = { lastLine: null, group: null, events: null, lastByNick: new Map() };
+  view = { lastLine: null, group: null, events: null, lastByNick: new Map(), separator: null, separatorAfter: null };
   const b = state.buffers.get(state.current);
-  if (!b) return;
+  if (!b) return updateJumps();
+  view.separatorAfter = b.separatorAfter ?? null;
   for (const l of b.lines) appendLine(l, false);
-  toBottom();
+  if (view.separator) toSeparator();
+  else toBottom();
+  updateJumps();
+}
+
+function toSeparator() {
+  const top = view.separator.getBoundingClientRect().top - el.col.getBoundingClientRect().top;
+  el.log.scrollTop = Math.max(0, top - SEPARATOR_MARGIN_PX);
 }
 
 function appendLine(l, live) {
@@ -346,6 +420,16 @@ function appendLine(l, live) {
 
   if (!prev || !sameDay(prev.ts, l.ts)) {
     el.col.append(h('div', 'day', dayLabel(l.ts)));
+    view.group = null;
+    view.events = null;
+  }
+
+  const firstUnread = view.separatorAfter !== null && !view.separator
+    && l.id > view.separatorAfter && CHAT_KINDS.has(l.kind) && !l.own;
+  if (firstUnread) {
+    view.separator = h('div', 'unread-sep', 'New');
+    view.separator.setAttribute('role', 'separator');
+    el.col.append(view.separator);
     view.group = null;
     view.events = null;
   }
@@ -815,6 +899,10 @@ document.addEventListener('keydown', (e) => {
     if (b) select(b.key);
     e.preventDefault();
   }
+  if (e.altKey && e.key.toLowerCase() === 'a') {
+    e.preventDefault();
+    jumpToUnreadChannel();
+  }
   if ((e.altKey && e.key === 'ArrowRight') || (e.ctrlKey && e.key === 'PageDown')) step(1);
   if ((e.altKey && e.key === 'ArrowLeft') || (e.ctrlKey && e.key === 'PageUp')) step(-1);
 });
@@ -828,11 +916,40 @@ document.addEventListener('click', (e) => {
 
 window.addEventListener('focus', () => {
   const b = state.buffers.get(state.current);
-  if (!b || (!b.unread && !b.mention)) return;
-  b.unread = 0;
-  b.mention = false;
-  renderHeader();
+  if (b && atBottom()) markRead(b);
 });
+
+// Jumping: to the channel with unread, to the "New" line, back to the latest.
+
+function jumpToUnreadChannel() {
+  const waiting = ordered().filter((b) => b.key !== state.current && b.unread);
+  const next = waiting.find((b) => b.mention) || waiting[0];
+  if (next) select(next.key);
+}
+
+function updateJumps() {
+  const sep = view?.separator;
+  const sepAbove = sep && sep.getBoundingClientRect().bottom < el.log.getBoundingClientRect().top;
+  el.jumpUnread.hidden = !sepAbove;
+  el.jumpLatest.hidden = atBottom();
+}
+
+el.jumpUnread.addEventListener('click', () => {
+  if (view?.separator) view.separator.scrollIntoView({ block: 'start', behavior: 'smooth' });
+});
+el.jumpLatest.addEventListener('click', () => {
+  el.log.scrollTo({ top: el.log.scrollHeight, behavior: 'smooth' });
+});
+
+let jumpFrame = 0;
+el.log.addEventListener('scroll', () => {
+  cancelAnimationFrame(jumpFrame);
+  jumpFrame = requestAnimationFrame(() => {
+    updateJumps();
+    const b = state.buffers.get(state.current);
+    if (b && atBottom() && document.hasFocus()) markRead(b);
+  });
+}, { passive: true });
 
 // Start
 
@@ -843,9 +960,10 @@ function applyStatus(st) {
     state.conn[n.name] = n.state;
     if (n.nick) state.me[n.name] = n.nick;
   }
-  for (const info of st.channels) onBuffer(info);
   state.people = st.people || [];
   state.settings = st.settings || {};
+  applyReadSetting(state.settings[READ_SETTING]);
+  for (const info of st.channels) onBuffer(info);
   renderStatus(st.error || undefined);
 }
 
@@ -863,7 +981,10 @@ async function start() {
     renderLog();
     if (el.people.open && !el.peopleList.hidden) renderPeople();
   });
-  await listen('setting', (e) => { state.settings[e.payload.key] = e.payload.value; });
+  await listen('setting', (e) => {
+    state.settings[e.payload.key] = e.payload.value;
+    if (e.payload.key === READ_SETTING) applyReadSetting(e.payload.value);
+  });
   // A lobby-server connection came back: fetch what was missed.
   await listen('resync', async () => {
     applyStatus(await invoke('status'));
