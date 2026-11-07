@@ -195,7 +195,6 @@ button:focus:not(:focus-visible) { outline: none; }
 .av {
   width: var(--avatar);
   height: var(--avatar);
-  margin-top: 2px;
   flex-shrink: 0;
   border-radius: 26%;
   display: flex;
@@ -215,7 +214,8 @@ button:focus:not(:focus-visible) { outline: none; }
   flex: 1;
 }
 
-.hd { display: flex; align-items: baseline; gap: 8px; }
+/* The name row is as tall as the photo, so their tops and middles line up. */
+.hd { display: flex; align-items: center; gap: 8px; height: var(--avatar); }
 .nm { font-weight: 600; }
 
 .tm {
