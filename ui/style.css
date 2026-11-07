@@ -247,11 +247,23 @@ a:hover { text-decoration-color: var(--dim); }
 
 /* Link previews */
 
+/* Media keeps its shape inside a box well short of the column: tall pictures are held by height, wide ones by width. */
+:root {
+  --media-w: min(72%, 320px);
+  --media-h: 260px;
+}
+
+.pic {
+  display: block;
+  width: fit-content;
+  max-width: var(--media-w);
+  margin: 4px 0;
+}
+
 .pic img {
   display: block;
-  max-width: min(100%, 360px);
-  max-height: 280px;
-  margin: 4px 0;
+  max-width: 100%;
+  max-height: var(--media-h);
   border-radius: 10px;
 }
 
@@ -470,6 +482,7 @@ dialog:focus { outline: none; }
   #composer { padding: 0 10px 10px; }
   .tm { display: none; }
   .card-media { width: 60px; }
+  :root { --media-w: min(80%, 260px); --media-h: 220px; }
 }
 
 /* macOS keeps its window buttons, drawn over the left end of the header. */
