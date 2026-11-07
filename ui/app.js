@@ -924,14 +924,14 @@ function youtubeCard(url, { id, portrait }) {
   const poster = image(`https://i.ytimg.com/vi/${id}/hqdefault.jpg`, 'vid-poster');
   box.append(poster, openButton(url));
   let preview = null;
+  let failed = false;
 
-  // The muted loop runs behind the still and fades in once it has had time to start.
+  // The muted loop runs behind the still, which fades out once the loop really plays.
   box.visible = (on) => {
-    if (box.classList.contains('playing')) return;
+    if (failed || box.classList.contains('playing')) return;
     if (on && !preview) {
       preview = youtubeFrame(id, `${YT_PREVIEW}&playlist=${id}`);
       preview.className = 'vid-preview';
-      preview.addEventListener('load', () => setTimeout(() => box.classList.add('live'), 900));
       box.prepend(preview);
     } else if (!on && preview) {
       preview.remove();
@@ -941,11 +941,25 @@ function youtubeCard(url, { id, portrait }) {
   };
   onScreen.observe(box);
 
+  // Some videos refuse to play outside YouTube: they stay a still that opens YouTube.
+  box.playerState = (state, frame) => {
+    if (state === 'playing') box.classList.add('live');
+    if (state !== 'error') return;
+    failed = true;
+    frame.remove();
+    preview = null;
+    box.classList.remove('live', 'playing');
+    if (!poster.isConnected) box.prepend(poster);
+    box.dataset.tip = 'Open on YouTube';
+  };
+
   box.dataset.tip = 'Play with sound';
   box.addEventListener('click', () => {
+    if (failed) return openUrl(url);
     if (box.classList.contains('playing')) return;
     onScreen.unobserve(box);
     preview?.remove();
+    preview = null;
     poster.remove();
     delete box.dataset.tip;
     box.classList.add('playing');
@@ -958,6 +972,13 @@ function youtubeCard(url, { id, portrait }) {
   });
   return box;
 }
+
+window.addEventListener('message', (e) => {
+  const state = e.data?.lobbyPlayer;
+  if (!state) return;
+  const frame = [...document.querySelectorAll('.vid iframe')].find((f) => f.contentWindow === e.source);
+  frame?.closest('.vid')?.playerState?.(state, frame);
+});
 
 function videoCard(p) {
   const box = h('div', 'vid native');

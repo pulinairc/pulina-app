@@ -1,3 +1,7 @@
+### 0.5.2: 2026-11-07
+
+* Fix YouTube error screen on refused videos
+
 ### 0.5.1: 2026-11-07
 
 * Add times to join, quit and topic lines
