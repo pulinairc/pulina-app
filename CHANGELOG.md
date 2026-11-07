@@ -32,3 +32,4 @@
 - Change README to a presentable one with a demo
 - Add a full emoji picker, actions only on hover
 - Fix photo alignment with the name
+- Change link cards to one line per field

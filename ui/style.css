@@ -256,12 +256,11 @@ a:hover { text-decoration-color: var(--dim); }
 
 .card {
   display: flex;
-  max-width: 460px;
-  min-height: 88px;
-  margin: 6px 0 2px;
+  max-width: 400px;
+  margin: 4px 0 2px;
   overflow: hidden;
   border: 1px solid var(--line);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--panel);
   color: var(--text);
   transition: border-color 0.15s ease;
@@ -273,35 +272,28 @@ a:hover { text-decoration-color: var(--dim); }
 .card-text {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 1px;
   min-width: 0;
   flex: 1;
-  padding: 10px 14px;
+  padding: 7px 11px;
 }
 
-.card-site {
-  font-size: 12px;
-  color: var(--faint);
+/* Site, title and description: one line each. */
+.card-site, .card-title, .card-desc {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.card-title, .card-desc {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.card-title { font-size: 14px; font-weight: 600; line-height: 1.35; color: var(--strong); }
-.card-desc { font-size: 13px; line-height: 1.4; color: var(--dim); }
+.card-site { font-size: 11px; color: var(--faint); }
+.card-title { font-size: 13px; font-weight: 600; line-height: 1.35; color: var(--strong); }
+.card-desc { font-size: 12px; line-height: 1.35; color: var(--dim); }
 
 /* The picture fills the right edge of the card, top to bottom. */
 .card-media {
   position: relative;
   flex: none;
-  width: min(132px, 32%);
+  width: 76px;
   background: var(--raised);
 }
 
@@ -444,7 +436,7 @@ dialog:focus { outline: none; }
   #log { padding: 10px 12px; }
   #composer { padding: 0 10px 10px; }
   .tm { display: none; }
-  .card-media { width: 84px; }
+  .card-media { width: 60px; }
 }
 
 /* macOS keeps its window buttons, drawn over the left end of the header. */
