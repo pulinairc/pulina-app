@@ -853,9 +853,17 @@ el.col.addEventListener('pointerover', (e) => {
   fillActions();
   r.append(actions);
 });
-el.log.addEventListener('pointerleave', () => {
+function hideActions() {
   closePanel();
   actions.remove();
+}
+
+// Leaving the chat, the window or its focus takes the hover menu away.
+el.log.addEventListener('pointerleave', hideActions);
+document.documentElement.addEventListener('mouseleave', hideActions);
+window.addEventListener('blur', () => {
+  hideActions();
+  hideTip();
 });
 
 function note(l) {
