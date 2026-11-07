@@ -5,3 +5,10 @@
 - Add first prototype
 - Add Tokyo Night theme and channel header
 - Add lobby-server for history next to irssi
+- Fix server history permissions and Rust check
+- Add SSH tunnel to lobby-server
+- Fix numeric entities in link previews
+- Fix first channel pick after connecting
+- Add install instructions for other users
+- Change link cards to a full-height picture
+- Fix the header hover box
