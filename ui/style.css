@@ -60,15 +60,21 @@ button { font: inherit; color: inherit; cursor: pointer; }
   align-items: center;
   gap: 10px;
   min-width: 0;
-  flex: 1;
-  padding: 4px 6px 4px 4px;
+  flex: 0 1 auto;
+  margin-right: auto;
+  padding: 2px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   text-align: left;
+  outline: none;
 }
 
-#title:hover { background: var(--panel); }
+/* Hover shows in the text, not as a box: the header stays flat. */
+#title:hover #chan-name { color: #ffffff; }
+#title:hover .chev { color: var(--text); }
+#title:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:focus:not(:focus-visible) { outline: none; }
 
 .chan-icon {
   width: 32px;
@@ -133,7 +139,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
   flex-shrink: 0;
 }
 
-#gear:hover { background: var(--panel); color: var(--text); }
+#gear:hover { color: var(--strong); }
+#gear:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 #status {
   padding: 4px 16px;
