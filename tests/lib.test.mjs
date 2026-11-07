@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -42,4 +42,11 @@ test('day labels use Finnish date format', () => {
   const now = at(0);
   assert.equal(dayLabel(now, now), 'Today');
   assert.equal(dayLabel(Date.UTC(2026, 0, 5, 12), now), '5.1.2026');
+});
+
+test('shortens links for reading', () => {
+  assert.equal(shortUrl('https://www.example.org/'), 'example.org');
+  assert.equal(shortUrl('https://example.org/a/b'), 'example.org/a/b');
+  assert.equal(shortUrl('https://example.org/a-very-long-article-name-that-goes-on'), 'example.org/a-very-long-article-name-th…');
+  assert.equal(shortUrl('not a url'), 'not a url');
 });

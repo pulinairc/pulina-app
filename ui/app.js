@@ -1,6 +1,6 @@
 import {
   CHAT_KINDS, EVENT_KINDS, clock, completeNick, continues, dayLabel, initial,
-  isChannel, mentions, nickColor, sameDay, summarize, tokenize,
+  isChannel, mentions, nickColor, sameDay, shortUrl, summarize, tokenize,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -334,10 +334,12 @@ function row(l) {
   r.title = clock(l.ts);
 
   let firstUrl = null;
-  for (const t of tokenize(l.text, state.me[l.net])) {
+  const tokens = tokenize(l.text, state.me[l.net]);
+  for (const t of tokens) {
     if (t.type === 'url') {
-      const a = h('a', 'link', t.value);
+      const a = h('a', 'link', shortUrl(t.value));
       a.href = t.value;
+      a.title = t.value;
       r.append(a);
       firstUrl ??= t.value;
     } else if (t.type === 'mention') {
@@ -346,6 +348,8 @@ function row(l) {
       r.append(t.value);
     }
   }
+  // A message that is only a link gets replaced by its card.
+  r.dataset.onlyLink = String(tokens.length === 1 && tokens[0].type === 'url');
   if (firstUrl) attachPreview(firstUrl, r);
   return r;
 }
@@ -367,8 +371,7 @@ async function attachPreview(url, rowNode) {
   if (!p || !rowNode.isConnected) return;
   const pinned = atBottom();
   const card = p.kind === 'image' ? imageCard(p) : pageCard(p);
-  const bareImage = p.kind === 'image' && rowNode.textContent.trim() === url;
-  if (bareImage) rowNode.replaceWith(card);
+  if (rowNode.dataset.onlyLink === 'true') rowNode.replaceWith(card);
   else rowNode.after(card);
   const keep = () => pinned && toBottom();
   card.querySelector('img')?.addEventListener('load', keep);
@@ -394,12 +397,19 @@ function imageCard(p) {
 function pageCard(p) {
   const a = h('a', 'card');
   a.href = p.url;
+  a.title = p.url;
   const text = h('div', 'card-text');
-  if (p.site) text.append(h('span', 'card-site', p.site));
+  text.append(h('span', 'card-site', p.site || shortUrl(p.url)));
   if (p.title) text.append(h('span', 'card-title', p.title));
   if (p.description) text.append(h('span', 'card-desc', p.description));
   a.append(text);
-  if (p.image) a.append(image(p.image, 'card-img'));
+  if (p.image) {
+    const media = h('div', 'card-media');
+    const img = image(p.image);
+    img.addEventListener('error', () => media.remove());
+    media.append(img);
+    a.append(media);
+  }
   return a;
 }
 

@@ -102,6 +102,21 @@ function splitMentions(text, me) {
   return out;
 }
 
+const SHORT_PATH_CHARS = 28;
+
+/** A link as people read it: host and the start of the path, no scheme or www. */
+export function shortUrl(url) {
+  try {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^www\./, '');
+    const rest = (u.pathname + u.search).replace(/\/$/, '');
+    if (!rest) return host;
+    return rest.length > SHORT_PATH_CHARS ? `${host}${rest.slice(0, SHORT_PATH_CHARS)}…` : host + rest;
+  } catch {
+    return url;
+  }
+}
+
 export function nickColor(nick) {
   let h = 0;
   for (const ch of nick.toLowerCase().replace(/[_\-`|^]+$/, '')) h = (h * 31 + ch.codePointAt(0)) >>> 0;
