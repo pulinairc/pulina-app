@@ -5,8 +5,8 @@ export const EVENT_KINDS = new Set(['join', 'part', 'quit', 'nick', 'kick']);
 export const CHAT_KINDS = new Set(['msg', 'action', 'notice']);
 
 const NAMES_SHOWN = 3;
-// Purple is left out: it marks mentions and unread highlights.
-const PALETTE = ['#7fb4c9', '#c9a77f', '#8fbf9a', '#e39fb6', '#d9b86c', '#86c5b8', '#e0a07f', '#a3b4e6', '#c5c98f', '#9fd0e0'];
+// Tokyo Night colours, purple left out.
+const PALETTE = ['#7aa2f7', '#7dcfff', '#2ac3de', '#73daca', '#9ece6a', '#e0af68', '#ff9e64', '#f7768e', '#b4f9f8', '#c3e88d'];
 const FORMATTING = /[\x02\x0f\x11\x16\x1d\x1e\x1f]|\x03(\d{1,2}(,\d{1,2})?)?/g;
 const URL_RE = /\bhttps?:\/\/[^\s<>"']+/gi;
 const TRAILING_PUNCT = /[.,;:!?'"»)\]]+$/;

@@ -54,6 +54,7 @@ struct Status {
     networks: Vec<NetStatus>,
     channels: Vec<net::BufferInfo>,
     error: Option<String>,
+    config_path: String,
 }
 
 #[tauri::command]
@@ -70,7 +71,7 @@ fn status(state: State<AppState>) -> Status {
         })
         .collect();
     let channels = state.channels.lock().unwrap().values().cloned().collect();
-    Status { networks, channels, error: state.error.clone() }
+    Status { networks, channels, error: state.error.clone(), config_path: config::path().display().to_string() }
 }
 
 #[tauri::command]
