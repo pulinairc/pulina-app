@@ -20,3 +20,5 @@
 - Add people with photos, colours and nick aliases
 - Add unread line and jumping to unread
 - Change the person editor layout
+- Change theme to neutral charcoal, squircle photos
+- Change People list to a minimal one
