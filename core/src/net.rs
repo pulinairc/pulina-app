@@ -32,6 +32,13 @@ struct Chan {
     pending_names: Vec<String>,
 }
 
+/// Numerics worth showing: everything except the connection burst and the ones handled above.
+fn is_reply_numeric(cmd: &str) -> bool {
+    const BURST: [&str; 17] =
+        ["001", "002", "003", "004", "005", "250", "251", "252", "253", "254", "255", "265", "266", "372", "375", "376", "422"];
+    cmd.len() == 3 && cmd.bytes().all(|b| b.is_ascii_digit()) && !BURST.contains(&cmd) && !matches!(cmd, "332" | "333" | "353" | "366")
+}
+
 pub struct Session {
     net: String,
     me: String,
@@ -185,6 +192,11 @@ impl Session {
                 vec![self.info(&self.chans[&key], true)]
             }
             "ERROR" => vec![Out::Line(self.line("", "status", msg, msg.param(0), now))],
+            // Answers to commands (WHOIS, errors like "no such nick") as readable text.
+            cmd if is_reply_numeric(cmd) => {
+                let text = msg.params.iter().skip(1).cloned().collect::<Vec<_>>().join(" ");
+                vec![Out::Line(self.line("", "info", msg, &text, now))]
+            }
             _ => vec![],
         }
     }
@@ -271,6 +283,15 @@ mod tests {
 
         let out = feed(&mut s, ":irc.example NOTICE * :Looking up your hostname");
         assert_eq!(lines(&out), vec![("".into(), "notice".into(), "irc.example".into())]);
+    }
+
+    #[test]
+    fn shows_command_replies_but_not_the_burst() {
+        let mut s = Session::new("net", "rolle");
+        assert!(feed(&mut s, ":srv 001 rolle :Welcome").iter().all(|o| matches!(o, Out::Me(_))));
+        assert!(feed(&mut s, ":srv 375 rolle :- motd").is_empty());
+        let out = feed(&mut s, ":srv 401 rolle nobody :No such nick/channel");
+        assert_eq!(lines(&out), vec![("".into(), "info".into(), "srv".into())]);
     }
 
     #[test]

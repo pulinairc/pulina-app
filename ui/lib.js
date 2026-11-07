@@ -164,3 +164,36 @@ export function parseAddress(text) {
   const m = text.match(ADDRESS_RE);
   return m ? { nick: m[1], rest: m[2] } : null;
 }
+
+/** Commands offered in the / menu. `local` ones are handled by the app itself. */
+export const COMMANDS = [
+  { name: 'me', args: 'action', desc: 'Say what you are doing' },
+  { name: 'msg', args: 'nick text', desc: 'Send a private message' },
+  { name: 'query', args: 'nick', desc: 'Open a private chat', local: true },
+  { name: 'join', args: '#channel', desc: 'Join a channel' },
+  { name: 'part', args: 'reason', desc: 'Leave this channel' },
+  { name: 'wc', args: '', desc: 'Close this window, leaving the channel', local: true },
+  { name: 'topic', args: 'text', desc: 'Show or change the topic' },
+  { name: 'names', args: '', desc: 'List people here', local: true },
+  { name: 'whois', args: 'nick', desc: 'Who is this' },
+  { name: 'nick', args: 'newnick', desc: 'Change your nick' },
+  { name: 'away', args: 'message', desc: 'Set away, or come back without a message' },
+  { name: 'notice', args: 'target text', desc: 'Send a notice' },
+  { name: 'invite', args: 'nick', desc: 'Invite someone here' },
+  { name: 'kick', args: 'nick reason', desc: 'Kick someone out' },
+  { name: 'op', args: 'nick', desc: 'Give operator status' },
+  { name: 'deop', args: 'nick', desc: 'Take operator status' },
+  { name: 'voice', args: 'nick', desc: 'Give voice' },
+  { name: 'devoice', args: 'nick', desc: 'Take voice' },
+  { name: 'clear', args: '', desc: 'Clear this window', local: true },
+  { name: 'say', args: 'text', desc: 'Send text as is, even starting with /' },
+  { name: 'quote', args: 'raw line', desc: 'Send a raw IRC line' },
+];
+
+/** Commands matching what is typed after "/", or null when the menu should be closed. */
+export function commandMatches(input) {
+  const m = input.match(/^\/(\w*)$/);
+  if (!m) return null;
+  const q = m[1].toLowerCase();
+  return COMMANDS.filter((c) => c.name.startsWith(q));
+}

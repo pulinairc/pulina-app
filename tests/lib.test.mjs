@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -66,4 +66,12 @@ test('reads reactions and replies sent as plain IRC text', () => {
   assert.deepEqual(parseAddress('snowfake: no niin'), { nick: 'snowfake', rest: 'no niin' });
   assert.equal(parseAddress('https://example.org'), null);
   assert.equal(parseAddress('no niin'), null);
+});
+
+test('slash menu matches typed commands', () => {
+  assert.ok(commandMatches('/').length > 10);
+  assert.deepEqual(commandMatches('/wh').map((c) => c.name), ['whois']);
+  assert.equal(commandMatches('/me waves'), null);
+  assert.equal(commandMatches('hello'), null);
+  assert.deepEqual(commandMatches('/zzz'), []);
 });

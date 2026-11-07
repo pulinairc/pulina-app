@@ -1,5 +1,5 @@
 import {
-  CHAT_KINDS, EVENT_KINDS, clock, completeNick, continues, dayLabel, initial,
+  CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel, initial,
   isChannel, mentions, nickColor, parseAddress, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize,
 } from './lib.js';
 
@@ -16,13 +16,15 @@ const REACTION_USE_KEY = 'lobby.reactions';
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.
 const REPLY_WINDOW_MS = 30 * 60 * 1000;
 const QUOTE_CHARS = 120;
+// Server answers (WHOIS, errors) show in the open window when a command was sent this recently.
+const COMMAND_ANSWER_MS = 15000;
 
 const $ = (id) => document.getElementById(id);
 const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'),
-  replying: $('replying'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
+  slash: $('slash'), replying: $('replying'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
   switcher: $('switcher'), filter: $('filter'), list: $('list'),
   settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'),
 };
@@ -81,6 +83,11 @@ function trackMembers(b, l) {
 }
 
 function onLine(l) {
+  if (l.kind === 'info' && Date.now() - lastCommandAt < COMMAND_ANSWER_MS && view) {
+    const pinned = atBottom();
+    el.col.append(h('div', 'events info', l.text));
+    if (pinned) toBottom();
+  }
   const b = buffer(l.net, l.buffer);
   if (l.id && b.ids.has(l.id)) return;
   if (l.id) b.ids.add(l.id);
@@ -569,11 +576,64 @@ function pageCard(p) {
 
 // Composer
 
+let lastCommandAt = 0;
+
+function closeBuffer(b) {
+  state.buffers.delete(b.key);
+  if (state.current === b.key) {
+    state.current = null;
+    const next = ordered().find((x) => isChannel(x.name)) || ordered()[0];
+    if (next) select(next.key);
+    else renderLog();
+  }
+  renderHeader();
+}
+
+function localNote(text) {
+  el.col.append(h('div', 'events info', text));
+  toBottom();
+}
+
+/** Commands the app handles itself. Returns true when handled. */
+async function runLocal(b, text) {
+  const [cmd, ...args] = text.slice(1).split(' ');
+  const rest = args.join(' ').trim();
+  switch (cmd.toLowerCase()) {
+    case 'wc':
+    case 'close':
+      if (isChannel(b.name) && b.joined) await invoke('send', { net: b.net, buffer: b.name, text: '/part' });
+      closeBuffer(b);
+      return true;
+    case 'clear':
+      b.lines = [];
+      renderLog();
+      return true;
+    case 'query':
+      if (!rest) return true;
+      select(buffer(b.net, rest.split(' ')[0]).key);
+      return true;
+    case 'names':
+      localNote(`${b.members.size} people: ${[...b.members].sort((x, y) => x.localeCompare(y)).join(', ')}`);
+      return true;
+    default:
+      return false;
+  }
+}
+
 async function send() {
   const text = el.input.value;
   const b = state.buffers.get(state.current);
   if (!text.trim() || !b) return;
+  hideSlash();
   try {
+    if (text.startsWith('/') && !text.startsWith('//')) {
+      lastCommandAt = Date.now();
+      if (await runLocal(b, text)) {
+        lastSent = text;
+        el.input.value = '';
+        return;
+      }
+    }
     if (replying && text.startsWith(`${replying.nick}: `)) {
       replyHints.set(text, { line: replying, row: findRow(replying) });
     }
@@ -616,7 +676,69 @@ el.form.addEventListener('submit', (e) => {
   send();
 });
 
+// The / menu
+
+let slashItems = [];
+let slashPick = 0;
+
+function hideSlash() {
+  el.slash.hidden = true;
+  slashItems = [];
+}
+
+function renderSlash() {
+  const items = commandMatches(el.input.value);
+  if (!items || !items.length) return hideSlash();
+  slashItems = items;
+  slashPick = Math.min(slashPick, items.length - 1);
+  el.slash.replaceChildren(...items.map((c, i) => {
+    const item = h('button', 'slash-item');
+    item.type = 'button';
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', String(i === slashPick));
+    item.append(h('span', 'slash-name', `/${c.name}`), h('span', 'slash-args', c.args), h('span', 'slash-desc', c.desc));
+    item.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      applySlash(c);
+    });
+    return item;
+  }));
+  el.slash.hidden = false;
+  el.slash.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+}
+
+function applySlash(c) {
+  el.input.value = `/${c.name} `;
+  hideSlash();
+  el.input.focus();
+  if (!c.args) send();
+}
+
+el.input.addEventListener('input', () => {
+  slashPick = 0;
+  renderSlash();
+});
+
 el.input.addEventListener('keydown', (e) => {
+  if (slashItems.length) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      const step = e.key === 'ArrowDown' ? 1 : -1;
+      slashPick = (slashPick + step + slashItems.length) % slashItems.length;
+      renderSlash();
+      return;
+    }
+    if (e.key === 'Tab' || e.key === 'Enter') {
+      e.preventDefault();
+      applySlash(slashItems[slashPick]);
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      hideSlash();
+      return;
+    }
+  }
   if (e.key === 'Tab') {
     e.preventDefault();
     complete();

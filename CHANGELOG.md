@@ -16,3 +16,4 @@
 - Add instant black tooltips
 - Change nick colours to one per user
 - Add reactions and replies on hover
+- Add irssi commands and a / menu

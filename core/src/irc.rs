@@ -128,10 +128,34 @@ pub fn outgoing(buffer: &str, input: &str) -> Result<Vec<(String, Option<Echo>)>
             let (target, text) = rest.split_once(' ').unwrap_or((rest, ""));
             return Ok(say(target, text));
         }
+        "say" => return Ok(say(buffer, rest)),
+        "notice" => {
+            let (target, text) = rest.split_once(' ').unwrap_or((rest, ""));
+            let echo = Echo { buffer: target.into(), kind: "notice", text: text.into() };
+            return Ok(vec![(format!("NOTICE {target} :{text}"), Some(echo))]);
+        }
         "join" | "j" => format!("JOIN {rest}"),
-        "part" | "leave" => format!("PART {buffer} :{rest}"),
-        "topic" if rest.is_empty() => format!("TOPIC {buffer}"),
-        "topic" => format!("TOPIC {buffer} :{rest}"),
+        "part" | "leave" | "wc" => format!("PART {buffer} :{rest}"),
+        "topic" | "t" if rest.is_empty() => format!("TOPIC {buffer}"),
+        "topic" | "t" => format!("TOPIC {buffer} :{rest}"),
+        "whois" | "wi" => format!("WHOIS {rest}"),
+        "away" if rest.is_empty() => "AWAY".into(),
+        "away" => format!("AWAY :{rest}"),
+        "invite" => format!("INVITE {rest} {buffer}"),
+        "kick" | "k" => {
+            let (nick, reason) = rest.split_once(' ').unwrap_or((rest, ""));
+            format!("KICK {buffer} {nick} :{reason}")
+        }
+        "op" | "deop" | "voice" | "devoice" => {
+            let mode = match name.to_lowercase().as_str() {
+                "op" => "+o",
+                "deop" => "-o",
+                "voice" => "+v",
+                _ => "-v",
+            };
+            let nicks: Vec<&str> = rest.split_whitespace().collect();
+            format!("MODE {buffer} {}{} {}", &mode[..1], mode[1..].repeat(nicks.len().max(1)), nicks.join(" "))
+        }
         "quit" | "exit" => return Err("Quit is disabled, it would disconnect irssi from the network".into()),
         "raw" | "quote" => rest.to_string(),
         _ => format!("{} {rest}", name.to_uppercase()).trim_end().to_string(),
@@ -199,6 +223,12 @@ mod tests {
         assert_eq!(outgoing("#a", "//not a command").unwrap()[0].0, "PRIVMSG #a :/not a command");
         assert_eq!(outgoing("#a", "/whois kaisla").unwrap()[0].0, "WHOIS kaisla");
         assert!(outgoing("#a", "/quit").is_err());
+        assert_eq!(outgoing("#a", "/wc").unwrap()[0].0, "PART #a :");
+        assert_eq!(outgoing("#a", "/op kaisla jaska").unwrap()[0].0, "MODE #a +oo kaisla jaska");
+        assert_eq!(outgoing("#a", "/kick jaska bye now").unwrap()[0].0, "KICK #a jaska :bye now");
+        assert_eq!(outgoing("#a", "/away").unwrap()[0].0, "AWAY");
+        assert_eq!(outgoing("#a", "/say /me is literal").unwrap()[0].0, "PRIVMSG #a :/me is literal");
+        assert_eq!(outgoing("#a", "/wi kaisla").unwrap()[0].0, "WHOIS kaisla");
         assert!(outgoing("", "hello").is_err());
     }
 
