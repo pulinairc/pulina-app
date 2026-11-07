@@ -37,3 +37,4 @@
 - Add seconds to timestamps
 - Change stacked lines to a little more air
 - Add muting channels
+- Fix cards showing for pages with only a title

@@ -815,6 +815,8 @@ function getPreview(url) {
 async function attachPreview(url, rowNode) {
   const p = await getPreview(url);
   if (!p || !rowNode.isConnected) return;
+  // A page with only a title says nothing the link does not: no card.
+  if (p.kind === 'page' && !p.image && !p.description) return;
   const pinned = atBottom();
   const card = p.kind === 'image' ? imageCard(p) : pageCard(p);
   if (rowNode.dataset.onlyLink === 'true') rowNode.replaceWith(card);
