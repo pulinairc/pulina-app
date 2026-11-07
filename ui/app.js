@@ -16,8 +16,8 @@ const REACTION_SETTING = 'reactions';
 const PHOTO_PX = 160;
 const PHOTO_QUALITY = 0.85;
 const COLOR_SAMPLE_PX = 24;
-// Tokyo Night colours offered for people, purple left out.
-const SWATCHES = ['#7aa2f7', '#7dcfff', '#73daca', '#9ece6a', '#e0af68', '#ff9e64', '#f7768e', '#c0caf5'];
+// Colours offered for people, purple left out.
+const SWATCHES = ['#f7768e', '#ff9e64', '#e0af68', '#9ece6a', '#73daca', '#7dcfff', '#d6d6da'];
 const PERSON_ICON = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
 const CAMERA_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.
@@ -38,7 +38,7 @@ const el = {
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
-  personEdit: $('person-edit'), personPhoto: $('person-photo'), personPhotoPick: $('person-photo-pick'),
+  personEdit: $('person-edit'), personPhoto: $('person-photo'),
   personPhotoRemove: $('person-photo-remove'), personFile: $('person-file'), personName: $('person-name'),
   personColor: $('person-color'), personColors: $('person-colors'),
   personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
@@ -374,6 +374,7 @@ function renderSettings() {
 el.gear.addEventListener('click', () => {
   renderSettings();
   el.settings.showModal();
+  el.settings.focus();
 });
 el.settingsClose.addEventListener('click', () => el.settings.close());
 el.settings.addEventListener('click', (e) => {
@@ -1076,7 +1077,7 @@ function renderPeople() {
     row.addEventListener('click', () => editPerson(p));
     return row;
   });
-  el.peopleItems.replaceChildren(...(rows.length ? rows : [h('p', 'hint', 'Nobody yet. Click a name in the chat, or add someone here.')]));
+  el.peopleItems.replaceChildren(...(rows.length ? rows : [h('p', 'people-empty', 'Nobody yet. Click a name in the chat, or use +.')]));
 }
 
 function personAvatar(p, cls) {
@@ -1100,6 +1101,7 @@ function showList() {
   editingFromChat = false;
   el.peopleTitle.textContent = 'People';
   el.peopleBack.hidden = true;
+  el.personNew.hidden = false;
   el.personEdit.hidden = true;
   el.peopleList.hidden = false;
   renderPeople();
@@ -1109,6 +1111,7 @@ function editPerson(p) {
   editing = structuredClone(p);
   el.peopleTitle.textContent = p.id ? p.name : 'New person';
   el.peopleBack.hidden = false;
+  el.personNew.hidden = true;
   el.peopleList.hidden = true;
   el.personEdit.hidden = false;
   el.personDelete.hidden = !p.id;
@@ -1292,7 +1295,6 @@ el.people.addEventListener('click', (e) => {
 });
 el.personNew.addEventListener('click', () => editPerson({ id: 0, name: '', color: '', photo: '', nicks: [] }));
 el.personPhoto.addEventListener('click', () => el.personFile.click());
-el.personPhotoPick.addEventListener('click', () => el.personFile.click());
 el.personFile.addEventListener('change', () => {
   setPhoto(el.personFile.files[0]);
   el.personFile.value = '';

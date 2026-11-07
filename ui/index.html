@@ -48,13 +48,13 @@
     <input id="input" autocomplete="off" spellcheck="true" placeholder="Message">
   </form>
 
-  <dialog id="switcher" aria-label="Channels">
+  <dialog id="switcher" tabindex="-1" aria-label="Channels">
     <label for="filter" class="sr">Find a channel</label>
     <input id="filter" autocomplete="off" placeholder="Jump to a channel or person">
     <div id="list" role="listbox"></div>
   </dialog>
 
-  <dialog id="settings" aria-labelledby="settings-title">
+  <dialog id="settings" tabindex="-1" aria-labelledby="settings-title">
     <div class="sheet-head">
       <h2 id="settings-title">Settings</h2>
       <button id="settings-close" type="button" aria-label="Close">
@@ -71,34 +71,34 @@
     <section>
       <h3>Config file</h3>
       <p id="config-path" class="mono"></p>
-      <p class="hint">Networks and the server address live here for now. People and photos get their own page next.</p>
+      <p class="hint">Networks and the server address are set in this file.</p>
     </section>
   </dialog>
-  <dialog id="people" aria-labelledby="people-title">
+  <dialog id="people" tabindex="-1" aria-labelledby="people-title">
     <div class="sheet-head">
       <button id="people-back" class="icon-btn" type="button" aria-label="Back to people" data-tip="Back" hidden>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
       <h2 id="people-title">People</h2>
+      <button id="person-new" class="icon-btn" type="button" aria-label="Add a person" data-tip="Add a person">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
       <button id="people-close" class="icon-btn" type="button" aria-label="Close">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
 
     <div id="people-list-view">
-      <button id="person-new" class="wide-btn" type="button">New person</button>
       <div id="people-list"></div>
-      <p class="hint">Photos and colours are kept on your lobby-server, so every device shows the same.</p>
     </div>
 
     <form id="person-edit" hidden>
       <div class="person-top">
         <button id="person-photo" class="photo-btn" type="button" aria-label="Choose a photo" data-tip="Choose a photo, or paste one"></button>
         <div class="person-name-wrap">
-          <label for="person-name">Name</label>
+          <label for="person-name" class="sr">Name</label>
           <input id="person-name" class="field" autocomplete="off" placeholder="Name">
           <div class="photo-links">
-            <button id="person-photo-pick" class="link-btn" type="button">Choose photo</button>
             <button id="person-photo-remove" class="link-btn" type="button">Remove photo</button>
           </div>
         </div>
@@ -114,7 +114,7 @@
         <div id="person-nicks" class="chips"></div>
         <input id="person-nick" autocomplete="off" placeholder="Add a nick, Enter">
       </div>
-      <p class="hint">Kaisla also covers Kaisla_ and Kaisla-. Kaisla* covers anything that starts with Kaisla. kaisla@*.example.net matches by ident and host.</p>
+      <p class="hint">Kaisla covers Kaisla_ too. Kaisla* matches any ending, kaisla@*.example.net matches ident and host.</p>
 
       <div class="person-buttons">
         <button id="person-delete" class="link-btn danger" type="button">Delete person</button>
