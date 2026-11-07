@@ -581,7 +581,8 @@ function appendLine(l, live) {
       el.col.append(view.events.node);
     }
     view.events.list.push(l);
-    view.events.node.replaceChildren(summarize(view.events.list), h('span', 'tm', clock(l.ts)));
+    view.events.node.textContent = summarize(view.events.list);
+    view.events.node.dataset.tip = clock(l.ts);
     view.group = null;
   } else if (CHAT_KINDS.has(l.kind)) {
     view.events = null;
@@ -611,7 +612,7 @@ function newGroup(l) {
   name.style.color = who.color;
   name.dataset.tip = who.name === l.nick ? l.nick : `${l.nick} · ${l.mask || 'IRC'}`;
   name.addEventListener('click', () => openPerson(l.nick, l.mask));
-  head.append(name, h('span', 'tm', clock(l.ts)));
+  head.append(name);
   body.append(head);
   group.append(av, body);
   el.col.append(group);
@@ -868,8 +869,8 @@ window.addEventListener('blur', () => {
 
 function note(l) {
   const text = l.kind === 'topic' ? `${l.nick} changed the topic to “${l.text}”` : l.text;
-  const n = h('div', 'events');
-  n.append(text, h('span', 'tm', clock(l.ts)));
+  const n = h('div', 'events', text);
+  n.dataset.tip = clock(l.ts);
   return n;
 }
 

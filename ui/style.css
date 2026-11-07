@@ -219,12 +219,6 @@ button:focus:not(:focus-visible) { outline: none; }
 .hd { display: flex; align-items: baseline; gap: 8px; line-height: 1.2; }
 .nm { font-weight: 600; }
 
-.tm {
-  font-size: 11px;
-  color: var(--faint);
-  font-variant-numeric: tabular-nums;
-}
-
 .text { overflow-wrap: anywhere; white-space: pre-wrap; }
 .text.notice { color: var(--dim); }
 .text.own { color: #fff; }
@@ -246,7 +240,6 @@ a:hover { text-decoration-color: var(--dim); }
   padding-left: calc(var(--avatar) + 10px);
 }
 
-.events .tm { margin-left: 8px; }
 
 /* Link previews */
 
@@ -653,7 +646,6 @@ dialog:focus { outline: none; }
   body { font-size: 14px; }
   #log { padding: 10px 12px; }
   #composer { padding: 0 10px 10px; }
-  .tm { display: none; }
   .card-media { width: 60px; }
   :root { --media-w: min(80%, 260px); --media-h: 220px; }
 }

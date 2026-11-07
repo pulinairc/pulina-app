@@ -1,3 +1,7 @@
+### 0.5.6: 2026-11-08
+
+* Change times to show only in tooltips
+
 ### 0.5.5: 2026-11-08
 
 * Change the icon background to a lighter grey
