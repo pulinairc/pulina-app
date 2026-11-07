@@ -10,12 +10,12 @@
   --strong: #f4f4f5;
   --dim: #a1a1aa;
   --faint: #7c7c86;
-  --accent: #ff9e64;
-  --accent-bg: #3a2618;
-  --mention: #ff9e64;
-  --mention-bg: #3a2618;
-  --private: #73daca;
-  --new: #f7768e;
+  --accent: #ff7eb6;
+  --accent-bg: #3a1c2b;
+  --mention: #5fe0b3;
+  --mention-bg: #15302a;
+  --private: #5fe0b3;
+  --new: #ff5f5f;
   --ok: #9ece6a;
   --avatar: 24px;
   /* A squircle: rounder than a rounded square, never a circle. */
