@@ -1,6 +1,7 @@
 ### 0.5.4: 2026-11-08
 
 * Change the demo to a full-colour WebP
+* Fix low contrast on the release badge
 
 ### 0.5.3: 2026-11-07
 

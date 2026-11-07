@@ -5,7 +5,7 @@
 <h1 align="center">Lobby</h1>
 
 <p align="center">
-  <a href="https://github.com/rollecode/lobby/releases/latest"><img src="https://img.shields.io/github/v/release/rollecode/lobby?style=for-the-badge&color=ff7eb6&label=release" alt="Latest release"></a>
+  <a href="https://github.com/rollecode/lobby/releases/latest"><img src="https://img.shields.io/github/v/release/rollecode/lobby?style=for-the-badge&color=c2185b&label=release" alt="Latest release"></a>
   <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/Rust-CE422B?style=for-the-badge&logo=rust&logoColor=white" alt="Rust"></a>
   <a href="https://tauri.app"><img src="https://img.shields.io/badge/Tauri-24C8D8?style=for-the-badge&logo=tauri&logoColor=white" alt="Tauri"></a>
   <img src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux">
