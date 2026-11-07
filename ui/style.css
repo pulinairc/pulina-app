@@ -886,7 +886,7 @@ dialog:focus { outline: none; }
 #person-edit { display: flex; flex-direction: column; }
 #person-edit[hidden], #people-list-view[hidden] { display: none; }
 
-.field-label, #person-edit label:not(.switch-row) {
+.field-label, #person-edit label {
   display: block;
   margin: 16px 0 6px;
   font-size: 12px;
@@ -1268,8 +1268,6 @@ dialog:focus { outline: none; }
 
 /* Muting */
 
-#person-edit:not(.channel-mode) .channel-only { display: none; }
-
 label.switch-row {
   display: flex;
   align-items: center;
@@ -1280,8 +1278,6 @@ label.switch-row {
   color: var(--text);
   cursor: pointer;
 }
-
-#person-edit label.switch-row { margin: 18px 0 0; }
 
 /* A switch: a pill track with a round knob that slides right when on. */
 .switch {

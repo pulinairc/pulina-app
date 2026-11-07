@@ -56,3 +56,4 @@
 - Add inline YouTube, video and audio
 - Add a you label on your own messages
 - Fix mute switch alignment in the channel editor
+- Remove the mute switch from the channel editor

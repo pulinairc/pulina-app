@@ -45,7 +45,7 @@ const el = {
   personEdit: $('person-edit'), personPhoto: $('person-photo'),
   personPhotoRemove: $('person-photo-remove'), personFile: $('person-file'), personName: $('person-name'),
   personColor: $('person-color'), personColors: $('person-colors'),
-  channelMute: $('channel-mute'), personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
+  personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
   switcher: $('switcher'), filter: $('filter'), list: $('list'),
   settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'),
 };
@@ -1505,7 +1505,6 @@ function showList() {
 
 function editChannel(b) {
   const look = channelLook(b);
-  el.channelMute.checked = isMuted(b);
   el.people.showModal();
   editPerson({ id: 0, channel: b.key, name: label(b), color: look.color || '', photo: look.photo || '', nicks: [] });
   editingFromChat = true;
@@ -1791,8 +1790,6 @@ el.personEdit.addEventListener('submit', async (e) => {
     try { all = JSON.parse(state.settings[CHANNELS_SETTING] || '{}'); } catch { /* start fresh */ }
     all[editing.channel] = { photo: editing.photo, color: editing.color };
     saveSetting(CHANNELS_SETTING, JSON.stringify(all));
-    const b = state.buffers.get(editing.channel);
-    if (b && el.channelMute.checked !== isMuted(b)) setMuted(b, el.channelMute.checked);
     el.people.close();
     renderHeader();
     return;
