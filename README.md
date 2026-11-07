@@ -1,82 +1,73 @@
-# Lobby
+<p align="center">
+  <img src="docs/logo.png" width="96" alt="Lobby">
+</p>
 
-A small, modern IRC client for Linux and macOS. One reading column, messages grouped by person, link previews, and a window that is happy to live in the corner of your screen.
+<h1 align="center">Lobby</h1>
 
-Lobby does not replace your IRC setup. It reads from what you already run, such as irssi with irssiproxy, and everything stays self-hosted.
+<p align="center">
+  <img src="https://img.shields.io/badge/version-0.1.0-ff9e64?style=for-the-badge" alt="Version 0.1.0">
+  <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/Rust-1f1f23?style=for-the-badge&logo=rust&logoColor=white" alt="Rust"></a>
+  <a href="https://tauri.app"><img src="https://img.shields.io/badge/Tauri_2-1f1f23?style=for-the-badge&logo=tauri&logoColor=ffc131" alt="Tauri 2"></a>
+  <img src="https://img.shields.io/badge/Linux-1f1f23?style=for-the-badge&logo=linux&logoColor=white" alt="Linux">
+  <img src="https://img.shields.io/badge/macOS-1f1f23?style=for-the-badge&logo=apple&logoColor=white" alt="macOS">
+  <img src="https://img.shields.io/badge/self--hosted-1f1f23?style=for-the-badge" alt="Self-hosted">
+</p>
+
+<p align="center">
+  A small, modern IRC client for people who keep irssi running.<br>
+  One calm reading column, your whole history, and a window happy to live in the corner of your screen.
+</p>
+
+<p align="center">
+  <img src="docs/lobby.gif" width="440" alt="Lobby in a narrow window: a reaction, a reply with its quote, switching channels and the slash command menu">
+</p>
+
+## Features
+
+- **Your history, every time:** lobby-server sits next to irssi and keeps every line, so Lobby opens with everything you missed
+- **Grouped, readable chat:** one photo and name per person, their lines stacked under it, link previews and images inline
+- **Reactions and replies:** sent as plain IRC (`nick: 😂`, `nick: text`) and shown as reactions and quotes in Lobby
+- **People:** a photo, a colour and any number of nicks per person, matched by pattern or ident and host
+- **Unread that stays put:** a red New line, jump buttons, and nothing marked read until you say so
+- **irssi muscle memory:** `/wc`, `/whois`, `/names` and the rest, with a `/` menu, `Alt+1…9` and `Alt+A`
+- **Same everywhere:** people, channel pictures, read positions and settings live on your server and follow you between devices
+- **Self-hosted, no bouncer:** irssi stays in charge, Lobby reads through irssiproxy and talks to your own server over SSH
 
 ## How it works
 
-IRC history only exists if something stays online while you are away. If you use irssi, that is already true: irssi sits on your shell host and sees every message. What it cannot do is hand those messages to another app. irssiproxy only passes on what happens from the moment you connect.
-
-lobby-server fills that gap. It runs next to irssi, connects to irssiproxy on the same machine like any client would, and writes every line to a small SQLite file. The Lobby app connects to lobby-server, gets the history on start and the live chat after that. irssi itself is not touched and keeps working over SSH as before.
-
-```mermaid
-flowchart LR
-    nets[(IRC networks)] --- irssi
-
-    subgraph shell [Your IRC shell host]
-        irssi --- proxy[irssiproxy]
-        proxy -- "localhost, one port per network" --> server["lobby-server<br/>SQLite history"]
-    end
-
-    server -- "WebSocket with a token<br/>through SSH or a TLS reverse proxy" --> mac[Lobby on macOS]
-    server --> linux[Lobby on Linux]
-    proxy -. "direct mode, no history" .-> direct[Lobby]
-```
-
-The app can run in two ways:
-
-| Mode | Connects to | History |
-|------|-------------|---------|
-| Server | lobby-server | Everything lobby-server has recorded, also from while the app was closed |
-| Direct | irssiproxy or any IRC server | Only what arrived while the app was running |
-
-### Inside the repository
+irssi already sees every message, but irssiproxy only hands over what happens after you connect. lobby-server fills that gap: it runs on the same machine as irssi, connects to irssiproxy like any client, and writes every line to SQLite. Lobby connects to lobby-server, loads the history, then follows the live chat.
 
 ```mermaid
 flowchart TB
-    core["core: IRC parsing, channel state,<br/>history store, the hub"]
-    server["server: lobby-server binary"]
-    app["src-tauri: the Lobby app"]
-    ui["ui: the window, plain HTML and JS"]
-
-    core --> server
-    core --> app
-    ui --> app
+    nets[(IRC networks)] --- irssi
+    subgraph host [Your shell host]
+        irssi --- proxy[irssiproxy]
+        proxy --> server[lobby-server<br/>SQLite history]
+    end
+    server -->|WebSocket over SSH| app[Lobby<br/>Linux and macOS]
 ```
 
-- `core` keeps IRC connections running, turns lines into events and stores them. Both the app (direct mode) and lobby-server use it.
-- `server` is lobby-server: the hub plus a WebSocket endpoint.
-- `src-tauri` is the desktop app. In server mode it talks to lobby-server, in direct mode it runs the hub itself.
-- `ui` is what you see. It does not know which mode is in use.
+Lobby can also connect straight to irssiproxy or any IRC server. That works without a server of your own, but only shows what arrived while Lobby was open.
 
-Built with Rust and [Tauri](https://tauri.app). The window uses the web view that comes with the system, not a bundled browser.
+| Mode | Lobby connects to | History |
+|------|-------------------|---------|
+| Server | lobby-server | Everything recorded, also while Lobby was closed |
+| Direct | irssiproxy or an IRC server | Only what arrived while Lobby was running |
 
-## Status
+## Installation
 
-Early. Works: server and direct mode, history, grouped messages, link previews, channel switcher, nick completion, reactions and replies, irssi-style commands, and people with photos, colours and nick aliases that every device shares.
+Lobby is built from source for now.
 
-Coming: attachments, emoji picker, notifications, an iPhone version, and more sources next to irssiproxy (WeeChat relay, Matrix and Beeper, and a way to plug in your own).
+### The app
 
-## Installing
-
-Lobby is built from source for now. There are no ready-made packages yet.
-
-### 1. Build tools
-
-Rust 1.85 or newer, from [rustup.rs](https://rustup.rs) or your package manager.
-
-Linux also needs WebKitGTK 4.1 and a C compiler:
+You need Rust 1.85 or newer from [rustup.rs](https://rustup.rs), plus:
 
 | System | Command |
 |--------|---------|
 | Arch | `sudo pacman -S --needed base-devel webkit2gtk-4.1` |
 | Debian, Ubuntu | `sudo apt install build-essential libwebkit2gtk-4.1-dev` |
 | Fedora | `sudo dnf install webkit2gtk4.1-devel gcc` |
-
-macOS needs the Xcode command line tools: `xcode-select --install`.
-
-### 2. Build and run the app
+| macOS | `xcode-select --install` |
 
 ```sh
 git clone https://github.com/rollecode/lobby
@@ -85,16 +76,31 @@ cargo build --release -p lobby
 ./target/release/lobby
 ```
 
-To update later: `git pull`, then build again.
+To update: `git pull` and build again.
 
-### 3. Point it at your chat
+### lobby-server
+
+On the machine where irssi runs:
+
+```sh
+git clone https://github.com/rollecode/lobby
+cd lobby
+./server/install.sh
+```
+
+The installer builds lobby-server, writes a config and a random token, and sets up a systemd user service. [server/README.md](server/README.md) walks through turning on irssi's proxy, the config, starting the service, updating and removing it.
+
+> [!IMPORTANT]
+> lobby-server only listens on `127.0.0.1`. Lobby reaches it through SSH with your usual key, so nothing on the server is opened to the internet. For an address of its own, put a reverse proxy with TLS in front, as shown in the server README.
+
+## Configuration
 
 On first start Lobby writes a config template and shows where it is. The gear in the top right shows the path too.
 
 - Linux: `~/.config/lobby/config.toml`
 - macOS: `~/Library/Application Support/lobby/config.toml`
 
-**Server mode**, with history. Set up lobby-server first ([instructions](server/README.md)), then:
+**Server mode.** Copy `~/.config/lobby-server/token` from the server to `~/.config/lobby/server.token`, then:
 
 ```toml
 [server]
@@ -102,9 +108,9 @@ ssh = "you@your-shell-host"
 token_file = "~/.config/lobby/server.token"
 ```
 
-`ssh` makes Lobby open an SSH tunnel to the server itself, using your usual SSH key. If you have put lobby-server behind a web server with TLS instead, use `url = "wss://lobby.example.org"`.
+With a reverse proxy, use `url = "wss://lobby.example.org"` instead of `ssh`.
 
-**Direct mode**, without history, straight to irssiproxy or any IRC server:
+**Direct mode:**
 
 ```toml
 nick = "yournick"
@@ -118,53 +124,75 @@ password_file = "~/.config/lobby/ircnet.pass"
 
 Restart Lobby after changing the config.
 
-### lobby-server
+## Using Lobby
 
-See [server/README.md](server/README.md): turning on irssi's proxy, installing, configuring, connecting the app, updating and removing.
+| Keys | What they do |
+|------|--------------|
+| `Ctrl+K`, or click the channel name | Find and switch channels |
+| `Alt+1` … `Alt+9` | Jump to a channel |
+| `Alt+Left`, `Alt+Right` | Previous and next channel |
+| `Alt+A`, or the unread counter | Next channel with unread, mentions first |
+| `Shift+Esc` | Mark this channel read |
+| `Tab` | Complete a nick |
+| `Up` in an empty input | Bring back the last message |
 
-### Troubleshooting
+**Reactions and replies.** Point at a message for your favourite emojis, more emojis, reply and a menu. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a reaction under that person's message. A reply goes out as `nick: text` and shows the message it answers.
 
-- **The window stays empty on Linux**: try starting it with `WEBKIT_DISABLE_DMABUF_RENDERER=1 ./target/release/lobby`. This has helped with some graphics drivers.
-- **An orange line under the header**: it names the network or server that is not connected, and why.
-- **Nothing shows up at all**: open the gear, check the config path, and compare the file with the examples above.
+**Unread.** A red New line marks where unread messages start. Nothing is marked read on its own: click Mark as read on the line, or press `Shift+Esc`.
 
-## Using it
+**People.** Click a name or photo in the chat, or open the gear and People. `Kaisla` also covers `Kaisla_` and `Kaisla-`, `Kaisla*` covers any ending, and `kaisla@*.example.net` matches by ident and host. The colour follows the photo unless you pick one. Click the channel icon in the header to give a channel its own picture or colour.
 
-- Click the channel name, or press `Ctrl+K`, to switch channels
-- `Alt+1` to `Alt+9`: jump to a channel
-- `Alt+Left` and `Alt+Right`: previous and next channel
-- `Tab`: complete a nick
-- `Up` in an empty input: bring back the last message
-- `Alt+A`, or the unread counter in the header: jump to the next channel with unread messages, mentions first
+**Commands.** Type `/` for the menu. `/me`, `/msg`, `/query`, `/join`, `/part`, `/wc`, `/topic`, `/names`, `/whois`, `/nick`, `/away`, `/notice`, `/invite`, `/kick`, `/op`, `/deop`, `/voice`, `/devoice`, `/clear`, `/say` and `/quote` work as in irssi. Anything else is sent as is. `/quit` is off, because through irssiproxy it would disconnect irssi from the network.
 
-A red **New** line marks where unread messages start. Nothing is marked read on its own: click **Mark as read** on that line, or press `Shift+Esc`. Buttons in the chat jump up to the line or down to the latest. Read positions are stored like other settings, so they carry over between devices.
+<details>
+<summary><strong>Importing a folder of photos</strong></summary>
 
-**Reactions and replies.** Point at a message for a row of emojis and a reply button. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a small reaction under that person's message. Replying puts `nick: ` in front of your text and shows what you are answering. Lobby shows the quote, other clients see the plain line.
+If you already have photos named after nicks (`kaisla.png`, `Kaisla_.png`), import them all at once. Files with the same picture, or nicks that differ only by `_`, `-` or `` ` ``, become one person. Nicks you have already set up are left alone. Round avatars are squared to fill the frame.
 
-**People.** Click a name or photo in the chat, or open the gear and People. A person has a photo, a colour and any number of nicks. `Kaisla` also covers `Kaisla_` and `Kaisla-`, `Kaisla*` covers anything starting with Kaisla, and `kaisla@*.example.net` matches by ident and host. The colour comes from the photo unless you pick one. In server mode people and settings are stored on lobby-server, so every device shows the same.
-
-**Commands.** Type `/` for a menu. `/me`, `/msg`, `/query`, `/join`, `/part`, `/wc`, `/topic`, `/names`, `/whois`, `/nick`, `/away`, `/notice`, `/invite`, `/kick`, `/op`, `/deop`, `/voice`, `/devoice`, `/clear`, `/say` and `/quote` work as in irssi, and anything else is sent as is. `/quit` is disabled, because through irssiproxy it would disconnect irssi from the network.
-
-## The app and lobby-server protocol
-
-JSON over a WebSocket. The app sends `hello` with the token first, the server answers `welcome` with the current state and then streams events. Requests carry an `id` that the reply repeats. The types live in `core/src/protocol.rs`.
-
-```
-app    {"type":"hello","token":"..."}
-server {"type":"welcome","snapshot":{"networks":[...],"channels":[...]}}
-server {"type":"event","event":{"type":"line","net":"IRCnet","buffer":"#linux","nick":"jaska","text":"hei",...}}
-app    {"type":"history","id":1,"net":"IRCnet","buffer":"#linux","before":null}
-server {"type":"reply","id":1,"data":[...],"error":null}
-app    {"type":"send","id":2,"net":"IRCnet","buffer":"#linux","text":"moi"}
+```sh
+pip install Pillow websocket-client
+ssh -N -L 17667:127.0.0.1:7667 you@your-shell-host &
+python3 tools/import_photos.py ~/Pictures/irc ws://127.0.0.1:17667 ~/.config/lobby/server.token --dry-run
 ```
 
-## Tests
+Drop `--dry-run` to import. Add `--skip file.png …` at the end to leave files out.
+
+</details>
+
+## Development
+
+```mermaid
+flowchart TB
+    core[core<br/>IRC, history, the hub]
+    core --> server[server<br/>lobby-server]
+    core --> app[src-tauri<br/>the app]
+    ui[ui<br/>HTML, CSS, JS] --> app
+```
+
+- `core` keeps IRC connections running, turns lines into events and stores them. The app in direct mode and lobby-server both use it.
+- `server` is lobby-server: the hub behind a WebSocket.
+- `src-tauri` is the desktop app. In server mode it talks to lobby-server, in direct mode it runs the hub itself.
+- `ui` is the window. It does not know which mode is in use.
 
 ```sh
 cargo test --workspace
 node --test tests/lib.test.mjs
 ```
 
-## Licence
+<details>
+<summary><strong>The app and lobby-server protocol</strong></summary>
 
-MIT
+JSON over a WebSocket. The app sends `hello` with the token first, the server answers `welcome` with the current state and then streams events. Requests carry an `id` that the reply repeats. The types live in `core/src/protocol.rs`.
+
+```
+app    {"type":"hello","token":"..."}
+server {"type":"welcome","snapshot":{"networks":[...],"channels":[...],"people":[...],"settings":{...}}}
+server {"type":"event","event":{"type":"line","net":"IRCnet","buffer":"#rust","nick":"kaisla","text":"hei",...}}
+app    {"type":"history","id":1,"net":"IRCnet","buffer":"#rust","before":null}
+server {"type":"reply","id":1,"data":[...],"error":null}
+app    {"type":"send","id":2,"net":"IRCnet","buffer":"#rust","text":"moi"}
+app    {"type":"save_person","id":3,"person":{"id":0,"name":"Kaisla","nicks":["kaisla"],...}}
+app    {"type":"set_setting","id":4,"key":"read","value":"{...}"}
+```
+
+</details>

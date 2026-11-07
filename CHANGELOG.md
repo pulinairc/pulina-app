@@ -28,3 +28,5 @@
 - Fix round photos to fill the squircle
 - Add channel pictures and colours
 - Add a tool to import photos from a folder
+- Change the app icon to the new colours
+- Change README to a presentable one with a demo
