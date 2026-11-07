@@ -1,3 +1,7 @@
+### 0.5.3: 2026-11-07
+
+* Fix message box icons sitting off centre
+
 ### 0.5.2: 2026-11-07
 
 * Add a message box that grows with the text

@@ -530,6 +530,12 @@ body.dropping .composer-box { border-color: var(--accent); }
   justify-content: center;
 }
 
+/* Centred on the first line of the message, also when the box grows. */
+.composer-box .box-btn {
+  font-size: inherit;
+  margin-bottom: calc((1.45em + 20px - 34px) / 2);
+}
+
 .box-btn:hover { color: var(--strong); }
 .box-btn[hidden] { display: none; }
 #input::placeholder, #filter::placeholder { color: var(--faint); }
