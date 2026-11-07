@@ -28,6 +28,8 @@ let completion = null;
 let lastSent = '';
 let picked = 0;
 
+if (navigator.userAgent.includes('Mac')) document.documentElement.classList.add('mac');
+
 const key = (net, name) => `${net}\u0000${name.toLowerCase()}`;
 const label = (b) => b.name || b.net;
 const isPrivate = (b) => b.name !== '' && !isChannel(b.name);

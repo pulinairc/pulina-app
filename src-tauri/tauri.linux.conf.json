@@ -1,0 +1,16 @@
+{
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Lobby",
+        "width": 440,
+        "height": 720,
+        "minWidth": 300,
+        "minHeight": 320,
+        "backgroundColor": "#16161e",
+        "decorations": false
+      }
+    ]
+  }
+}

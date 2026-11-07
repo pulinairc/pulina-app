@@ -439,3 +439,6 @@ dialog::backdrop { background: rgb(10 10 16 / 55%); }
   .card-media { width: 84px; }
   .chan-icon { width: 28px; height: 28px; }
 }
+
+/* macOS keeps its window buttons, drawn over the left end of the header. */
+.mac #top { padding-left: 80px; }
