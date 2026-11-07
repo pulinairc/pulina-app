@@ -2,6 +2,7 @@
 
 * Add a message box that grows with the text
 * Change the message box to a borderless one
+* Change the app icon to a larger, centred plant
 * Fix YouTube error screen on refused videos
 
 ### 0.5.1: 2026-11-07
