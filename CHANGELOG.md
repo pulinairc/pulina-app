@@ -1,5 +1,6 @@
 ### 0.5.2: 2026-11-07
 
+* Change the message box to a borderless one
 * Fix YouTube error screen on refused videos
 
 ### 0.5.1: 2026-11-07

@@ -492,15 +492,14 @@ a:hover { text-decoration-color: var(--dim); }
   max-width: var(--column);
   margin: 0 auto;
   padding: 0 4px 0 14px;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: 12px;
-  background: var(--panel);
+  background: var(--raised);
 }
 
 .composer-box:has(#attach-btn:not([hidden])) { padding-left: 4px; }
 body.dropping .composer-box { border-color: var(--accent); }
 
-.composer-box:focus-within { border-color: var(--line-strong); }
 
 #input {
   flex: 1;
