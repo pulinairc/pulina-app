@@ -750,6 +750,7 @@ const ICONS = {
   moreV: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
   bellOff: '<svg class="muted-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Muted"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>',
   moreH: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+  check: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   external: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>',
   play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z"/></svg>',
   pause: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
@@ -1281,7 +1282,13 @@ document.addEventListener('click', (e) => {
 function separatorNode() {
   const sep = h('div', 'unread-sep');
   sep.setAttribute('role', 'separator');
-  sep.append(h('span', 'sep-label', 'New'));
+  const mark = h('button', 'sep-mark');
+  mark.type = 'button';
+  mark.dataset.tip = 'Mark as read (Shift+Esc)';
+  mark.setAttribute('aria-label', 'Mark as read');
+  mark.innerHTML = ICONS.check;
+  mark.addEventListener('click', markCurrentRead);
+  sep.append(h('span', 'sep-label', 'New'), mark);
   return sep;
 }
 
@@ -1296,10 +1303,23 @@ function markCurrentRead() {
   const b = state.buffers.get(state.current);
   if (!b) return;
   markRead(b);
-  view.separator?.remove();
-  view.separator = null;
+  dropSeparator();
   view.separatorAfter = readMap[b.key] ?? lastId(b);
   updateJumps();
+}
+
+// Removing the New line keeps what is on screen where it was.
+function dropSeparator() {
+  const sep = view.separator;
+  view.separator = null;
+  if (!sep) return;
+  const pinned = atBottom();
+  // It folds away instead of vanishing, so the lines around it slide rather than jump.
+  sep.classList.add('gone');
+  sep.addEventListener('transitionend', () => {
+    sep.remove();
+    if (pinned) toBottom();
+  }, { once: true });
 }
 
 // Jumping: to the channel with unread, to the "New" line, back to the latest.

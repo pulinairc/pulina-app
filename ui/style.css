@@ -1098,10 +1098,15 @@ dialog:focus { outline: none; }
   display: flex;
   align-items: center;
   gap: 8px;
+  height: 22px;
+  overflow: hidden;
   color: var(--new);
   font-size: 11px;
   font-weight: 600;
+  transition: height 0.2s ease, opacity 0.2s ease;
 }
+
+.unread-sep.gone { height: 0; opacity: 0; }
 
 .unread-sep::before {
   content: "";
@@ -1112,6 +1117,22 @@ dialog:focus { outline: none; }
 }
 
 .sep-label { order: 1; }
+
+.sep-mark {
+  order: 2;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--new) 45%, transparent);
+  border-radius: 6px;
+  background: none;
+  color: var(--new);
+  cursor: pointer;
+  place-items: center;
+}
+
+.sep-mark:hover { background: var(--new); border-color: var(--new); color: var(--bg); }
 
 
 

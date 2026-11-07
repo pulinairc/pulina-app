@@ -3,12 +3,14 @@
 * Add inline YouTube, video and audio
 * Add a you label on own messages
 * Add sender photos to notifications
+* Add a mark read checkmark to the New line
 * Add releases with Linux and macOS builds
 * Change images to a smaller box
 * Change accent to pink and mint
 * Change the app icon to a plant
 * Change README badges to brand colours
 * Fix Settings layout and switches
+* Fix the jump when marking read
 * Remove the mute switch from the channel editor
 * Remove /clear and /quote from the / menu
 * Update the demo GIF
