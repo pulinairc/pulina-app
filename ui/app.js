@@ -16,6 +16,9 @@ const REACTION_SETTING = 'reactions';
 const PHOTO_PX = 160;
 const PHOTO_QUALITY = 0.85;
 const COLOR_SAMPLE_PX = 24;
+const ROUND_SAMPLE_PX = 32;
+// The largest square inside a circle is 1/√2 of its width; a little less avoids the rim.
+const ROUND_INNER = 0.7;
 // Colours offered for people, purple left out.
 const SWATCHES = ['#f7768e', '#ff9e64', '#e0af68', '#9ece6a', '#73daca', '#7dcfff', '#d6d6da'];
 const PERSON_ICON = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
@@ -69,17 +72,27 @@ function h(tag, cls, text) {
 // Who a nick is: their person's name, colour and photo when one matches.
 
 // Colours read from photos, worked out once per photo and kept for the session.
-const photoColors = new Map();
+// Photos as shown, and their colours: worked out once per photo and kept for the session.
+const photoInfos = new Map();
 
-function photoColorOf(photo) {
-  if (photoColors.has(photo)) return photoColors.get(photo);
-  photoColors.set(photo, null);
-  colorOfPhoto(photo).then((c) => {
-    photoColors.set(photo, c);
+function photoInfo(photo) {
+  if (photoInfos.has(photo)) return photoInfos.get(photo);
+  photoInfos.set(photo, { src: photo, color: null });
+  squarePhoto(photo).then(async (src) => {
+    photoInfos.set(photo, { src, color: await colorOfPhoto(src) });
     renderHeader();
     renderLog();
   });
-  return null;
+  return photoInfos.get(photo);
+}
+
+function photoColorOf(photo) {
+  return photoInfo(photo).color;
+}
+
+/** The photo as shown: round avatars are zoomed to fill the squircle. */
+function shownPhoto(photo) {
+  return photo ? photoInfo(photo).src : '';
 }
 
 /** A person's colour: their own pick, else from their photo, else from the nick. */
@@ -93,7 +106,7 @@ function identity(nick, mask = '') {
     person,
     name: person?.name || nick,
     color: personColor(person, nick),
-    photo: person?.photo || '',
+    photo: shownPhoto(person?.photo),
   };
 }
 
@@ -1191,7 +1204,7 @@ function personAvatar(p, cls) {
   if (p.photo) {
     av.classList.add('photo');
     const img = h('img');
-    img.src = p.photo;
+    img.src = shownPhoto(p.photo);
     img.alt = '';
     av.append(img);
   } else {
@@ -1261,7 +1274,7 @@ function renderEditor() {
   el.personPhoto.classList.toggle('empty', !p.photo && !name);
   if (p.photo) {
     const img = h('img');
-    img.src = p.photo;
+    img.src = shownPhoto(p.photo);
     img.alt = '';
     el.personPhoto.append(img);
   } else if (name) {
@@ -1337,10 +1350,50 @@ function loadImage(file) {
 async function photoFrom(file) {
   const img = await loadImage(file);
   const side = Math.min(img.naturalWidth, img.naturalHeight);
+  let crop = side;
+  if (isRound(img, side)) crop = side * ROUND_INNER;
   const canvas = document.createElement('canvas');
   canvas.width = PHOTO_PX;
   canvas.height = PHOTO_PX;
-  canvas.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, PHOTO_PX, PHOTO_PX);
+  canvas.getContext('2d').drawImage(img, (img.naturalWidth - crop) / 2, (img.naturalHeight - crop) / 2, crop, crop, 0, 0, PHOTO_PX, PHOTO_PX);
+  return canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
+}
+
+/**
+ * Is this picture a round avatar on an empty square? Corners that are see-through, or solid
+ * black from an earlier JPEG save, while the middle is not.
+ */
+function isRound(img, side) {
+  const c = document.createElement('canvas');
+  c.width = ROUND_SAMPLE_PX;
+  c.height = ROUND_SAMPLE_PX;
+  const ctx = c.getContext('2d');
+  const sx = (img.naturalWidth - side) / 2;
+  const sy = (img.naturalHeight - side) / 2;
+  ctx.drawImage(img, sx, sy, side, side, 0, 0, ROUND_SAMPLE_PX, ROUND_SAMPLE_PX);
+  const px = (x, y) => ctx.getImageData(x, y, 1, 1).data;
+  const empty = ([r, g, b, a]) => a < 16 || (a > 240 && r + g + b < 30);
+  const last = ROUND_SAMPLE_PX - 2;
+  const corners = [px(1, 1), px(last, 1), px(1, last), px(last, last)];
+  return corners.every(empty) && !empty(px(ROUND_SAMPLE_PX / 2, ROUND_SAMPLE_PX / 2));
+}
+
+/** Square up a saved photo that turns out to be a round avatar. */
+async function squarePhoto(src) {
+  const img = await new Promise((resolve) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => resolve(null);
+    i.src = src;
+  });
+  if (!img) return src;
+  const side = Math.min(img.naturalWidth, img.naturalHeight);
+  if (!isRound(img, side)) return src;
+  const crop = side * ROUND_INNER;
+  const canvas = document.createElement('canvas');
+  canvas.width = PHOTO_PX;
+  canvas.height = PHOTO_PX;
+  canvas.getContext('2d').drawImage(img, (img.naturalWidth - crop) / 2, (img.naturalHeight - crop) / 2, crop, crop, 0, 0, PHOTO_PX, PHOTO_PX);
   return canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
 }
 
