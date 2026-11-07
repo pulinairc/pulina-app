@@ -250,3 +250,30 @@ export function colorFromRgb(r, g, b) {
   const s = Math.round(Math.min(Math.max(sat * 100, 45), 80));
   return `hsl(${hue} ${s}% ${NICK_LIGHTNESS}%)`;
 }
+
+const YOUTUBE_HOSTS = ['youtube.com', 'm.youtube.com', 'music.youtube.com', 'youtube-nocookie.com'];
+
+/** The video in a YouTube link, or null. Shorts are portrait. */
+export function youtube(url) {
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return null;
+  }
+  const host = u.hostname.replace(/^www\./, '');
+  let id = null;
+  if (host === 'youtu.be') {
+    id = u.pathname.slice(1);
+  } else if (YOUTUBE_HOSTS.includes(host)) {
+    id = u.searchParams.get('v') ?? u.pathname.match(/^\/(?:shorts|embed|live)\/([^/]+)/)?.[1];
+  }
+  if (!/^[\w-]{11}$/.test(id ?? '')) return null;
+  return { id, portrait: u.pathname.startsWith('/shorts/') };
+}
+
+/** 83 seconds as 1:23. */
+export function duration(seconds) {
+  const s = Math.max(0, Math.floor(seconds || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}

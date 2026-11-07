@@ -25,7 +25,7 @@
 ## Features
 
 - **Your history, every time:** lobby-server sits next to irssi and keeps every line, so Lobby opens with everything you missed
-- **Grouped, readable chat:** one photo and name per person, their lines stacked under it, link previews and images inline
+- **Grouped, readable chat:** one photo and name per person, their lines stacked under it, link previews, pictures, videos and audio inline
 - **Reactions and replies:** sent as plain IRC (`nick: 😂`, `nick: text`) and shown as reactions and quotes in Lobby
 - **People:** a photo, a colour and any number of nicks per person, matched by pattern or ident and host
 - **Unread that stays put:** a red New line, jump buttons, and nothing marked read until you say so

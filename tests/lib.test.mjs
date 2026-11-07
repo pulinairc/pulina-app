@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -98,4 +98,17 @@ test('photo colours keep their hue', () => {
 
 test('clock shows seconds', () => {
   assert.equal(clock(new Date(2026, 10, 7, 9, 5, 3).getTime()), '09:05:03');
+});
+
+test('finds YouTube videos in links', () => {
+  assert.deepEqual(youtube('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=10'), { id: 'dQw4w9WgXcQ', portrait: false });
+  assert.deepEqual(youtube('https://youtu.be/dQw4w9WgXcQ?si=x'), { id: 'dQw4w9WgXcQ', portrait: false });
+  assert.deepEqual(youtube('https://youtube.com/shorts/dQw4w9WgXcQ'), { id: 'dQw4w9WgXcQ', portrait: true });
+  assert.equal(youtube('https://www.youtube.com/@channel'), null);
+  assert.equal(youtube('https://example.org/watch?v=dQw4w9WgXcQ'), null);
+});
+
+test('formats durations', () => {
+  assert.equal(duration(83), '1:23');
+  assert.equal(duration(NaN), '0:00');
 });

@@ -56,6 +56,9 @@ pub async fn fetch(raw: &str) -> Option<Preview> {
     }
 
     let client = reqwest::Client::builder().timeout(TIMEOUT).user_agent(USER_AGENT).build().ok()?;
+    if is_youtube(&url) {
+        return youtube(&client, raw).await;
+    }
     let mut res = client.get(url.clone()).send().await.ok()?;
     if !res.status().is_success() {
         return None;
@@ -66,6 +69,12 @@ pub async fn fetch(raw: &str) -> Option<Preview> {
 
     if content_type.starts_with("image/") {
         return Some(Preview { kind: "image".into(), url: raw.into(), image: raw.into(), site, ..Default::default() });
+    }
+    for kind in ["video", "audio"] {
+        if content_type.starts_with(&format!("{kind}/")) {
+            let title = url.path_segments().and_then(|mut s| s.next_back()).unwrap_or("").to_string();
+            return Some(Preview { kind: kind.into(), url: raw.into(), title, site, ..Default::default() });
+        }
     }
     if !content_type.contains("html") {
         return None;
@@ -88,6 +97,25 @@ pub async fn fetch(raw: &str) -> Option<Preview> {
         preview.site = site;
     }
     Some(preview)
+}
+
+fn is_youtube(url: &Url) -> bool {
+    let host = url.host_str().unwrap_or("").trim_start_matches("www.").trim_start_matches("m.");
+    host == "youtube.com" || host == "youtu.be"
+}
+
+/// YouTube pages put their tags past the first megabyte; oEmbed gives the title directly.
+async fn youtube(client: &reqwest::Client, raw: &str) -> Option<Preview> {
+    #[derive(Deserialize)]
+    struct OEmbed {
+        title: String,
+        #[serde(default)]
+        thumbnail_url: String,
+    }
+    let api = Url::parse_with_params("https://www.youtube.com/oembed", &[("url", raw), ("format", "json")]).ok()?;
+    let body = client.get(api).send().await.ok()?.error_for_status().ok()?.bytes().await.ok()?;
+    let o: OEmbed = serde_json::from_slice(&body).ok()?;
+    Some(Preview { kind: "page".into(), url: raw.into(), title: o.title, image: o.thumbnail_url, site: "youtube.com".into(), ..Default::default() })
 }
 
 fn decode_entities(s: &str) -> String {

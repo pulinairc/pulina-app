@@ -1,6 +1,6 @@
 import {
   CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel, initial,
-  colorFromRgb, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize,
+  colorFromRgb, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -748,6 +748,10 @@ const ICONS = {
   moreV: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
   bellOff: '<svg class="muted-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Muted"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>',
   moreH: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+  external: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>',
+  play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z"/></svg>',
+  pause: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
+  sound: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
 };
 
 const actions = h('div', 'actions');
@@ -856,17 +860,166 @@ function getPreview(url) {
 }
 
 async function attachPreview(url, rowNode) {
+  const yt = youtube(url);
+  if (yt) {
+    await null; // the row is appended right after it is built
+    return place(youtubeCard(url, yt), rowNode);
+  }
   const p = await getPreview(url);
   if (!p || !rowNode.isConnected) return;
   // A page with only a title says nothing the link does not: no card.
   if (p.kind === 'page' && !p.image && !p.description) return;
+  const cards = { image: imageCard, video: videoCard, audio: audioCard, page: pageCard };
+  place((cards[p.kind] ?? pageCard)(p), rowNode);
+}
+
+function place(card, rowNode) {
+  if (!rowNode.isConnected) return;
   const pinned = atBottom();
-  const card = p.kind === 'image' ? imageCard(p) : pageCard(p);
   if (rowNode.dataset.onlyLink === 'true') rowNode.replaceWith(card);
   else rowNode.after(card);
   const keep = () => pinned && toBottom();
   card.querySelector('img')?.addEventListener('load', keep);
+  card.querySelector('video')?.addEventListener('loadedmetadata', keep);
   keep();
+}
+
+// Videos only play while they are on screen.
+const onScreen = new IntersectionObserver((entries) => {
+  for (const e of entries) e.target.visible?.(e.isIntersecting);
+}, { threshold: 0.25 });
+
+function openButton(url) {
+  const b = h('button', 'glass media-open');
+  b.type = 'button';
+  b.dataset.tip = 'Open in browser';
+  b.innerHTML = ICONS.external;
+  b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openUrl(url);
+  });
+  return b;
+}
+
+const YT_PREVIEW = 'autoplay=1&mute=1&loop=1&controls=0&disablekb=1&iv_load_policy=3&playsinline=1&rel=0';
+
+// YouTube's player, through Lobby's local page that gives it a Referer.
+let playerBase = null;
+
+function youtubeFrame(id, query) {
+  const f = h('iframe');
+  playerBase ??= invoke('player');
+  playerBase.then((base) => (f.src = `${base}?v=${id}&${query}`));
+  f.allow = 'autoplay; encrypted-media; picture-in-picture; fullscreen';
+  f.allowFullscreen = true;
+  return f;
+}
+
+function youtubeCard(url, { id, portrait }) {
+  const box = h('div', `vid${portrait ? ' portrait' : ''}`);
+  const poster = image(`https://i.ytimg.com/vi/${id}/hqdefault.jpg`, 'vid-poster');
+  box.append(poster, openButton(url));
+  let preview = null;
+
+  // The muted loop runs behind the still and fades in once it has had time to start.
+  box.visible = (on) => {
+    if (box.classList.contains('playing')) return;
+    if (on && !preview) {
+      preview = youtubeFrame(id, `${YT_PREVIEW}&playlist=${id}`);
+      preview.className = 'vid-preview';
+      preview.addEventListener('load', () => setTimeout(() => box.classList.add('live'), 900));
+      box.prepend(preview);
+    } else if (!on && preview) {
+      preview.remove();
+      preview = null;
+      box.classList.remove('live');
+    }
+  };
+  onScreen.observe(box);
+
+  box.dataset.tip = 'Play with sound';
+  box.addEventListener('click', () => {
+    if (box.classList.contains('playing')) return;
+    onScreen.unobserve(box);
+    preview?.remove();
+    poster.remove();
+    delete box.dataset.tip;
+    box.classList.add('playing');
+    box.prepend(youtubeFrame(id, 'autoplay=1&playsinline=1&rel=0&iv_load_policy=3'));
+  });
+
+  getPreview(url).then((p) => {
+    const title = p?.title?.replace(/ - YouTube$/, '');
+    if (title) box.append(h('span', 'vid-title', title));
+  });
+  return box;
+}
+
+function videoCard(p) {
+  const box = h('div', 'vid native');
+  const v = h('video');
+  Object.assign(v, { src: p.url, muted: true, loop: true, playsInline: true, preload: 'metadata' });
+  v.addEventListener('error', () => box.replaceWith(pageLink(p)));
+  box.append(v, openButton(p.url));
+  box.visible = (on) => {
+    if (on) v.play().catch(() => {});
+    else v.pause();
+  };
+  onScreen.observe(box);
+
+  box.dataset.tip = 'Play with sound';
+  box.addEventListener('click', () => {
+    if (box.classList.contains('playing')) return;
+    delete box.dataset.tip;
+    box.classList.add('playing');
+    v.muted = false;
+    v.controls = true;
+    v.currentTime = 0;
+    v.play().catch(() => {});
+  });
+  return box;
+}
+
+// A plain link for media the system cannot play.
+function pageLink(p) {
+  const a = h('a', 'link', shortUrl(p.url));
+  a.href = p.url;
+  return a;
+}
+
+function audioCard(p) {
+  const box = h('div', 'aud');
+  const audio = h('audio');
+  Object.assign(audio, { src: p.url, preload: 'metadata' });
+  const play = h('button', 'aud-play');
+  play.type = 'button';
+  play.innerHTML = ICONS.play;
+  const name = h('a', 'aud-name', decodeURIComponent(p.title || '') || p.site);
+  name.href = p.url;
+  name.dataset.tip = p.url;
+  const bar = h('div', 'aud-bar');
+  const fill = h('i');
+  bar.append(fill);
+  const time = h('span', 'aud-time', '0:00');
+  const main = h('div', 'aud-main');
+  main.append(name, bar);
+  box.append(play, main, time, audio);
+
+  play.addEventListener('click', () => (audio.paused ? audio.play().catch(() => {}) : audio.pause()));
+  audio.addEventListener('play', () => (play.innerHTML = ICONS.pause));
+  audio.addEventListener('pause', () => (play.innerHTML = ICONS.play));
+  audio.addEventListener('loadedmetadata', () => (time.textContent = duration(audio.duration)));
+  audio.addEventListener('timeupdate', () => {
+    fill.style.width = `${(audio.currentTime / audio.duration) * 100 || 0}%`;
+    time.textContent = duration(audio.paused && !audio.currentTime ? audio.duration : audio.currentTime);
+  });
+  audio.addEventListener('error', () => box.replaceWith(pageLink(p)));
+  bar.addEventListener('click', (e) => {
+    if (!audio.duration) return;
+    const r = bar.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+  });
+  return box;
 }
 
 function image(src, cls) {

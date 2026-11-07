@@ -53,3 +53,4 @@
 - Add a file host script and setup guide
 - Fix Settings layout and switches
 - Change images to a smaller box with a height cap
+- Add inline YouTube, video and audio

@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod config;
+mod embed;
 mod preview;
 mod remote;
 mod tunnel;
@@ -190,6 +191,11 @@ fn forward(app: AppHandle, hub: Arc<Hub>) {
     });
 }
 
+#[tauri::command]
+fn player() -> String {
+    embed::base()
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -220,7 +226,7 @@ fn main() {
             app.manage(AppState { source, store, error });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload])
+        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }
