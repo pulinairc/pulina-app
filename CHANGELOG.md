@@ -33,3 +33,4 @@
 - Add a full emoji picker, actions only on hover
 - Fix photo alignment with the name
 - Change link cards to one line per field
+- Change the demo to the current hover menu
