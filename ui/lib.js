@@ -5,8 +5,12 @@ export const EVENT_KINDS = new Set(['join', 'part', 'quit', 'nick', 'kick']);
 export const CHAT_KINDS = new Set(['msg', 'action', 'notice']);
 
 const NAMES_SHOWN = 3;
-// Tokyo Night colours, purple left out.
-const PALETTE = ['#7aa2f7', '#7dcfff', '#2ac3de', '#73daca', '#9ece6a', '#e0af68', '#ff9e64', '#f7768e', '#b4f9f8', '#c3e88d'];
+// Nick colours are spread over the whole hue circle, minus purple (kept free for nothing
+// to clash with), at one lightness that reads well on the dark background.
+const PURPLE_FROM = 250;
+const PURPLE_SPAN = 70;
+const NICK_SATURATION = 70;
+const NICK_LIGHTNESS = 68;
 const FORMATTING = /[\x02\x0f\x11\x16\x1d\x1e\x1f]|\x03(\d{1,2}(,\d{1,2})?)?/g;
 const URL_RE = /\bhttps?:\/\/[^\s<>"']+/gi;
 const TRAILING_PUNCT = /[.,;:!?'"»)\]]+$/;
@@ -117,10 +121,19 @@ export function shortUrl(url) {
   }
 }
 
+/** Hue for a nick, ignoring trailing _ - ` | ^ so Setsu and Setsu_ match. */
+export function nickHue(nick) {
+  let h = 0x811c9dc5;
+  for (const ch of nick.toLowerCase().replace(/[_\-`|^]+$/, '')) {
+    h ^= ch.codePointAt(0);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  const hue = h % (360 - PURPLE_SPAN);
+  return hue >= PURPLE_FROM ? hue + PURPLE_SPAN : hue;
+}
+
 export function nickColor(nick) {
-  let h = 0;
-  for (const ch of nick.toLowerCase().replace(/[_\-`|^]+$/, '')) h = (h * 31 + ch.codePointAt(0)) >>> 0;
-  return PALETTE[h % PALETTE.length];
+  return `hsl(${nickHue(nick)} ${NICK_SATURATION}% ${NICK_LIGHTNESS}%)`;
 }
 
 export function initial(nick) {

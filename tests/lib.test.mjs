@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -27,8 +27,15 @@ test('splits links and mentions', () => {
   assert.equal(tokenize('\x02bold\x02 \x0304red', '')[0].value, 'bold red');
 });
 
-test('nick color ignores trailing underscores', () => {
+test('nick colours ignore trailing underscores and avoid purple', () => {
   assert.equal(nickColor('Kaisla_'), nickColor('kaisla'));
+  assert.notEqual(nickColor('rolle'), nickColor('snowfake'));
+  const nicks = ['rolle', 'snowfake', 'mustikkasoppa', 'kummitus', 'milla', 'jaska', 'tiina', 'mikko', 'anna', 'pekka'];
+  for (const n of nicks) {
+    const h = nickHue(n);
+    assert.ok(h < 250 || h >= 320, `${n} got purple hue ${h}`);
+  }
+  assert.ok(new Set(nicks.map(nickColor)).size >= 9);
 });
 
 test('completes nicks in order', () => {

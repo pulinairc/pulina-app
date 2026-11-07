@@ -14,3 +14,4 @@
 - Fix the header hover box
 - Remove the system title bar
 - Add instant black tooltips
+- Change nick colours to one per user
