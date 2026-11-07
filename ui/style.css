@@ -373,7 +373,7 @@ dialog::backdrop { background: rgb(10 10 16 / 55%); }
   padding: 14px 14px 4px 18px;
 }
 
-.sheet-head h2 { margin: 0; font-size: 16px; color: var(--strong); }
+.sheet-head h2 { margin: 0; font-size: 20px; color: var(--strong); }
 
 #settings-close {
   width: 32px;
