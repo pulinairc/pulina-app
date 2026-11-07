@@ -44,3 +44,4 @@
 - Change Mark as read to a floating pill with a count
 - Fix photos sitting too low next to names
 - Fix pill heights, neutral Mark read
+- Fix freeze when opening People

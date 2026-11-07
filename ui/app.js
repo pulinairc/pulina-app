@@ -81,10 +81,31 @@ function photoInfo(photo) {
   photoInfos.set(photo, { src: photo, color: null });
   squarePhoto(photo).then(async (src) => {
     photoInfos.set(photo, { src, color: await colorOfPhoto(src) });
-    renderHeader();
-    renderLog();
+    refreshForPhotos();
   });
   return photoInfos.get(photo);
+}
+
+// Many photos finish at once (the People list loads them all): redraw once, after they settle.
+const PHOTO_REFRESH_DELAY_MS = 250;
+let photoRefreshTimer = null;
+
+function refreshForPhotos() {
+  clearTimeout(photoRefreshTimer);
+  photoRefreshTimer = setTimeout(() => {
+    renderHeader();
+    redrawKeepingScroll();
+    if (el.people.open && !el.peopleList.hidden) renderPeople();
+  }, PHOTO_REFRESH_DELAY_MS);
+}
+
+/** Redraw the chat without moving what the reader is looking at. */
+function redrawKeepingScroll() {
+  const fromBottom = el.log.scrollHeight - el.log.scrollTop;
+  const pinned = atBottom();
+  renderLog();
+  if (pinned) toBottom();
+  else el.log.scrollTop = el.log.scrollHeight - fromBottom;
 }
 
 function photoColorOf(photo) {
@@ -1537,6 +1558,7 @@ async function setPhoto(file) {
 el.openPeople.addEventListener('click', () => {
   el.settings.close();
   el.people.showModal();
+  el.people.focus();
   showList();
 });
 el.peopleClose.addEventListener('click', () => el.people.close());
