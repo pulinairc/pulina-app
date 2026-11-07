@@ -1,3 +1,7 @@
+### 0.5.1: 2026-11-07
+
+* Remove the you label from own messages
+
 ### 0.5.0: 2026-11-07
 
 * Add inline YouTube, video and audio
