@@ -130,7 +130,7 @@ button:focus:not(:focus-visible) { outline: none; }
 
 #unread.mention { background: var(--mention-bg); color: var(--mention); }
 
-#gear {
+#gear, #bell {
   width: 36px;
   height: 36px;
   border: 0;
@@ -143,8 +143,10 @@ button:focus:not(:focus-visible) { outline: none; }
   flex-shrink: 0;
 }
 
-#gear:hover { color: var(--strong); }
-#gear:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+#gear:hover, #bell:hover { color: var(--strong); }
+#bell[hidden] { display: none; }
+#bell[aria-pressed="true"] { color: var(--dim); }
+#gear:focus-visible, #bell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
 #status {
   padding: 4px 16px;

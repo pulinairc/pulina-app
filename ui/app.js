@@ -36,7 +36,7 @@ const COMMAND_ANSWER_MS = 15000;
 const $ = (id) => document.getElementById(id);
 const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
-  unread: $('unread'), gear: $('gear'), status: $('status'), log: $('log'), col: $('col'),
+  unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
@@ -280,6 +280,18 @@ function wantsAttention(b) {
   return b.unread > 0 && (b.mention || !isMuted(b));
 }
 
+const BELL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
+const BELL_OFF = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>';
+
+function renderBell(b) {
+  el.bell.hidden = b.name === '';
+  const muted = isMuted(b);
+  el.bell.replaceChildren(svg(muted ? BELL_OFF : BELL));
+  el.bell.setAttribute('aria-pressed', String(muted));
+  el.bell.setAttribute('aria-label', muted ? 'Unmute channel' : 'Mute channel');
+  el.bell.dataset.tip = muted ? 'Unmute' : 'Mute';
+}
+
 function setMuted(b, muted) {
   const keys = mutedKeys();
   if (muted) keys.add(b.key);
@@ -330,6 +342,7 @@ function renderHeader() {
     el.chanName.textContent = label(b);
     const who = isPrivate(b) ? 'private' : b.name === '' ? 'server messages' : `${b.members.size} people`;
     el.chanMeta.textContent = `${b.net} · ${who}${isMuted(b) ? ' · muted' : ''}`;
+    renderBell(b);
     el.title.dataset.tip = b.topic || '';
   }
 
@@ -417,6 +430,10 @@ function pick(k) {
 }
 
 el.title.addEventListener('click', openSwitcher);
+el.bell.addEventListener('click', () => {
+  const b = state.buffers.get(state.current);
+  if (b) setMuted(b, !isMuted(b));
+});
 el.chanIcon.addEventListener('click', (e) => {
   e.stopPropagation();
   const b = state.buffers.get(state.current);

@@ -39,3 +39,4 @@
 - Add muting channels
 - Fix cards showing for pages with only a title
 - Remove the arrow next to the channel name
+- Add a bell to mute and unmute quickly
