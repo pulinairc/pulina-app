@@ -1,111 +1,90 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod config;
-mod irc;
-mod net;
 mod preview;
-mod store;
+mod remote;
 
+use lobby_core::hub::{Event, Hub, Snapshot};
+use lobby_core::protocol::ClientMsg;
+use lobby_core::store::{BufferRef, Line, Store};
+use lobby_core::now_ms;
+use remote::Remote;
 use serde::Serialize;
-use std::collections::HashMap;
-use std::sync::Mutex;
-use std::time::{SystemTime, UNIX_EPOCH};
-use store::{BufferRef, Line, Store};
+use std::sync::Arc;
 use tauri::{AppHandle, Emitter, Manager, State};
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::broadcast::error::RecvError;
 
-const HISTORY_PAGE: i64 = 300;
-const RECENT_BUFFER_DAYS: i64 = 30;
-const DAY_MS: i64 = 86_400_000;
+/// Where chat comes from: our own IRC connections, or a lobby-server.
+enum Source {
+    Local(Arc<Hub>),
+    Remote(Arc<Remote>),
+    Unconfigured,
+}
 
-pub struct AppState {
-    pub store: Store,
-    pub writers: Mutex<HashMap<String, UnboundedSender<String>>>,
-    pub me: Mutex<HashMap<String, String>>,
-    pub conn: Mutex<HashMap<String, String>>,
-    /// Joined channels by (network, lowercase name), for a window that loads after the joins.
-    pub channels: Mutex<HashMap<(String, String), net::BufferInfo>>,
-    networks: Vec<String>,
+struct AppState {
+    source: Source,
+    /// Local file for link previews, and for history in local mode.
+    store: Store,
     error: Option<String>,
-}
-
-pub fn now_ms() -> i64 {
-    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
-}
-
-/// Save a line to history and hand it to the window.
-pub fn deliver(app: &AppHandle, mut line: Line) {
-    match app.state::<AppState>().store.insert(&line) {
-        Ok(id) => line.id = id,
-        Err(e) => eprintln!("history write failed: {e}"),
-    }
-    let _ = app.emit("line", &line);
-}
-
-#[derive(Serialize)]
-struct NetStatus {
-    name: String,
-    state: String,
-    nick: String,
 }
 
 #[derive(Serialize)]
 struct Status {
-    networks: Vec<NetStatus>,
-    channels: Vec<net::BufferInfo>,
+    #[serde(flatten)]
+    snapshot: Snapshot,
     error: Option<String>,
     config_path: String,
 }
 
+/// Hand an event to the window under the name the frontend listens for.
+pub fn emit_event(app: &AppHandle, event: Event) {
+    let _ = match event {
+        Event::Line(line) => app.emit("line", line),
+        Event::Buffer(info) => app.emit("buffer", info),
+        Event::Me { net, nick } => app.emit("me", serde_json::json!({ "net": net, "nick": nick })),
+        Event::Conn { net, state } => app.emit("conn", serde_json::json!({ "net": net, "state": state })),
+    };
+}
+
+fn from_value<T: serde::de::DeserializeOwned>(v: serde_json::Value) -> Result<T, String> {
+    serde_json::from_value(v).map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 fn status(state: State<AppState>) -> Status {
-    let conn = state.conn.lock().unwrap();
-    let me = state.me.lock().unwrap();
-    let networks = state
-        .networks
-        .iter()
-        .map(|n| NetStatus {
-            name: n.clone(),
-            state: conn.get(n).cloned().unwrap_or_default(),
-            nick: me.get(n).cloned().unwrap_or_default(),
-        })
-        .collect();
-    let channels = state.channels.lock().unwrap().values().cloned().collect();
-    Status { networks, channels, error: state.error.clone(), config_path: config::path().display().to_string() }
+    let snapshot = match &state.source {
+        Source::Local(hub) => hub.snapshot(),
+        Source::Remote(remote) => remote.snapshot(),
+        Source::Unconfigured => Snapshot::default(),
+    };
+    Status { snapshot, error: state.error.clone(), config_path: config::path().display().to_string() }
 }
 
 #[tauri::command]
-fn recent_buffers(state: State<AppState>) -> Result<Vec<BufferRef>, String> {
-    let since = now_ms() - RECENT_BUFFER_DAYS * DAY_MS;
-    state.store.recent_buffers(since).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn history(state: State<AppState>, net: String, buffer: String, before: Option<i64>) -> Result<Vec<Line>, String> {
-    state.store.history(&net, &buffer, before.unwrap_or(i64::MAX), HISTORY_PAGE).map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-fn send(app: AppHandle, state: State<AppState>, net: String, buffer: String, text: String) -> Result<(), String> {
-    let tx = state.writers.lock().unwrap().get(&net).cloned().ok_or("Not connected")?;
-    let me = state.me.lock().unwrap().get(&net).cloned().unwrap_or_default();
-
-    for (raw, echo) in irc::outgoing(&buffer, &text)? {
-        tx.send(raw).map_err(|_| "Not connected")?;
-        let Some(echo) = echo else { continue };
-        let line = Line {
-            net: net.clone(),
-            buffer: echo.buffer,
-            ts: now_ms(),
-            kind: echo.kind.into(),
-            nick: me.clone(),
-            text: echo.text,
-            own: true,
-            ..Default::default()
-        };
-        deliver(&app, line);
+async fn recent_buffers(state: State<'_, AppState>) -> Result<Vec<BufferRef>, String> {
+    match &state.source {
+        Source::Local(hub) => hub.recent_buffers(),
+        Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::Recent { id }).await?),
+        Source::Unconfigured => Ok(vec![]),
     }
-    Ok(())
+}
+
+#[tauri::command]
+async fn history(state: State<'_, AppState>, net: String, buffer: String, before: Option<i64>) -> Result<Vec<Line>, String> {
+    match &state.source {
+        Source::Local(hub) => hub.history(&net, &buffer, before),
+        Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::History { id, net, buffer, before }).await?),
+        Source::Unconfigured => Ok(vec![]),
+    }
+}
+
+#[tauri::command]
+async fn send(state: State<'_, AppState>, net: String, buffer: String, text: String) -> Result<(), String> {
+    match &state.source {
+        Source::Local(hub) => hub.send(&net, &buffer, &text),
+        Source::Remote(remote) => remote.request(|id| ClientMsg::Send { id, net, buffer, text }).await.map(|_| ()),
+        Source::Unconfigured => Err("Nothing configured".into()),
+    }
 }
 
 #[tauri::command]
@@ -119,32 +98,50 @@ async fn preview(state: State<'_, AppState>, url: String) -> Result<Option<previ
     Ok(result)
 }
 
+/// Pass hub events to the window. A lagging window reloads instead of missing lines.
+fn forward(app: AppHandle, hub: Arc<Hub>) {
+    let mut rx = hub.subscribe();
+    hub.start();
+    tauri::async_runtime::spawn(async move {
+        loop {
+            match rx.recv().await {
+                Ok(event) => emit_event(&app, event),
+                Err(RecvError::Lagged(_)) => {
+                    let _ = app.emit("resync", ());
+                }
+                Err(RecvError::Closed) => break,
+            }
+        }
+    });
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let data = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data)?;
-            let store = Store::open(&data.join("history.db"))?;
 
-            let (networks, error, nick) = match config::load() {
-                Ok(c) => (c.networks, None, c.nick),
-                Err(e) => (vec![], Some(e), String::new()),
+            let (source, error) = match config::load() {
+                Ok(c) => match c.server {
+                    Some(link) => (Source::Remote(Remote::new(link)), None),
+                    None => (Source::Local(Hub::new(Store::open(&data.join("history.db"))?, c.networks, c.nick)), None),
+                },
+                Err(e) => (Source::Unconfigured, Some(e)),
             };
 
-            app.manage(AppState {
-                store,
-                writers: Mutex::default(),
-                me: Mutex::default(),
-                conn: Mutex::default(),
-                channels: Mutex::default(),
-                networks: networks.iter().map(|n| n.name.clone()).collect(),
-                error,
-            });
-
-            for network in networks {
-                net::spawn(app.handle().clone(), network, nick.clone());
+            let handle = app.handle().clone();
+            match &source {
+                Source::Local(hub) => {
+                    let hub = Arc::clone(hub);
+                    tauri::async_runtime::spawn(async move { forward(handle, hub) });
+                }
+                Source::Remote(remote) => remote.start(handle),
+                Source::Unconfigured => {}
             }
+
+            let store = Store::open(&data.join("previews.db"))?;
+            app.manage(AppState { source, store, error });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview])

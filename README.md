@@ -1,28 +1,150 @@
 # Lobby
 
-A small, modern IRC client for Linux and macOS. One reading column, grouped messages, link previews, and a window that is happy to live in the corner of your screen.
+A small, modern IRC client for Linux and macOS. One reading column, messages grouped by person, link previews, and a window that is happy to live in the corner of your screen.
 
-Built for use behind a bouncer such as irssiproxy, so it connects with just a host, port and password.
+Lobby does not replace your IRC setup. It reads from what you already run, such as irssi with irssiproxy, and everything stays self-hosted.
+
+## How it works
+
+IRC history only exists if something stays online while you are away. If you use irssi, that is already true: irssi sits on your shell host and sees every message. What it cannot do is hand those messages to another app. irssiproxy only passes on what happens from the moment you connect.
+
+lobby-server fills that gap. It runs next to irssi, connects to irssiproxy on the same machine like any client would, and writes every line to a small SQLite file. The Lobby app connects to lobby-server, gets the history on start and the live chat after that. irssi itself is not touched and keeps working over SSH as before.
+
+```mermaid
+flowchart LR
+    nets[(IRC networks)] --- irssi
+
+    subgraph shell [Your IRC shell host]
+        irssi --- proxy[irssiproxy]
+        proxy -- "localhost, one port per network" --> server["lobby-server<br/>SQLite history"]
+    end
+
+    server -- "WebSocket with a token<br/>TLS by your reverse proxy or SSH tunnel" --> mac[Lobby on macOS]
+    server --> linux[Lobby on Linux]
+    proxy -. "direct mode, no history" .-> direct[Lobby]
+```
+
+The app can run in two ways:
+
+| Mode | Connects to | History |
+|------|-------------|---------|
+| Server | lobby-server | Everything lobby-server has recorded, also from while the app was closed |
+| Direct | irssiproxy or any IRC server | Only what arrived while the app was running |
+
+### Inside the repository
+
+```mermaid
+flowchart TB
+    core["core: IRC parsing, channel state,<br/>history store, the hub"]
+    server["server: lobby-server binary"]
+    app["src-tauri: the Lobby app"]
+    ui["ui: the window, plain HTML and JS"]
+
+    core --> server
+    core --> app
+    ui --> app
+```
+
+- `core` keeps IRC connections running, turns lines into events and stores them. Both the app (direct mode) and lobby-server use it.
+- `server` is lobby-server: the hub plus a WebSocket endpoint.
+- `src-tauri` is the desktop app. In server mode it talks to lobby-server, in direct mode it runs the hub itself.
+- `ui` is what you see. It does not know which mode is in use.
+
+Built with Rust and [Tauri](https://tauri.app). The window uses the web view that comes with the system, not a bundled browser.
 
 ## Status
 
-Early prototype. It connects, shows channels as a strip of tabs, groups messages by person, previews links and keeps its own local history.
+Early. Works: server and direct mode, history, grouped messages, link previews, channel switcher, nick completion.
 
-Not yet: profile photos and nick aliases, attachments, emoji picker, reactions, notifications, TLS.
+Coming: profile photos and nick aliases, attachments, emoji picker, notifications, an iPhone version, and more sources next to irssiproxy (WeeChat relay, Matrix and Beeper, and a way to plug in your own).
 
-## Running
+## Installing lobby-server
 
-You need Rust and the Tauri system libraries (on Linux, `webkit2gtk-4.1`).
+On the machine where irssi runs:
 
 ```sh
-cd src-tauri
-cargo run
+git clone https://github.com/rollecode/lobby
+cd lobby
+./server/install.sh
 ```
 
-On first start Lobby writes a config template and tells you where it is:
+The installer builds lobby-server, creates `~/.config/lobby-server/config.toml` and a random token, and sets up a systemd user service. Put your irssiproxy ports in the config:
+
+```toml
+nick = "yournick"
+listen = "127.0.0.1:7667"
+
+[[network]]
+name = "IRCnet"
+host = "127.0.0.1"
+port = 45000
+password_file = "~/.config/lobby-server/irssiproxy.pass"
+```
+
+Then:
+
+```sh
+systemctl --user start lobby-server
+loginctl enable-linger $USER   # keep running after you log out
+journalctl --user -u lobby-server -f
+```
+
+### Reaching it from your computer
+
+lobby-server only listens on `127.0.0.1`, and refuses other addresses unless you say otherwise, because the token and your messages would travel unencrypted. Pick one:
+
+**SSH tunnel**, nothing to set up on the server:
+
+```sh
+ssh -N -L 7667:127.0.0.1:7667 your-shell-host
+```
+
+and use `url = "ws://127.0.0.1:7667"` in the app.
+
+**Reverse proxy with TLS**, for use from anywhere. With Caddy:
+
+```
+lobby.example.org {
+    reverse_proxy 127.0.0.1:7667
+}
+```
+
+With nginx, inside a `server` block that already has TLS:
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:7667;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 1h;
+}
+```
+
+and use `url = "wss://lobby.example.org"`.
+
+## Running the app
+
+You need Rust and, on Linux, `webkit2gtk-4.1`.
+
+```sh
+cargo run -p lobby
+```
+
+On first start Lobby writes a config template and shows its path. The gear in the top right shows it too.
 
 - Linux: `~/.config/lobby/config.toml`
 - macOS: `~/Library/Application Support/lobby/config.toml`
+
+Server mode:
+
+```toml
+[server]
+url = "wss://lobby.example.org"
+token_file = "~/.config/lobby/server.token"
+```
+
+Direct mode:
 
 ```toml
 nick = "yournick"
@@ -34,19 +156,33 @@ port = 6667
 password_file = "~/.config/lobby/ircnet.pass"
 ```
 
-## Keys
+## Using it
 
+- Click the channel name, or press `Ctrl+K`, to switch channels
 - `Alt+1` to `Alt+9`: jump to a channel
-- `Alt+Left` and `Alt+Right`, or `Ctrl+PageUp` and `Ctrl+PageDown`: previous and next channel
+- `Alt+Left` and `Alt+Right`: previous and next channel
 - `Tab`: complete a nick
 - `Up` in an empty input: bring back the last message
 
-Commands work as in other clients: `/me`, `/msg`, `/join`, `/part`, `/topic`, and anything else is sent as is. `/quit` is disabled, because through a bouncer it would disconnect the bouncer from the network.
+Commands work as in other clients: `/me`, `/msg`, `/join`, `/part`, `/topic`, and anything else is sent as is. `/quit` is disabled, because through irssiproxy it would disconnect irssi from the network.
+
+## The app and lobby-server protocol
+
+JSON over a WebSocket. The app sends `hello` with the token first, the server answers `welcome` with the current state and then streams events. Requests carry an `id` that the reply repeats. The types live in `core/src/protocol.rs`.
+
+```
+app    {"type":"hello","token":"..."}
+server {"type":"welcome","snapshot":{"networks":[...],"channels":[...]}}
+server {"type":"event","event":{"type":"line","net":"IRCnet","buffer":"#linux","nick":"jaska","text":"hei",...}}
+app    {"type":"history","id":1,"net":"IRCnet","buffer":"#linux","before":null}
+server {"type":"reply","id":1,"data":[...],"error":null}
+app    {"type":"send","id":2,"net":"IRCnet","buffer":"#linux","text":"moi"}
+```
 
 ## Tests
 
 ```sh
-cd src-tauri && cargo test
+cargo test --workspace
 node --test tests/lib.test.mjs
 ```
 

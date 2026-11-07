@@ -1,22 +1,13 @@
-//! One connection per network: reads lines, keeps channel state, emits events.
+//! Channel state for one IRC connection: turns incoming lines into events.
 
-use crate::config::Network;
 use crate::irc::{self, Msg};
 use crate::store::Line;
-use crate::{AppState, deliver, now_ms};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::Duration;
-use tauri::{AppHandle, Emitter, Manager};
-use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-use tokio::net::TcpStream;
-use tokio::sync::mpsc;
 
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
-const RECONNECT_DELAY: Duration = Duration::from_secs(10);
 const NAME_PREFIXES: [char; 5] = ['~', '&', '@', '%', '+'];
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BufferInfo {
     pub net: String,
     pub name: String,
@@ -222,102 +213,6 @@ impl Session {
         };
 
         vec![Out::Line(self.line(buffer, kind, msg, text, now))]
-    }
-}
-
-fn set_conn(app: &AppHandle, net: &str, state: &str) {
-    let st = app.state::<AppState>();
-    st.conn.lock().unwrap().insert(net.to_string(), state.to_string());
-    let _ = app.emit("conn", serde_json::json!({ "net": net, "state": state }));
-}
-
-pub fn spawn(app: AppHandle, net: Network, nick: String) {
-    tauri::async_runtime::spawn(async move {
-        loop {
-            set_conn(&app, &net.name, "connecting");
-            let result = run(&app, &net, &nick).await;
-            let state = match result {
-                Ok(()) => "disconnected".to_string(),
-                Err(e) => format!("disconnected: {e}"),
-            };
-            set_conn(&app, &net.name, &state);
-            tokio::time::sleep(RECONNECT_DELAY).await;
-        }
-    });
-}
-
-// ponytail: no keepalive, a silently dead socket is only noticed when the OS drops it.
-async fn run(app: &AppHandle, net: &Network, nick: &str) -> Result<(), String> {
-    let connect = TcpStream::connect((net.host.as_str(), net.port));
-    let stream = tokio::time::timeout(CONNECT_TIMEOUT, connect)
-        .await
-        .map_err(|_| "timed out".to_string())?
-        .map_err(|e| e.to_string())?;
-    let (read, mut write) = stream.into_split();
-
-    let (tx, mut rx) = mpsc::unbounded_channel::<String>();
-    let writer = tauri::async_runtime::spawn(async move {
-        while let Some(line) = rx.recv().await {
-            if write.write_all(format!("{line}\r\n").as_bytes()).await.is_err() {
-                break;
-            }
-        }
-    });
-
-    let state = app.state::<AppState>();
-    state.writers.lock().unwrap().insert(net.name.clone(), tx.clone());
-
-    if let Some(password) = net.password() {
-        let _ = tx.send(format!("PASS {password}"));
-    }
-    let _ = tx.send(format!("NICK {nick}"));
-    let _ = tx.send(format!("USER {nick} 0 * :Lobby"));
-    set_conn(app, &net.name, "connected");
-
-    let mut session = Session::new(&net.name, nick);
-    let mut reader = BufReader::new(read);
-    let mut buf = Vec::new();
-    let result = loop {
-        buf.clear();
-        match reader.read_until(b'\n', &mut buf).await {
-            Ok(0) => break Ok(()),
-            Ok(_) => {}
-            Err(e) => break Err(e.to_string()),
-        }
-        let Some(msg) = irc::parse(&irc::decode(&buf)) else { continue };
-        for out in session.handle(&msg, now_ms()) {
-            apply(app, &net.name, out, &tx);
-        }
-    };
-
-    state.writers.lock().unwrap().remove(&net.name);
-    state.channels.lock().unwrap().retain(|(n, _), _| n != &net.name);
-    writer.abort();
-    result
-}
-
-fn apply(app: &AppHandle, net: &str, out: Out, tx: &mpsc::UnboundedSender<String>) {
-    match out {
-        Out::Line(line) => deliver(app, line),
-        Out::Buffer(info) => {
-            let key = (info.net.clone(), info.name.to_lowercase());
-            let st = app.state::<AppState>();
-            let mut channels = st.channels.lock().unwrap();
-            if info.joined {
-                channels.insert(key, info.clone());
-            } else {
-                channels.remove(&key);
-            }
-            drop(channels);
-            let _ = app.emit("buffer", info);
-        }
-        Out::Me(nick) => {
-            app.state::<AppState>().me.lock().unwrap().insert(net.to_string(), nick.clone());
-            let _ = app.emit("me", serde_json::json!({ "net": net, "nick": nick }));
-        }
-        Out::Send(line) => {
-            let _ = tx.send(line);
-        }
     }
 }
 

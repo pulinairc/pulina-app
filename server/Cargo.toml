@@ -1,0 +1,16 @@
+[package]
+name = "lobby-server"
+description = "Keeps IRC history next to your irssi and serves it to the Lobby app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+lobby-core.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+tokio-tungstenite.workspace = true
+futures-util.workspace = true
+toml.workspace = true
+dirs.workspace = true

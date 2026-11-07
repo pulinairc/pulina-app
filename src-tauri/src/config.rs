@@ -1,9 +1,17 @@
-//! `config.toml`: your nick and the networks (irssiproxy ports) to connect to.
+//! `config.toml`: either a lobby-server to use, or networks to connect to directly.
 
+use lobby_core::{Network, read_secret};
 use serde::Deserialize;
 use std::path::PathBuf;
 
-const TEMPLATE: &str = r#"# Lobby config. One [[network]] per irssiproxy port or IRC server.
+const TEMPLATE: &str = r#"# Lobby config.
+#
+# With a lobby-server (keeps history while Lobby is closed):
+# [server]
+# url = "wss://lobby.example.org"
+# token_file = "~/.config/lobby/server.token"
+#
+# Or straight to IRC or irssiproxy (history only while Lobby runs):
 nick = "yournick"
 
 [[network]]
@@ -16,35 +24,23 @@ port = 6667
 
 #[derive(Deserialize)]
 pub struct Config {
+    #[serde(default)]
     pub nick: String,
     #[serde(rename = "network", default)]
     pub networks: Vec<Network>,
+    pub server: Option<ServerLink>,
 }
 
 #[derive(Deserialize, Clone)]
-pub struct Network {
-    pub name: String,
-    pub host: String,
-    pub port: u16,
-    pub password: Option<String>,
-    pub password_file: Option<String>,
+pub struct ServerLink {
+    pub url: String,
+    pub token: Option<String>,
+    pub token_file: Option<String>,
 }
 
-impl Network {
-    pub fn password(&self) -> Option<String> {
-        if let Some(p) = &self.password {
-            return Some(p.clone());
-        }
-        let file = expand(self.password_file.as_deref()?);
-        let text = std::fs::read_to_string(file).ok()?;
-        Some(text.trim().to_string())
-    }
-}
-
-fn expand(path: &str) -> PathBuf {
-    match (path.strip_prefix("~/"), dirs::home_dir()) {
-        (Some(rest), Some(home)) => home.join(rest),
-        _ => PathBuf::from(path),
+impl ServerLink {
+    pub fn token(&self) -> String {
+        self.token.clone().or_else(|| read_secret(self.token_file.as_deref()?)).unwrap_or_default()
     }
 }
 
@@ -62,13 +58,13 @@ pub fn load() -> Result<Config, String> {
     if !path.exists() {
         let _ = std::fs::create_dir_all(dir());
         let _ = std::fs::write(&path, TEMPLATE);
-        return Err(format!("Add your networks to {}", path.display()));
+        return Err(format!("Add your networks or server to {}", path.display()));
     }
 
     let text = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
     let config: Config = toml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
-    if config.networks.is_empty() {
-        return Err(format!("No networks in {}", path.display()));
+    if config.server.is_none() && config.networks.is_empty() {
+        return Err(format!("No server or networks in {}", path.display()));
     }
     Ok(config)
 }
@@ -81,6 +77,9 @@ mod tests {
     fn template_parses() {
         let config: Config = toml::from_str(TEMPLATE).unwrap();
         assert_eq!(config.networks.len(), 1);
-        assert_eq!(config.networks[0].port, 6667);
+        assert!(config.server.is_none());
+
+        let config: Config = toml::from_str("[server]\nurl = \"ws://127.0.0.1:7667\"\ntoken = \"t\"").unwrap();
+        assert_eq!(config.server.unwrap().token(), "t");
     }
 }

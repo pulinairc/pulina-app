@@ -18,7 +18,7 @@ pub struct Line {
     pub own: bool,
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct BufferRef {
     pub net: String,
     pub buffer: String,
