@@ -22,3 +22,4 @@
 - Change the person editor layout
 - Change theme to neutral charcoal, squircle photos
 - Change People list to a minimal one
+- Change hover menu to glass emoji and action rows

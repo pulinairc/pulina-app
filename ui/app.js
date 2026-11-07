@@ -613,34 +613,101 @@ function stopReply() {
   el.replying.hidden = true;
 }
 
-// One action bar, moved to whichever line the pointer is on.
+// Hover menu: quick reactions on top, actions under them. One instance, moved to the hovered line.
+
+const ICONS = {
+  addReaction: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.56"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/><path d="M19 2v6M16 5h6"/></svg>',
+  reply: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
+  moreV: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
+  moreH: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+};
+
+const MORE_EMOJIS = ['😀', '😁', '😆', '😅', '🤣', '😊', '🙂', '😉', '😍', '😘', '😋', '😜', '🤔', '🤨', '😐', '🙄',
+  '😏', '😴', '😮', '😳', '🥺', '😢', '😭', '😤', '😡', '🤯', '😱', '🤗', '🤭', '🤫', '👏', '🙌',
+  '🙏', '💪', '👀', '🔥', '💯', '❤️', '💔', '✨', '🎉', '✅', '❌', '🍺', '☕', '🤝', '💀', '🫡'];
+
 const actions = h('div', 'actions');
-function actionButton(label, content, onClick) {
-  const b = h('button', 'act');
+let actionPanel = null;
+
+function hoveredLine() {
+  return actions.parentElement?.line || null;
+}
+
+function menuButton(label, content, onClick, cls = 'act') {
+  const b = h('button', cls);
   b.type = 'button';
   b.setAttribute('aria-label', label);
   b.dataset.tip = label;
-  if (typeof content === 'string') b.textContent = content;
-  else b.append(content);
+  if (content.startsWith('<')) b.append(svg(content));
+  else b.textContent = content;
   b.addEventListener('click', (e) => {
     e.stopPropagation();
-    const line = actions.parentElement?.line;
-    if (line) onClick(line);
+    const line = hoveredLine();
+    if (line) onClick(line, b);
   });
   return b;
 }
 
-function replyIcon() {
-  const t = document.createElement('template');
-  t.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>';
-  return t.content.firstChild;
+function closePanel() {
+  actionPanel?.remove();
+  actionPanel = null;
+}
+
+function togglePanel(build) {
+  const open = actionPanel?.dataset.kind === build.name;
+  closePanel();
+  if (open) return;
+  actionPanel = build();
+  actionPanel.dataset.kind = build.name;
+  actions.append(actionPanel);
+}
+
+function emojiGrid() {
+  const grid = h('div', 'glass emoji-grid');
+  for (const e of MORE_EMOJIS) {
+    grid.append(menuButton(`React ${e}`, e, (line) => {
+      closePanel();
+      react(line, e);
+    }, 'act emoji'));
+  }
+  return grid;
+}
+
+function moreMenu() {
+  const menu = h('div', 'glass more-menu');
+  const item = (label, run) => {
+    const b = h('button', 'menu-item', label);
+    b.type = 'button';
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const line = hoveredLine();
+      closePanel();
+      if (line) run(line);
+    });
+    return b;
+  };
+  menu.append(
+    item('Reply', startReply),
+    item('Copy text', (line) => navigator.clipboard?.writeText(stripFormatting(line.text))),
+    item('Edit person', (line) => openPerson(line.nick, line.mask)),
+  );
+  return menu;
 }
 
 function fillActions() {
-  actions.replaceChildren(
-    ...topReactions().map((e) => actionButton(`React ${e}`, e, (line) => react(line, e))),
-    actionButton('Reply', replyIcon(), startReply),
+  closePanel();
+  const quick = h('div', 'glass emoji-row');
+  quick.append(
+    ...topReactions().map((e) => menuButton(`React ${e}`, e, (line) => react(line, e), 'act emoji')),
+    menuButton('More emojis', ICONS.moreH, () => togglePanel(emojiGrid)),
   );
+  const tools = h('div', 'glass action-row');
+  tools.append(
+    menuButton('Add reaction', ICONS.addReaction, () => togglePanel(emojiGrid)),
+    menuButton('Reply', ICONS.reply, startReply),
+    menuButton('More', ICONS.moreV, () => togglePanel(moreMenu)),
+  );
+  actions.replaceChildren(quick, tools);
 }
 
 el.col.addEventListener('pointerover', (e) => {
@@ -649,7 +716,10 @@ el.col.addEventListener('pointerover', (e) => {
   fillActions();
   r.append(actions);
 });
-el.log.addEventListener('pointerleave', () => actions.remove());
+el.log.addEventListener('pointerleave', () => {
+  closePanel();
+  actions.remove();
+});
 
 function note(l) {
   if (l.kind === 'topic') return h('div', 'events', `${l.nick} changed the topic to “${l.text}”`);
