@@ -1,0 +1,386 @@
+//! One connection per network: reads lines, keeps channel state, emits events.
+
+use crate::config::Network;
+use crate::irc::{self, Msg};
+use crate::store::Line;
+use crate::{AppState, deliver, now_ms};
+use serde::Serialize;
+use std::collections::HashMap;
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, Manager};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::net::TcpStream;
+use tokio::sync::mpsc;
+
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+const RECONNECT_DELAY: Duration = Duration::from_secs(10);
+const NAME_PREFIXES: [char; 5] = ['~', '&', '@', '%', '+'];
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+pub struct BufferInfo {
+    pub net: String,
+    pub name: String,
+    pub topic: String,
+    pub members: Vec<String>,
+    pub joined: bool,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Out {
+    Line(Line),
+    Buffer(BufferInfo),
+    Me(String),
+    Send(String),
+}
+
+#[derive(Default)]
+struct Chan {
+    name: String,
+    topic: String,
+    members: HashMap<String, String>,
+    pending_names: Vec<String>,
+}
+
+pub struct Session {
+    net: String,
+    me: String,
+    chans: HashMap<String, Chan>,
+}
+
+fn same(a: &str, b: &str) -> bool {
+    a.eq_ignore_ascii_case(b)
+}
+
+impl Session {
+    pub fn new(net: &str, me: &str) -> Self {
+        Self { net: net.to_string(), me: me.to_string(), chans: HashMap::new() }
+    }
+
+    fn line(&self, buffer: &str, kind: &str, msg: &Msg, text: &str, now: i64) -> Line {
+        Line {
+            id: 0,
+            net: self.net.clone(),
+            buffer: buffer.to_string(),
+            ts: now,
+            kind: kind.to_string(),
+            nick: msg.nick().to_string(),
+            mask: msg.mask().to_string(),
+            text: text.to_string(),
+            own: same(msg.nick(), &self.me),
+        }
+    }
+
+    fn info(&self, chan: &Chan, joined: bool) -> Out {
+        let mut members: Vec<String> = chan.members.values().cloned().collect();
+        members.sort_by_key(|m| m.to_lowercase());
+        Out::Buffer(BufferInfo { net: self.net.clone(), name: chan.name.clone(), topic: chan.topic.clone(), members, joined })
+    }
+
+    /// Channels a nick is on, as display names.
+    fn chans_with(&self, nick: &str) -> Vec<String> {
+        let key = nick.to_lowercase();
+        self.chans.values().filter(|c| c.members.contains_key(&key)).map(|c| c.name.clone()).collect()
+    }
+
+    pub fn handle(&mut self, msg: &Msg, now: i64) -> Vec<Out> {
+        let nick = msg.nick().to_string();
+        let is_me = same(&nick, &self.me);
+
+        match msg.command.as_str() {
+            "PING" => vec![Out::Send(format!("PONG :{}", msg.param(0)))],
+            "001" => {
+                self.me = msg.param(0).to_string();
+                vec![Out::Me(self.me.clone())]
+            }
+            "PRIVMSG" | "NOTICE" => self.on_message(msg, now),
+            "JOIN" => {
+                let name = msg.param(0).to_string();
+                let key = name.to_lowercase();
+                if is_me {
+                    let chan = Chan { name: name.clone(), ..Default::default() };
+                    let out = self.info(&chan, true);
+                    self.chans.insert(key, chan);
+                    return vec![out];
+                }
+                let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
+                chan.members.insert(nick.to_lowercase(), nick.clone());
+                let name = chan.name.clone();
+                vec![Out::Line(self.line(&name, "join", msg, "", now))]
+            }
+            "PART" => {
+                let key = msg.param(0).to_lowercase();
+                if is_me {
+                    let Some(chan) = self.chans.remove(&key) else { return vec![] };
+                    return vec![self.info(&chan, false)];
+                }
+                let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
+                chan.members.remove(&nick.to_lowercase());
+                let name = chan.name.clone();
+                vec![Out::Line(self.line(&name, "part", msg, msg.param(1), now))]
+            }
+            "KICK" => {
+                let key = msg.param(0).to_lowercase();
+                let victim = msg.param(1).to_string();
+                let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
+                chan.members.remove(&victim.to_lowercase());
+                let name = chan.name.clone();
+                let mut line = self.line(&name, "kick", msg, msg.param(2), now);
+                line.text = format!("{nick}: {}", msg.param(2));
+                line.nick = victim.clone();
+                line.own = same(&victim, &self.me);
+                let mut out = vec![Out::Line(line)];
+                if same(&victim, &self.me) {
+                    if let Some(chan) = self.chans.remove(&key) {
+                        out.push(self.info(&chan, false));
+                    }
+                }
+                out
+            }
+            "QUIT" => {
+                let names = self.chans_with(&nick);
+                let mut out = Vec::new();
+                for name in names {
+                    if let Some(chan) = self.chans.get_mut(&name.to_lowercase()) {
+                        chan.members.remove(&nick.to_lowercase());
+                    }
+                    out.push(Out::Line(self.line(&name, "quit", msg, msg.param(0), now)));
+                }
+                out
+            }
+            "NICK" => {
+                let new = msg.param(0).to_string();
+                let mut out = Vec::new();
+                if is_me {
+                    self.me = new.clone();
+                    out.push(Out::Me(new.clone()));
+                }
+                for name in self.chans_with(&nick) {
+                    if let Some(chan) = self.chans.get_mut(&name.to_lowercase()) {
+                        chan.members.remove(&nick.to_lowercase());
+                        chan.members.insert(new.to_lowercase(), new.clone());
+                    }
+                    out.push(Out::Line(self.line(&name, "nick", msg, &new, now)));
+                }
+                out
+            }
+            "TOPIC" => {
+                let key = msg.param(0).to_lowercase();
+                let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
+                chan.topic = msg.param(1).to_string();
+                let name = chan.name.clone();
+                let line = self.line(&name, "topic", msg, msg.param(1), now);
+                let info = self.info(&self.chans[&key], true);
+                vec![Out::Line(line), info]
+            }
+            "332" => {
+                let key = msg.param(1).to_lowercase();
+                let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
+                chan.topic = msg.param(2).to_string();
+                vec![self.info(&self.chans[&key], true)]
+            }
+            "353" => {
+                let key = msg.param(2).to_lowercase();
+                if let Some(chan) = self.chans.get_mut(&key) {
+                    let names = msg.param(3).split_whitespace().map(|n| n.trim_start_matches(NAME_PREFIXES).to_string());
+                    chan.pending_names.extend(names);
+                }
+                vec![]
+            }
+            "366" => {
+                let key = msg.param(1).to_lowercase();
+                let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
+                let names = std::mem::take(&mut chan.pending_names);
+                chan.members = names.into_iter().map(|n| (n.to_lowercase(), n)).collect();
+                vec![self.info(&self.chans[&key], true)]
+            }
+            "ERROR" => vec![Out::Line(self.line("", "status", msg, msg.param(0), now))],
+            _ => vec![],
+        }
+    }
+
+    fn on_message(&mut self, msg: &Msg, now: i64) -> Vec<Out> {
+        let target = msg.param(0);
+        let raw = msg.param(1);
+        let from = msg.nick();
+        let notice = msg.command == "NOTICE";
+
+        let (kind, text) = match irc::action(raw) {
+            Some(text) => ("action", text),
+            None if irc::is_ctcp(raw) => return vec![],
+            None if notice => ("notice", raw),
+            None => ("msg", raw),
+        };
+
+        let buffer = if irc::is_channel(target) {
+            target
+        } else if notice || msg.mask().is_empty() {
+            ""
+        } else if same(from, &self.me) {
+            target
+        } else {
+            from
+        };
+
+        vec![Out::Line(self.line(buffer, kind, msg, text, now))]
+    }
+}
+
+fn set_conn(app: &AppHandle, net: &str, state: &str) {
+    let st = app.state::<AppState>();
+    st.conn.lock().unwrap().insert(net.to_string(), state.to_string());
+    let _ = app.emit("conn", serde_json::json!({ "net": net, "state": state }));
+}
+
+pub fn spawn(app: AppHandle, net: Network, nick: String) {
+    tauri::async_runtime::spawn(async move {
+        loop {
+            set_conn(&app, &net.name, "connecting");
+            let result = run(&app, &net, &nick).await;
+            let state = match result {
+                Ok(()) => "disconnected".to_string(),
+                Err(e) => format!("disconnected: {e}"),
+            };
+            set_conn(&app, &net.name, &state);
+            tokio::time::sleep(RECONNECT_DELAY).await;
+        }
+    });
+}
+
+// ponytail: no keepalive, a silently dead socket is only noticed when the OS drops it.
+async fn run(app: &AppHandle, net: &Network, nick: &str) -> Result<(), String> {
+    let connect = TcpStream::connect((net.host.as_str(), net.port));
+    let stream = tokio::time::timeout(CONNECT_TIMEOUT, connect)
+        .await
+        .map_err(|_| "timed out".to_string())?
+        .map_err(|e| e.to_string())?;
+    let (read, mut write) = stream.into_split();
+
+    let (tx, mut rx) = mpsc::unbounded_channel::<String>();
+    let writer = tauri::async_runtime::spawn(async move {
+        while let Some(line) = rx.recv().await {
+            if write.write_all(format!("{line}\r\n").as_bytes()).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    let state = app.state::<AppState>();
+    state.writers.lock().unwrap().insert(net.name.clone(), tx.clone());
+
+    if let Some(password) = net.password() {
+        let _ = tx.send(format!("PASS {password}"));
+    }
+    let _ = tx.send(format!("NICK {nick}"));
+    let _ = tx.send(format!("USER {nick} 0 * :Lobby"));
+    set_conn(app, &net.name, "connected");
+
+    let mut session = Session::new(&net.name, nick);
+    let mut reader = BufReader::new(read);
+    let mut buf = Vec::new();
+    let result = loop {
+        buf.clear();
+        match reader.read_until(b'\n', &mut buf).await {
+            Ok(0) => break Ok(()),
+            Ok(_) => {}
+            Err(e) => break Err(e.to_string()),
+        }
+        let Some(msg) = irc::parse(&irc::decode(&buf)) else { continue };
+        for out in session.handle(&msg, now_ms()) {
+            apply(app, &net.name, out, &tx);
+        }
+    };
+
+    state.writers.lock().unwrap().remove(&net.name);
+    state.channels.lock().unwrap().retain(|(n, _), _| n != &net.name);
+    writer.abort();
+    result
+}
+
+fn apply(app: &AppHandle, net: &str, out: Out, tx: &mpsc::UnboundedSender<String>) {
+    match out {
+        Out::Line(line) => deliver(app, line),
+        Out::Buffer(info) => {
+            let key = (info.net.clone(), info.name.to_lowercase());
+            let st = app.state::<AppState>();
+            let mut channels = st.channels.lock().unwrap();
+            if info.joined {
+                channels.insert(key, info.clone());
+            } else {
+                channels.remove(&key);
+            }
+            drop(channels);
+            let _ = app.emit("buffer", info);
+        }
+        Out::Me(nick) => {
+            app.state::<AppState>().me.lock().unwrap().insert(net.to_string(), nick.clone());
+            let _ = app.emit("me", serde_json::json!({ "net": net, "nick": nick }));
+        }
+        Out::Send(line) => {
+            let _ = tx.send(line);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn feed(s: &mut Session, line: &str) -> Vec<Out> {
+        s.handle(&irc::parse(line).unwrap(), 1)
+    }
+
+    fn lines(outs: &[Out]) -> Vec<(String, String, String)> {
+        outs.iter()
+            .filter_map(|o| match o {
+                Out::Line(l) => Some((l.buffer.clone(), l.kind.clone(), l.nick.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn routes_quits_and_nicks_to_shared_channels() {
+        let mut s = Session::new("net", "rolle");
+        feed(&mut s, ":rolle!r@h JOIN #a");
+        feed(&mut s, ":rolle!r@h JOIN #B");
+        feed(&mut s, ":srv 353 rolle = #a :@rolle kaisla jaska");
+        feed(&mut s, ":srv 366 rolle #a :End");
+        feed(&mut s, ":kaisla!s@h JOIN #b");
+
+        let out = feed(&mut s, ":kaisla!s@h NICK Kaisla_");
+        let mut got = lines(&out);
+        got.sort();
+        assert_eq!(got, vec![("#B".into(), "nick".into(), "kaisla".into()), ("#a".into(), "nick".into(), "kaisla".into())]);
+
+        let out = feed(&mut s, ":Kaisla_!s@h QUIT :bye");
+        assert_eq!(lines(&out).len(), 2);
+
+        let out = feed(&mut s, ":jaska!j@h QUIT :bye");
+        assert_eq!(lines(&out), vec![("#a".into(), "quit".into(), "jaska".into())]);
+    }
+
+    #[test]
+    fn routes_private_messages_and_actions() {
+        let mut s = Session::new("net", "rolle");
+        let out = feed(&mut s, ":mikko!m@h PRIVMSG rolle :hei");
+        assert_eq!(lines(&out), vec![("mikko".into(), "msg".into(), "mikko".into())]);
+
+        let out = feed(&mut s, ":rolle!r@h PRIVMSG mikko :moi");
+        assert_eq!(lines(&out), vec![("mikko".into(), "msg".into(), "rolle".into())]);
+
+        let out = feed(&mut s, ":mikko!m@h PRIVMSG #a :\u{1}ACTION waves\u{1}");
+        assert_eq!(lines(&out), vec![("#a".into(), "action".into(), "mikko".into())]);
+
+        let out = feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}VERSION\u{1}");
+        assert!(out.is_empty());
+
+        let out = feed(&mut s, ":irc.example NOTICE * :Looking up your hostname");
+        assert_eq!(lines(&out), vec![("".into(), "notice".into(), "irc.example".into())]);
+    }
+
+    #[test]
+    fn answers_ping() {
+        let mut s = Session::new("net", "rolle");
+        assert_eq!(feed(&mut s, "PING :abc"), vec![Out::Send("PONG :abc".into())]);
+    }
+}

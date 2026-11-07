@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Lobby",
+  "version": "0.1.0",
+  "identifier": "io.github.rollecode.lobby",
+  "build": {
+    "frontendDist": "../ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      {
+        "label": "main",
+        "title": "Lobby",
+        "width": 440,
+        "height": 720,
+        "minWidth": 300,
+        "minHeight": 320,
+        "backgroundColor": "#020a0d"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' https: http: data:; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "icon": ["icons/icon.png"]
+  }
+}
