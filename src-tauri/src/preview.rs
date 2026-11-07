@@ -13,6 +13,7 @@ const USER_AGENT: &str = "Mozilla/5.0 (compatible; Lobby IRC client; link previe
 
 static META: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?is)<meta\s[^>]*>").unwrap());
 static ATTR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r#"(?is)([a-z:_-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')"#).unwrap());
+static NUMERIC_ENTITY: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"&#(?:[xX]([0-9a-fA-F]+)|([0-9]+));").unwrap());
 static TITLE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?is)<title[^>]*>(.*?)</title>").unwrap());
 
 #[derive(Debug, Default, Clone, PartialEq, Serialize, Deserialize)]
@@ -90,7 +91,16 @@ pub async fn fetch(raw: &str) -> Option<Preview> {
 }
 
 fn decode_entities(s: &str) -> String {
-    s.replace("&quot;", "\"")
+    let numeric = NUMERIC_ENTITY.replace_all(s, |c: &regex::Captures| {
+        let code = match (c.get(1), c.get(2)) {
+            (Some(hex), _) => u32::from_str_radix(hex.as_str(), 16).ok(),
+            (_, Some(dec)) => dec.as_str().parse().ok(),
+            _ => None,
+        };
+        code.and_then(char::from_u32).map(String::from).unwrap_or_else(|| c[0].to_string())
+    });
+    numeric
+        .replace("&quot;", "\"")
         .replace("&#39;", "'")
         .replace("&#x27;", "'")
         .replace("&lt;", "<")
@@ -161,6 +171,11 @@ mod tests {
         assert_eq!(p.title, "Kernel 7.3 & more");
         assert_eq!(p.description, "Scheduler work");
         assert_eq!(p.image, "https://example.org/img/card.png");
+    }
+
+    #[test]
+    fn decodes_numeric_entities() {
+        assert_eq!(decode_entities("virtal&#228;hde &#x2014; &amp;"), "virtalähde — &");
     }
 
     #[test]
