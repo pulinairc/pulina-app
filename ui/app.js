@@ -1404,7 +1404,12 @@ el.jumpLatest.addEventListener('click', () => {
 });
 
 let jumpFrame = 0;
+// A resize keeps the latest message in view when it was in view before.
+let stuck = true;
+new ResizeObserver(() => stuck && toBottom()).observe(el.log);
+
 el.log.addEventListener('scroll', () => {
+  stuck = atBottom();
   cancelAnimationFrame(jumpFrame);
   jumpFrame = requestAnimationFrame(() => {
     updateJumps();

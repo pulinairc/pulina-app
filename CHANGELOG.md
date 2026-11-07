@@ -4,6 +4,7 @@
 * Change the message box to a borderless one
 * Change the app icon to a larger, centred plant
 * Fix YouTube error screen on refused videos
+* Fix losing the latest message on window resize
 
 ### 0.5.1: 2026-11-07
 
