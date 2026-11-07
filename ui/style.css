@@ -886,7 +886,7 @@ dialog:focus { outline: none; }
 #person-edit { display: flex; flex-direction: column; }
 #person-edit[hidden], #people-list-view[hidden] { display: none; }
 
-.field-label, #person-edit label {
+.field-label, #person-edit label:not(.switch-row) {
   display: block;
   margin: 16px 0 6px;
   font-size: 12px;

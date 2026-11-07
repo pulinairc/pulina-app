@@ -55,3 +55,4 @@
 - Change images to a smaller box with a height cap
 - Add inline YouTube, video and audio
 - Add a you label on your own messages
+- Fix mute switch alignment in the channel editor
