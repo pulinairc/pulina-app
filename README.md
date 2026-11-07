@@ -54,9 +54,9 @@ Built with Rust and [Tauri](https://tauri.app). The window uses the web view tha
 
 ## Status
 
-Early. Works: server and direct mode, history, grouped messages, link previews, channel switcher, nick completion.
+Early. Works: server and direct mode, history, grouped messages, link previews, channel switcher, nick completion, reactions and replies, irssi-style commands, and people with photos, colours and nick aliases that every device shares.
 
-Coming: profile photos and nick aliases, attachments, emoji picker, notifications, an iPhone version, and more sources next to irssiproxy (WeeChat relay, Matrix and Beeper, and a way to plug in your own).
+Coming: attachments, emoji picker, notifications, an iPhone version, and more sources next to irssiproxy (WeeChat relay, Matrix and Beeper, and a way to plug in your own).
 
 ## Installing
 
@@ -136,7 +136,11 @@ See [server/README.md](server/README.md): turning on irssi's proxy, installing, 
 - `Tab`: complete a nick
 - `Up` in an empty input: bring back the last message
 
-Commands work as in other clients: `/me`, `/msg`, `/join`, `/part`, `/topic`, and anything else is sent as is. `/quit` is disabled, because through irssiproxy it would disconnect irssi from the network.
+**Reactions and replies.** Point at a message for a row of emojis and a reply button. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a small reaction under that person's message. Replying puts `nick: ` in front of your text and shows what you are answering. Lobby shows the quote, other clients see the plain line.
+
+**People.** Click a name or photo in the chat, or open the gear and People. A person has a photo, a colour and any number of nicks. `Kaisla` also covers `Kaisla_` and `Kaisla-`, `Kaisla*` covers anything starting with Kaisla, and `kaisla@*.example.net` matches by ident and host. The colour comes from the photo unless you pick one. In server mode people and settings are stored on lobby-server, so every device shows the same.
+
+**Commands.** Type `/` for a menu. `/me`, `/msg`, `/query`, `/join`, `/part`, `/wc`, `/topic`, `/names`, `/whois`, `/nick`, `/away`, `/notice`, `/invite`, `/kick`, `/op`, `/deop`, `/voice`, `/devoice`, `/clear`, `/say` and `/quote` work as in irssi, and anything else is sent as is. `/quit` is disabled, because through irssiproxy it would disconnect irssi from the network.
 
 ## The app and lobby-server protocol
 
