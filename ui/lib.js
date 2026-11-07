@@ -186,11 +186,9 @@ export const COMMANDS = [
   { name: 'deop', args: 'nick', desc: 'Take operator status' },
   { name: 'voice', args: 'nick', desc: 'Give voice' },
   { name: 'devoice', args: 'nick', desc: 'Take voice' },
-  { name: 'clear', args: '', desc: 'Clear this window', local: true },
   { name: 'mute', args: '', desc: 'Mute this channel', local: true },
   { name: 'unmute', args: '', desc: 'Unmute this channel', local: true },
   { name: 'say', args: 'text', desc: 'Send text as is, even starting with /' },
-  { name: 'quote', args: 'raw line', desc: 'Send a raw IRC line' },
 ];
 
 /** Commands matching what is typed after "/", or null when the menu should be closed. */

@@ -57,3 +57,4 @@
 - Add a you label on your own messages
 - Fix mute switch alignment in the channel editor
 - Remove the mute switch from the channel editor
+- Remove /clear and /quote from the / menu
