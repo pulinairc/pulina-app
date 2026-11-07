@@ -117,6 +117,51 @@ async fn set_setting(state: State<'_, AppState>, key: String, value: String) -> 
     }
 }
 
+const UPLOAD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
+
+/// Send a file to the file host set in Settings and return its address. The file comes as
+/// raw bytes; the host address, the file name (URI-encoded) and its type come as the
+/// `x-host`, `x-name` and `x-type` headers.
+#[tauri::command]
+async fn upload(request: tauri::ipc::Request<'_>) -> Result<String, String> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("Expected the file's bytes".into());
+    };
+    let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+    let url = header("x-host");
+    if !url.starts_with("https://") && !url.starts_with("http://") {
+        return Err("Set a file host address in Settings first".into());
+    }
+    let name = header("x-name");
+    let mime = header("x-type");
+
+    let res = reqwest::Client::builder()
+        .timeout(UPLOAD_TIMEOUT)
+        .build()
+        .map_err(|e| e.to_string())?
+        .post(url)
+        .header(reqwest::header::CONTENT_TYPE, if mime.is_empty() { "application/octet-stream" } else { &mime })
+        .header(reqwest::header::CONTENT_DISPOSITION, format!("attachment; filename*=UTF-8''{name}"))
+        .body(bytes.clone())
+        .send()
+        .await
+        .map_err(|e| format!("Upload failed: {e}"))?;
+
+    let status = res.status();
+    if !status.is_success() {
+        return Err(match status.as_u16() {
+            413 => "The file is too big for the file host".into(),
+            415 => "The file host does not take this type of file".into(),
+            code => format!("The file host answered {code}"),
+        });
+    }
+    res.headers()
+        .get(reqwest::header::LOCATION)
+        .and_then(|v| v.to_str().ok())
+        .map(String::from)
+        .ok_or("The file host did not say where the file went".into())
+}
+
 #[tauri::command]
 async fn preview(state: State<'_, AppState>, url: String) -> Result<Option<preview::Preview>, ()> {
     if let Some(json) = state.store.preview_get(&url) {
@@ -175,7 +220,7 @@ fn main() {
             app.manage(AppState { source, store, error });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting])
+        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }

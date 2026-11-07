@@ -321,6 +321,9 @@ a:hover { text-decoration-color: var(--dim); }
   background: var(--panel);
 }
 
+.composer-box:has(#attach-btn:not([hidden])) { padding-left: 4px; }
+body.dropping .composer-box { border-color: var(--accent); }
+
 .composer-box:focus-within { border-color: var(--line-strong); }
 
 #input {

@@ -51,6 +51,10 @@
       </button>
     </div>
     <div class="composer-box">
+      <button id="attach-btn" class="box-btn" type="button" aria-label="Attach a file" data-tip="Attach a file" hidden>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5l-8.5 8.5a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8"/></svg>
+      </button>
+      <input id="attach-file" type="file" multiple hidden>
       <label for="input" class="sr">Message</label>
       <input id="input" autocomplete="off" spellcheck="true" placeholder="Message">
       <button id="emoji-btn" class="box-btn" type="button" aria-label="Emoji" data-tip="Emoji">
@@ -77,6 +81,11 @@
         <span>Desktop notifications for mentions and private messages</span>
         <input id="notify-toggle" type="checkbox" role="switch">
       </label>
+    </section>
+    <section>
+      <h3><label for="upload-url">File host for attachments</label></h3>
+      <input id="upload-url" class="field" type="url" autocomplete="off" spellcheck="false" placeholder="https://files.example.org/upload?k=secret">
+      <p class="hint">Any host that takes the file as a POST and answers with its address. The README shows how to run one. Stored on your server, so every device uses it.</p>
     </section>
     <section>
       <h3>Connections</h3>

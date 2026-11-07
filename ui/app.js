@@ -38,7 +38,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emojiBtn: $('emoji-btn'),
+  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -487,6 +487,7 @@ el.switcher.addEventListener('click', (e) => {
 
 function renderSettings() {
   el.notifyToggle.checked = notifyOn();
+  el.uploadUrl.value = uploadHost();
   const rows = state.networks.map((n) => {
     const row = h('div', 'conn');
     const name = h('span', '', state.me[n] ? `${n} · ${state.me[n]}` : n);
@@ -1204,6 +1205,7 @@ function applyStatus(st) {
   }
   state.people = st.people || [];
   state.settings = st.settings || {};
+  renderAttach();
   applyReadSetting(state.settings[READ_SETTING]);
   for (const info of st.channels) onBuffer(info);
   renderStatus(st.error || undefined);
@@ -1227,6 +1229,7 @@ async function start() {
     state.settings[e.payload.key] = e.payload.value;
     if (e.payload.key === READ_SETTING) applyReadSetting(e.payload.value);
     if (e.payload.key === MUTED_SETTING || e.payload.key === CHANNELS_SETTING) renderHeader();
+    if (e.payload.key === UPLOAD_SETTING) renderAttach();
   });
   // A lobby-server connection came back: fetch what was missed.
   await listen('resync', async () => {
@@ -1860,4 +1863,78 @@ async function notify(b, l) {
 
 el.notifyToggle.addEventListener('change', () => {
   saveSetting(NOTIFY_SETTING, el.notifyToggle.checked ? 'on' : 'off');
+});
+
+
+// Attachments: files go to the file host set in Settings, and their address into the message.
+
+const UPLOAD_SETTING = 'upload';
+
+function uploadHost() {
+  return state.settings[UPLOAD_SETTING] || '';
+}
+
+function renderAttach() {
+  el.attachBtn.hidden = !uploadHost();
+}
+
+function insertAtCursor(text) {
+  const start = el.input.selectionStart ?? el.input.value.length;
+  const end = el.input.selectionEnd ?? start;
+  const before = el.input.value.slice(0, start);
+  const spaced = (before && !before.endsWith(' ') ? ' ' : '') + text + ' ';
+  el.input.setRangeText(spaced, start, end, 'end');
+  el.input.focus();
+}
+
+async function uploadFiles(files) {
+  if (!uploadHost()) {
+    renderStatus('Set a file host in Settings to send files');
+    return;
+  }
+  for (const file of files) {
+    const name = file.name || `pasted.${(file.type.split('/')[1] || 'png')}`;
+    renderStatus(`Uploading ${name}…`);
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const url = await invoke('upload', bytes, {
+        headers: { 'x-host': uploadHost(), 'x-name': encodeURIComponent(name), 'x-type': file.type || 'application/octet-stream' },
+      });
+      insertAtCursor(url);
+      renderStatus();
+    } catch (e) {
+      renderStatus(String(e));
+    }
+  }
+}
+
+el.attachBtn.addEventListener('click', () => el.attachFile.click());
+el.attachFile.addEventListener('change', () => {
+  uploadFiles([...el.attachFile.files]);
+  el.attachFile.value = '';
+});
+el.input.addEventListener('paste', (e) => {
+  const file = clipboardImage(e);
+  if (!file) return;
+  e.preventDefault();
+  uploadFiles([file]);
+});
+document.addEventListener('dragover', (e) => {
+  if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
+  e.preventDefault();
+  document.body.classList.add('dropping');
+});
+document.addEventListener('dragleave', (e) => {
+  if (!e.relatedTarget) document.body.classList.remove('dropping');
+});
+document.addEventListener('drop', (e) => {
+  document.body.classList.remove('dropping');
+  const files = [...(e.dataTransfer?.files || [])];
+  if (!files.length) return;
+  e.preventDefault();
+  uploadFiles(files);
+});
+el.uploadUrl.addEventListener('change', () => {
+  saveSetting(UPLOAD_SETTING, el.uploadUrl.value.trim());
+  renderAttach();
 });
