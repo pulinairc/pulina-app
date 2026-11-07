@@ -16,6 +16,10 @@ const REACTION_SETTING = 'reactions';
 const PHOTO_PX = 160;
 const PHOTO_QUALITY = 0.85;
 const COLOR_SAMPLE_PX = 24;
+// Tokyo Night colours offered for people, purple left out.
+const SWATCHES = ['#7aa2f7', '#7dcfff', '#73daca', '#9ece6a', '#e0af68', '#ff9e64', '#f7768e', '#c0caf5'];
+const PERSON_ICON = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+const CAMERA_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.
 const REPLY_WINDOW_MS = 30 * 60 * 1000;
 const QUOTE_CHARS = 120;
@@ -36,7 +40,7 @@ const el = {
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
   personEdit: $('person-edit'), personPhoto: $('person-photo'), personPhotoPick: $('person-photo-pick'),
   personPhotoRemove: $('person-photo-remove'), personFile: $('person-file'), personName: $('person-name'),
-  personColor: $('person-color'), personColorPhoto: $('person-color-photo'), personColorAuto: $('person-color-auto'),
+  personColor: $('person-color'), personColors: $('person-colors'),
   personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
   switcher: $('switcher'), filter: $('filter'), list: $('list'),
   settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'),
@@ -1111,24 +1115,74 @@ function editPerson(p) {
   el.personName.value = editing.name;
   renderEditor();
   el.personName.focus();
+  if (editing.photo) {
+    colorOfPhoto(editing.photo).then((c) => {
+      if (!editing || editing.id !== p.id) return;
+      editing.photoColor = c;
+      renderEditor();
+    });
+  }
+}
+
+function svg(markup) {
+  const t = document.createElement('template');
+  t.innerHTML = markup;
+  return t.content.firstChild;
+}
+
+function swatch(color, label, selected, content = '') {
+  const b = h('button', 'swatch');
+  b.type = 'button';
+  b.setAttribute('role', 'radio');
+  b.setAttribute('aria-checked', String(selected));
+  b.setAttribute('aria-label', label);
+  b.dataset.tip = label;
+  b.style.background = color;
+  if (content) b.append(content);
+  return b;
 }
 
 function renderEditor() {
   const p = editing;
-  const color = p.color || nickColor(p.nicks[0] || p.name || '?');
+  const name = el.personName.value || p.nicks[0] || '';
+  const auto = nickColor(p.nicks[0] || p.name || '?');
+  const color = p.color || auto;
+
   el.personPhoto.replaceChildren();
-  el.personPhoto.style.background = color;
+  el.personPhoto.style.background = '';
+  el.personPhoto.classList.toggle('empty', !p.photo && !name);
   if (p.photo) {
     const img = h('img');
     img.src = p.photo;
     img.alt = '';
     el.personPhoto.append(img);
+  } else if (name) {
+    el.personPhoto.textContent = initial(name);
+    el.personPhoto.style.background = color;
   } else {
-    el.personPhoto.textContent = initial(el.personName.value || p.nicks[0] || '?');
+    el.personPhoto.append(svg(PERSON_ICON));
   }
+  el.personPhoto.append(h('span', 'photo-badge'));
+  el.personPhoto.lastChild.append(svg(CAMERA_ICON));
   el.personPhotoRemove.hidden = !p.photo;
-  el.personColorPhoto.hidden = !p.photo;
-  el.personColor.value = toHex(color);
+
+  const swatches = [swatch(auto, 'Automatic', !p.color, h('span', 'swatch-mark', 'A'))];
+  if (p.photoColor) swatches.push(swatch(p.photoColor, 'From photo', p.color === p.photoColor));
+  for (const c of SWATCHES) swatches.push(swatch(c, c, p.color === c));
+  const custom = !swatches.some((b) => b.getAttribute('aria-checked') === 'true');
+  swatches.push(swatch(custom ? color : 'var(--raised)', 'Pick any colour', custom, h('span', 'swatch-mark', '+')));
+  const values = ['', ...(p.photoColor ? [p.photoColor] : []), ...SWATCHES];
+  swatches.forEach((b, i) => b.addEventListener('click', () => {
+    if (i === swatches.length - 1) {
+      el.personColor.value = toHex(color);
+      el.personColor.click();
+      return;
+    }
+    p.color = values[i];
+    renderEditor();
+  }));
+  el.personColors.replaceChildren(...swatches);
+
   el.personNicks.replaceChildren(...p.nicks.map((n, i) => {
     const chip = h('span', 'chip', n);
     const x = h('button', '', '×');
@@ -1218,7 +1272,8 @@ async function setPhoto(file) {
   if (!editing || !file?.type.startsWith('image/')) return;
   try {
     editing.photo = await photoFrom(file);
-    editing.color = await colorOfPhoto(editing.photo);
+    editing.photoColor = await colorOfPhoto(editing.photo);
+    editing.color = editing.photoColor;
     renderEditor();
   } catch (e) {
     renderStatus(String(e));
@@ -1249,23 +1304,17 @@ el.people.addEventListener('paste', (e) => {
   setPhoto(file);
 });
 el.personPhotoRemove.addEventListener('click', () => {
+  if (editing.color === editing.photoColor) editing.color = '';
   editing.photo = '';
+  editing.photoColor = '';
   renderEditor();
 });
 el.personColor.addEventListener('input', () => {
   editing.color = el.personColor.value;
   renderEditor();
 });
-el.personColorPhoto.addEventListener('click', async () => {
-  editing.color = await colorOfPhoto(editing.photo);
-  renderEditor();
-});
-el.personColorAuto.addEventListener('click', () => {
-  editing.color = '';
-  renderEditor();
-});
 el.personName.addEventListener('input', () => {
-  if (!editing.photo) el.personPhoto.textContent = initial(el.personName.value || editing.nicks[0] || '?');
+  if (!editing.photo) renderEditor();
 });
 el.personNick.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
@@ -1282,7 +1331,8 @@ el.personEdit.addEventListener('submit', async (e) => {
   el.personNick.value = '';
   editing.name = el.personName.value.trim() || editing.nicks[0] || 'Someone';
   try {
-    await invoke('save_person', { person: editing });
+    const { photoColor: _, ...person } = editing;
+    await invoke('save_person', { person });
     if (editingFromChat) el.people.close();
     else showList();
   } catch (err) {

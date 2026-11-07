@@ -19,3 +19,4 @@
 - Add irssi commands and a / menu
 - Add people with photos, colours and nick aliases
 - Add unread line and jumping to unread
+- Change the person editor layout

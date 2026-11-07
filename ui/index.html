@@ -94,30 +94,30 @@
     <form id="person-edit" hidden>
       <div class="person-top">
         <button id="person-photo" class="photo-btn" type="button" aria-label="Choose a photo" data-tip="Choose a photo, or paste one"></button>
-        <div class="person-photo-actions">
-          <button id="person-photo-pick" class="small-btn" type="button">Change photo</button>
-          <button id="person-photo-remove" class="small-btn" type="button">Remove photo</button>
+        <div class="person-name-wrap">
+          <label for="person-name">Name</label>
+          <input id="person-name" class="field" autocomplete="off" placeholder="Name">
+          <div class="photo-links">
+            <button id="person-photo-pick" class="link-btn" type="button">Choose photo</button>
+            <button id="person-photo-remove" class="link-btn" type="button">Remove photo</button>
+          </div>
         </div>
         <input id="person-file" type="file" accept="image/*" hidden>
       </div>
 
-      <label for="person-name">Name</label>
-      <input id="person-name" class="field" autocomplete="off">
+      <span class="field-label" id="person-color-label">Colour</span>
+      <div id="person-colors" class="swatches" role="radiogroup" aria-labelledby="person-color-label"></div>
+      <input id="person-color" type="color" class="sr" tabindex="-1" aria-hidden="true">
 
-      <label for="person-color">Colour</label>
-      <div class="color-row">
-        <input id="person-color" type="color">
-        <button id="person-color-photo" class="small-btn" type="button">From photo</button>
-        <button id="person-color-auto" class="small-btn" type="button">Automatic</button>
+      <label for="person-nick" class="field-label">Nicks</label>
+      <div class="tag-field">
+        <div id="person-nicks" class="chips"></div>
+        <input id="person-nick" autocomplete="off" placeholder="Add a nick, Enter">
       </div>
-
-      <label for="person-nick">Nicks</label>
-      <div id="person-nicks" class="chips"></div>
-      <input id="person-nick" class="field" autocomplete="off" placeholder="Add a nick and press Enter">
-      <p class="hint">Kaisla also covers Kaisla_ and Kaisla-. Kaisla* covers anything starting with Kaisla. kaisla@*.example.net matches by ident and host.</p>
+      <p class="hint">Kaisla also covers Kaisla_ and Kaisla-. Kaisla* covers anything that starts with Kaisla. kaisla@*.example.net matches by ident and host.</p>
 
       <div class="person-buttons">
-        <button id="person-delete" class="small-btn danger" type="button">Delete</button>
+        <button id="person-delete" class="link-btn danger" type="button">Delete person</button>
         <button id="person-save" class="primary-btn" type="submit">Save</button>
       </div>
     </form>
