@@ -128,6 +128,9 @@ fn answer(hub: &Hub, msg: ClientMsg) -> Option<ServerMsg> {
         ClientMsg::History { id, net, buffer, before } => reply(id, to_json(hub.history(&net, &buffer, before))),
         ClientMsg::Recent { id } => reply(id, to_json(hub.recent_buffers())),
         ClientMsg::Send { id, net, buffer, text } => reply(id, to_json(hub.send(&net, &buffer, &text))),
+        ClientMsg::SavePerson { id, person } => reply(id, to_json(hub.save_person(&person))),
+        ClientMsg::DeletePerson { id, person } => reply(id, to_json(hub.delete_person(person))),
+        ClientMsg::SetSetting { id, key, value } => reply(id, to_json(hub.set_setting(&key, &value))),
     })
 }
 

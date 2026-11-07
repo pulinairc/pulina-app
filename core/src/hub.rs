@@ -2,7 +2,7 @@
 //! The app uses it directly, lobby-server serves it to apps over WebSocket.
 
 use crate::net::{BufferInfo, Out, Session};
-use crate::store::{BufferRef, Line, Store};
+use crate::store::{BufferRef, Line, Person, Store};
 use crate::{Network, irc, now_ms};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -26,6 +26,8 @@ pub enum Event {
     Buffer(BufferInfo),
     Me { net: String, nick: String },
     Conn { net: String, state: String },
+    People { people: Vec<Person> },
+    Setting { key: String, value: String },
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -39,6 +41,10 @@ pub struct NetStatus {
 pub struct Snapshot {
     pub networks: Vec<NetStatus>,
     pub channels: Vec<BufferInfo>,
+    #[serde(default)]
+    pub people: Vec<Person>,
+    #[serde(default)]
+    pub settings: HashMap<String, String>,
 }
 
 pub struct Hub {
@@ -106,7 +112,9 @@ impl Hub {
             })
             .collect();
         let channels = lock(&self.channels).values().cloned().collect();
-        Snapshot { networks, channels }
+        let people = self.store.people().unwrap_or_default();
+        let settings = self.store.settings().unwrap_or_default();
+        Snapshot { networks, channels, people, settings }
     }
 
     pub fn history(&self, net: &str, buffer: &str, before: Option<i64>) -> Result<Vec<Line>, String> {
@@ -116,6 +124,30 @@ impl Hub {
     pub fn recent_buffers(&self) -> Result<Vec<BufferRef>, String> {
         let since = now_ms() - RECENT_BUFFER_DAYS * DAY_MS;
         self.store.recent_buffers(since).map_err(|e| e.to_string())
+    }
+
+    /// Add or update a person; every connected app gets the new list.
+    pub fn save_person(&self, person: &Person) -> Result<i64, String> {
+        let id = self.store.save_person(person).map_err(|e| e.to_string())?;
+        self.emit_people();
+        Ok(id)
+    }
+
+    pub fn delete_person(&self, id: i64) -> Result<(), String> {
+        self.store.delete_person(id).map_err(|e| e.to_string())?;
+        self.emit_people();
+        Ok(())
+    }
+
+    fn emit_people(&self) {
+        let people = self.store.people().unwrap_or_default();
+        self.emit(Event::People { people });
+    }
+
+    pub fn set_setting(&self, key: &str, value: &str) -> Result<(), String> {
+        self.store.set_setting(key, value).map_err(|e| e.to_string())?;
+        self.emit(Event::Setting { key: key.into(), value: value.into() });
+        Ok(())
     }
 
     /// Send what was typed: a message or a command.

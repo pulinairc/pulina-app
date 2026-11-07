@@ -4,6 +4,7 @@
 //! current state, then streams events. Requests carry an `id` that the reply repeats.
 
 use crate::hub::{Event, Snapshot};
+use crate::store::Person;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -13,6 +14,9 @@ pub enum ClientMsg {
     History { id: u64, net: String, buffer: String, before: Option<i64> },
     Recent { id: u64 },
     Send { id: u64, net: String, buffer: String, text: String },
+    SavePerson { id: u64, person: Person },
+    DeletePerson { id: u64, person: i64 },
+    SetSetting { id: u64, key: String, value: String },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

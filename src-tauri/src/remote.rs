@@ -161,6 +161,10 @@ impl Remote {
                     snap.channels.push(info.clone());
                 }
             }
+            Event::People { people } => snap.people = people.clone(),
+            Event::Setting { key, value } => {
+                snap.settings.insert(key.clone(), value.clone());
+            }
             Event::Line(_) => {}
         }
     }

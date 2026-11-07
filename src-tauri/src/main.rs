@@ -7,7 +7,7 @@ mod tunnel;
 
 use lobby_core::hub::{Event, Hub, Snapshot};
 use lobby_core::protocol::ClientMsg;
-use lobby_core::store::{BufferRef, Line, Store};
+use lobby_core::store::{BufferRef, Line, Person, Store};
 use lobby_core::now_ms;
 use remote::Remote;
 use serde::Serialize;
@@ -44,6 +44,8 @@ pub fn emit_event(app: &AppHandle, event: Event) {
         Event::Buffer(info) => app.emit("buffer", info),
         Event::Me { net, nick } => app.emit("me", serde_json::json!({ "net": net, "nick": nick })),
         Event::Conn { net, state } => app.emit("conn", serde_json::json!({ "net": net, "state": state })),
+        Event::People { people } => app.emit("people", people),
+        Event::Setting { key, value } => app.emit("setting", serde_json::json!({ "key": key, "value": value })),
     };
 }
 
@@ -84,6 +86,33 @@ async fn send(state: State<'_, AppState>, net: String, buffer: String, text: Str
     match &state.source {
         Source::Local(hub) => hub.send(&net, &buffer, &text),
         Source::Remote(remote) => remote.request(|id| ClientMsg::Send { id, net, buffer, text }).await.map(|_| ()),
+        Source::Unconfigured => Err("Nothing configured".into()),
+    }
+}
+
+#[tauri::command]
+async fn save_person(state: State<'_, AppState>, person: Person) -> Result<i64, String> {
+    match &state.source {
+        Source::Local(hub) => hub.save_person(&person),
+        Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::SavePerson { id, person }).await?),
+        Source::Unconfigured => Err("Nothing configured".into()),
+    }
+}
+
+#[tauri::command]
+async fn delete_person(state: State<'_, AppState>, id: i64) -> Result<(), String> {
+    match &state.source {
+        Source::Local(hub) => hub.delete_person(id),
+        Source::Remote(remote) => remote.request(|req| ClientMsg::DeletePerson { id: req, person: id }).await.map(|_| ()),
+        Source::Unconfigured => Err("Nothing configured".into()),
+    }
+}
+
+#[tauri::command]
+async fn set_setting(state: State<'_, AppState>, key: String, value: String) -> Result<(), String> {
+    match &state.source {
+        Source::Local(hub) => hub.set_setting(&key, &value),
+        Source::Remote(remote) => remote.request(|id| ClientMsg::SetSetting { id, key, value }).await.map(|_| ()),
         Source::Unconfigured => Err("Nothing configured".into()),
     }
 }
@@ -145,7 +174,7 @@ fn main() {
             app.manage(AppState { source, store, error });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview])
+        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }
