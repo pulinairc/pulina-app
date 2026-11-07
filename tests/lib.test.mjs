@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -111,4 +111,9 @@ test('finds YouTube videos in links', () => {
 test('formats durations', () => {
   assert.equal(duration(83), '1:23');
   assert.equal(duration(NaN), '0:00');
+});
+
+test('gives a nick the same animal every time', () => {
+  assert.equal(animalFor('Kaisla'), animalFor('kaisla_'));
+  assert.ok(animalFor('mikko').length > 0);
 });

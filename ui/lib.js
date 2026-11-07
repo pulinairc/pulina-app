@@ -123,12 +123,17 @@ export function shortUrl(url) {
 }
 
 /** Hue for a nick, ignoring trailing _ - ` | ^ so Setsu and Setsu_ match. */
-export function nickHue(nick) {
+function nickHash(nick) {
   let h = 0x811c9dc5;
   for (const ch of nick.toLowerCase().replace(/[_\-`|^]+$/, '')) {
     h ^= ch.codePointAt(0);
     h = Math.imul(h, 0x01000193) >>> 0;
   }
+  return h;
+}
+
+export function nickHue(nick) {
+  const h = nickHash(nick);
   const hue = h % (360 - PURPLE_SPAN);
   return hue >= PURPLE_FROM ? hue + PURPLE_SPAN : hue;
 }
@@ -274,4 +279,11 @@ export function youtube(url) {
 export function duration(seconds) {
   const s = Math.max(0, Math.floor(seconds || 0));
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+const ANIMALS = [...'🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🐔🐧🐦🐤🦆🦉🦇🐺🐗🐴🦄🐝🐛🦋🐌🐞🐢🐍🦎🐙🦑🦀🐡🐠🐟🐬🐳🦈🐊🐅🐆🦓🦍🦧🐘🦛🦏🐪🦒🦘🦬🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐈🐓🦃🦤🦚🦜🦢🦩🐇🦝🦨🦡🦫🦦🦥🐁🐀🦔🐉🦕🦖🐋🦭🪼🐹🐰🐭🐶🐱'];
+
+/** The animal a nick gets when it has no photo, the same one every time. */
+export function animalFor(nick) {
+  return ANIMALS[nickHash(nick) % ANIMALS.length];
 }

@@ -1,6 +1,6 @@
 import {
-  CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel, initial,
-  colorFromRgb, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
+  CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel,
+  animalFor, colorFromRgb, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -142,10 +142,17 @@ function avatar(nick, mask, cls = 'av') {
     img.alt = '';
     av.append(img);
   } else {
-    av.textContent = initial(who.name);
-    av.style.background = who.color;
+    animalInto(av, nick, who.color);
   }
   return av;
+}
+
+/** No photo: an animal on a soft gradient of the person's colour. */
+function animalInto(node, nick, color) {
+  node.classList.add('animal');
+  node.textContent = animalFor(nick);
+  node.style.background = `linear-gradient(color-mix(in srgb, ${color} 45%, white), ${color})`;
+  return node;
 }
 
 // Read markers: the last line id seen per channel, stored as a setting so every device agrees.
@@ -332,14 +339,12 @@ function channelLook(b) {
 function icon(b, node) {
   node.style.background = '';
   node.style.color = '';
+  node.classList.remove('animal');
   node.replaceChildren();
   if (isPrivate(b)) {
     const who = identity(b.name);
     if (who.photo) return photoInto(node, who.photo);
-    node.textContent = initial(who.name);
-    node.style.background = who.color;
-    node.style.color = 'var(--bg)';
-    return node;
+    return animalInto(node, b.name, who.color);
   }
   const look = channelLook(b);
   if (look.photo) return photoInto(node, shownPhoto(look.photo));
@@ -1557,8 +1562,7 @@ function personAvatar(p, cls) {
     img.alt = '';
     av.append(img);
   } else {
-    av.textContent = initial(p.name || p.nicks[0] || '?');
-    av.style.background = color;
+    animalInto(av, p.nicks[0] || p.name || '?', color);
   }
   return av;
 }
@@ -1627,6 +1631,7 @@ function renderEditor() {
   const color = p.color || auto;
 
   el.personPhoto.replaceChildren();
+  el.personPhoto.classList.remove('animal');
   el.personPhoto.style.background = '';
   el.personPhoto.classList.toggle('empty', !p.photo && !name);
   if (p.photo) {
@@ -1635,8 +1640,12 @@ function renderEditor() {
     img.alt = '';
     el.personPhoto.append(img);
   } else if (name) {
-    el.personPhoto.textContent = p.channel ? '#' : initial(name);
-    el.personPhoto.style.background = color;
+    if (p.channel) {
+      el.personPhoto.textContent = '#';
+      el.personPhoto.style.background = color;
+    } else {
+      animalInto(el.personPhoto, p.nicks[0] || name, color);
+    }
   } else {
     el.personPhoto.append(svg(PERSON_ICON));
   }

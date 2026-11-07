@@ -1,6 +1,7 @@
 ### 0.5.2: 2026-11-07
 
 * Add a message box that grows with the text
+* Add animal avatars for people without a photo
 * Change the message box to a borderless one
 * Change the app icon to a larger, centred plant
 * Fix YouTube error screen on refused videos
