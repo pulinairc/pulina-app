@@ -41,3 +41,5 @@
 - Remove the arrow next to the channel name
 - Add a bell to mute and unmute quickly
 - Fix photo tops to line up with the name
+- Change Mark as read to a floating pill with a count
+- Fix photos sitting too low next to names

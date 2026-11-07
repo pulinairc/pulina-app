@@ -191,7 +191,7 @@ button:focus:not(:focus-visible) { outline: none; }
 }
 
 .group { display: flex; gap: 10px; }
-.group > .av { margin-top: 3.5px; }
+.group > .av { margin-top: 1px; }
 
 .av {
   width: var(--avatar);
@@ -215,8 +215,7 @@ button:focus:not(:focus-visible) { outline: none; }
   flex: 1;
 }
 
-/* The photo's top sits level with the top of the name's capital letters: with a 1.2
-   line height, Inter's caps start about a quarter of the font size below the line top. */
+/* The photo sits level with the name: line height 1.2 and a 1px nudge. */
 .hd { display: flex; align-items: baseline; gap: 8px; line-height: 1.2; }
 .nm { font-weight: 600; }
 
