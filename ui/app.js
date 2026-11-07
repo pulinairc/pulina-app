@@ -602,7 +602,9 @@ function newGroup(l) {
   name.style.color = who.color;
   name.dataset.tip = who.name === l.nick ? l.nick : `${l.nick} · ${l.mask || 'IRC'}`;
   name.addEventListener('click', () => openPerson(l.nick, l.mask));
-  head.append(name, h('span', 'tm', clock(l.ts)));
+  head.append(name);
+  if (l.own || l.nick === state.me[l.net]) head.append(h('span', 'you', 'you'));
+  head.append(h('span', 'tm', clock(l.ts)));
   body.append(head);
   group.append(av, body);
   el.col.append(group);

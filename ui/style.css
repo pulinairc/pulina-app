@@ -219,6 +219,16 @@ button:focus:not(:focus-visible) { outline: none; }
 .hd { display: flex; align-items: baseline; gap: 8px; line-height: 1.2; }
 .nm { font-weight: 600; }
 
+.you {
+  align-self: center;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--raised);
+  color: var(--dim);
+  font-size: 10px;
+  line-height: 15px;
+}
+
 .tm {
   font-size: 11px;
   color: var(--faint);

@@ -54,3 +54,4 @@
 - Fix Settings layout and switches
 - Change images to a smaller box with a height cap
 - Add inline YouTube, video and audio
+- Add a you label on your own messages
