@@ -137,7 +137,7 @@ See [server/README.md](server/README.md): turning on irssi's proxy, installing, 
 - `Up` in an empty input: bring back the last message
 - `Alt+A`, or the unread counter in the header: jump to the next channel with unread messages, mentions first
 
-A red **New** line marks where you stopped reading, and the channel opens there. Buttons in the chat jump back up to it or down to the latest. Where you stopped reading is stored like other settings, so it carries over between devices.
+A red **New** line marks where unread messages start. Nothing is marked read on its own: click **Mark as read** on that line, or press `Shift+Esc`. Buttons in the chat jump up to the line or down to the latest. Read positions are stored like other settings, so they carry over between devices.
 
 **Reactions and replies.** Point at a message for a row of emojis and a reply button. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a small reaction under that person's message. Replying puts `nick: ` in front of your text and shows what you are answering. Lobby shows the quote, other clients see the plain line.
 
