@@ -10,6 +10,7 @@ const { openUrl } = window.__TAURI__.opener;
 const MAX_LINES = 2000;
 const BOTTOM_SLACK_PX = 48;
 const LAST_BUFFER_KEY = 'lobby.current';
+const FIRST_PICK_DELAY_MS = 400;
 
 const $ = (id) => document.getElementById(id);
 const el = {
@@ -49,7 +50,7 @@ function buffer(net, name) {
   state.buffers.set(k, b);
   loadHistory(b);
   renderHeader();
-  if (!state.current && state.started && isChannel(name)) select(k);
+  if (!state.current && state.started) scheduleFirstPick();
   return b;
 }
 
@@ -506,18 +507,31 @@ async function start() {
   // A lobby-server connection came back: fetch what was missed.
   await listen('resync', async () => {
     applyStatus(await invoke('status'));
+    for (const r of await invoke('recent_buffers').catch(() => [])) buffer(r.net, r.buffer);
     for (const b of state.buffers.values()) loadHistory(b);
   });
 
   applyStatus(await invoke('status'));
 
-  let saved = null;
-  try { saved = localStorage.getItem(LAST_BUFFER_KEY); } catch { /* storage may be unavailable */ }
   for (const r of await invoke('recent_buffers').catch(() => [])) buffer(r.net, r.buffer);
   state.started = true;
+  pickFirst();
+}
+
+function pickFirst() {
+  if (state.current) return;
+  let saved = null;
+  try { saved = localStorage.getItem(LAST_BUFFER_KEY); } catch { /* storage may be unavailable */ }
   const first = ordered().find((b) => isChannel(b.name));
   if (saved && state.buffers.has(saved)) select(saved);
   else if (first) select(first.key);
+}
+
+// Channels arrive in a burst after connecting: wait for it to settle before picking one.
+let firstPickTimer = null;
+function scheduleFirstPick() {
+  clearTimeout(firstPickTimer);
+  firstPickTimer = setTimeout(pickFirst, FIRST_PICK_DELAY_MS);
 }
 
 start();
