@@ -83,6 +83,12 @@ async fn run() -> Result<(), String> {
 
     let data = dirs::data_dir().unwrap_or_else(|| PathBuf::from(".")).join("lobby-server");
     std::fs::create_dir_all(&data).map_err(|e| format!("{}: {e}", data.display()))?;
+    // Shell hosts are often shared: keep the history readable by this user only.
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&data, std::fs::Permissions::from_mode(0o700));
+    }
     let store = Store::open(&data.join("history.db")).map_err(|e| e.to_string())?;
 
     let names: Vec<String> = config.networks.iter().map(|n| n.name.clone()).collect();

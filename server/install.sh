@@ -10,8 +10,18 @@ UNIT_DIR="$CONFIG_HOME/systemd/user"
 UNIT="lobby-server.service"
 REPO_DIR=$(cd "$(dirname "$0")/.." && pwd)
 
+MIN_RUST_MINOR=85
+PATH="$HOME/.cargo/bin:$PATH"
+
 if ! command -v cargo >/dev/null 2>&1; then
   echo "lobby-server is built from source and needs Rust: https://rustup.rs"
+  exit 1
+fi
+
+RUST_VERSION=$(rustc --version | cut -d' ' -f2)
+if [ "$(echo "$RUST_VERSION" | cut -d. -f2)" -lt "$MIN_RUST_MINOR" ]; then
+  echo "Rust $RUST_VERSION is too old, 1.$MIN_RUST_MINOR or newer is needed."
+  echo "Install a current one for your user with rustup: https://rustup.rs"
   exit 1
 fi
 
