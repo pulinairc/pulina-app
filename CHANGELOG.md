@@ -35,3 +35,4 @@
 - Change link cards to one line per field
 - Change the demo to the current hover menu
 - Add seconds to timestamps
+- Change stacked lines to a little more air
