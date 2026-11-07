@@ -191,6 +191,27 @@ fn forward(app: AppHandle, hub: Arc<Hub>) {
     });
 }
 
+/// Desktop notifications take an icon as a file, so a person's photo is written to the cache once.
+#[tauri::command]
+fn notify_icon(app: tauri::AppHandle, request: tauri::ipc::Request<'_>) -> Result<String, String> {
+    let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
+        return Err("Expected the photo's bytes".into());
+    };
+    let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
+    let key = header("x-key");
+    let ext = header("x-ext");
+    if key.is_empty() || !key.chars().all(|c| c.is_ascii_hexdigit()) || !matches!(ext.as_str(), "png" | "jpg" | "webp") {
+        return Err("Bad photo".into());
+    }
+    let dir = app.path().app_cache_dir().map_err(|e| e.to_string())?.join("avatars");
+    let path = dir.join(format!("{key}.{ext}"));
+    if !path.exists() {
+        std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+        std::fs::write(&path, bytes).map_err(|e| e.to_string())?;
+    }
+    Ok(path.to_string_lossy().into_owned())
+}
+
 #[tauri::command]
 fn player() -> String {
     embed::base()
@@ -226,7 +247,7 @@ fn main() {
             app.manage(AppState { source, store, error });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player])
+        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }

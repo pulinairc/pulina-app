@@ -2,6 +2,7 @@
 
 * Add inline YouTube, video and audio
 * Add a you label on own messages
+* Add sender photos to notifications
 * Add releases with Linux and macOS builds
 * Change images to a smaller box
 * Change accent to pink and mint

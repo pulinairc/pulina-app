@@ -2009,8 +2009,32 @@ async function notify(b, l) {
   if (!notifyOn() || !notifier) return;
   notifyAllowed ??= (await notifier.isPermissionGranted()) || (await notifier.requestPermission()) === 'granted';
   if (!notifyAllowed) return;
-  const title = isPrivate(b) ? l.nick : `${identity(l.nick, l.mask).name} in ${label(b)}`;
-  notifier.sendNotification({ title, body: stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS) });
+  const who = identity(l.nick, l.mask);
+  const title = isPrivate(b) ? l.nick : `${who.name} in ${label(b)}`;
+  const icon = await notifyIcon(who.photo);
+  notifier.sendNotification({ title, body: stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS), icon });
+}
+
+// A photo as a file the notification can show, written once per photo.
+const notifyIcons = new Map();
+const PHOTO_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+
+function notifyIcon(photo) {
+  const m = photo?.match(/^data:(image\/[a-z]+);base64,(.+)$/);
+  if (!m || !PHOTO_EXT[m[1]]) return Promise.resolve(undefined);
+  if (!notifyIcons.has(photo)) {
+    const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+    const key = hashHex(photo);
+    notifyIcons.set(photo, invoke('notify_icon', bytes, { headers: { 'x-key': key, 'x-ext': PHOTO_EXT[m[1]] } }).catch(() => undefined));
+  }
+  return notifyIcons.get(photo);
+}
+
+// FNV-1a, enough to name a cache file.
+function hashHex(text) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  return (h >>> 0).toString(16);
 }
 
 el.notifyToggle.addEventListener('change', () => {
