@@ -25,7 +25,8 @@ export function sameDay(a, b) {
 
 export function clock(ts) {
   const d = new Date(ts);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  const two = (n) => String(n).padStart(2, '0');
+  return `${two(d.getHours())}:${two(d.getMinutes())}:${two(d.getSeconds())}`;
 }
 
 export function dayLabel(ts, now = Date.now()) {

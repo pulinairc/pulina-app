@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -94,4 +94,8 @@ test('photo colours keep their hue', () => {
   assert.equal(colorFromRgb(200, 40, 40), 'hsl(0 67% 68%)');
   assert.equal(colorFromRgb(40, 90, 200), 'hsl(221 67% 68%)');
   assert.equal(colorFromRgb(128, 128, 128), 'hsl(0 45% 68%)');
+});
+
+test('clock shows seconds', () => {
+  assert.equal(clock(new Date(2026, 10, 7, 9, 5, 3).getTime()), '09:05:03');
 });
