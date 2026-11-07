@@ -474,7 +474,11 @@ el.filter.addEventListener('keydown', (e) => {
   const list = matches();
   if (e.key === 'ArrowDown') picked = Math.min(picked + 1, list.length - 1);
   else if (e.key === 'ArrowUp') picked = Math.max(picked - 1, 0);
-  else if (e.key === 'Enter' && list[picked]) return pick(list[picked].key);
+  else if (e.key === 'Enter' && list[picked]) {
+    // The same Enter would otherwise land in the message box as a new line.
+    e.preventDefault();
+    return pick(list[picked].key);
+  }
   else return;
   e.preventDefault();
   renderList();
