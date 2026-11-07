@@ -23,3 +23,5 @@
 - Change theme to neutral charcoal, squircle photos
 - Change People list to a minimal one
 - Change hover menu to glass emoji and action rows
+- Change reading to manual with Mark as read
+- Fix automatic colour to follow the photo

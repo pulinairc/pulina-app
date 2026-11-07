@@ -68,12 +68,31 @@ function h(tag, cls, text) {
 
 // Who a nick is: their person's name, colour and photo when one matches.
 
+// Colours read from photos, worked out once per photo and kept for the session.
+const photoColors = new Map();
+
+function photoColorOf(photo) {
+  if (photoColors.has(photo)) return photoColors.get(photo);
+  photoColors.set(photo, null);
+  colorOfPhoto(photo).then((c) => {
+    photoColors.set(photo, c);
+    renderHeader();
+    renderLog();
+  });
+  return null;
+}
+
+/** A person's colour: their own pick, else from their photo, else from the nick. */
+function personColor(person, nick) {
+  return person?.color || (person?.photo && photoColorOf(person.photo)) || nickColor(nick);
+}
+
 function identity(nick, mask = '') {
   const person = personFor(state.people, nick, mask);
   return {
     person,
     name: person?.name || nick,
-    color: person?.color || nickColor(nick),
+    color: personColor(person, nick),
     photo: person?.photo || '',
   };
 }
@@ -159,6 +178,11 @@ function buffer(net, name) {
 
 async function loadHistory(b) {
   const lines = await invoke('history', { net: b.net, buffer: b.name }).catch(() => []);
+  // First time this channel is seen anywhere: its old history counts as read.
+  if (readMap[b.key] === undefined) {
+    readMap[b.key] = lines.reduce((max, l) => Math.max(max, l.id || 0), 0);
+    saveReadSoon();
+  }
   const fresh = lines.filter((l) => !b.ids.has(l.id));
   if (!fresh.length) return;
   for (const l of fresh) b.ids.add(l.id);
@@ -177,11 +201,6 @@ function trackMembers(b, l) {
   if (l.kind === 'nick') {
     b.members.delete(l.nick);
     b.members.add(l.text);
-  }
-  // First time this channel is seen anywhere: its old history counts as read.
-  if (readMap[b.key] === undefined) {
-    readMap[b.key] = lines.reduce((max, l) => Math.max(max, l.id || 0), 0);
-    saveReadSoon();
   }
 }
 
@@ -971,6 +990,11 @@ document.addEventListener('keydown', (e) => {
     if (b) select(b.key);
     e.preventDefault();
   }
+  if (e.shiftKey && e.key === 'Escape') {
+    e.preventDefault();
+    markCurrentRead();
+    return;
+  }
   if (e.altKey && e.key.toLowerCase() === 'a') {
     e.preventDefault();
     jumpToUnreadChannel();
@@ -1006,11 +1030,6 @@ function markCurrentRead() {
   view.separatorAfter = readMap[b.key] ?? lastId(b);
   updateJumps();
 }
-  if (e.shiftKey && e.key === 'Escape') {
-    e.preventDefault();
-    markCurrentRead();
-    return;
-  }
 
 // Jumping: to the channel with unread, to the "New" line, back to the latest.
 
@@ -1168,7 +1187,7 @@ function renderPeople() {
 
 function personAvatar(p, cls) {
   const av = h('div', cls);
-  const color = p.color || nickColor(p.nicks[0] || p.name || '?');
+  const color = personColor(p, p.nicks[0] || p.name || '?');
   if (p.photo) {
     av.classList.add('photo');
     const img = h('img');
@@ -1234,7 +1253,7 @@ function swatch(color, label, selected, content = '') {
 function renderEditor() {
   const p = editing;
   const name = el.personName.value || p.nicks[0] || '';
-  const auto = nickColor(p.nicks[0] || p.name || '?');
+  const auto = p.photoColor || nickColor(p.nicks[0] || p.name || '?');
   const color = p.color || auto;
 
   el.personPhoto.replaceChildren();
@@ -1256,11 +1275,10 @@ function renderEditor() {
   el.personPhotoRemove.hidden = !p.photo;
 
   const swatches = [swatch(auto, 'Automatic', !p.color, h('span', 'swatch-mark', 'A'))];
-  if (p.photoColor) swatches.push(swatch(p.photoColor, 'From photo', p.color === p.photoColor));
   for (const c of SWATCHES) swatches.push(swatch(c, c, p.color === c));
   const custom = !swatches.some((b) => b.getAttribute('aria-checked') === 'true');
   swatches.push(swatch(custom ? color : 'var(--raised)', 'Pick any colour', custom, h('span', 'swatch-mark', '+')));
-  const values = ['', ...(p.photoColor ? [p.photoColor] : []), ...SWATCHES];
+  const values = ['', ...SWATCHES];
   swatches.forEach((b, i) => b.addEventListener('click', () => {
     if (i === swatches.length - 1) {
       el.personColor.value = toHex(color);
@@ -1362,7 +1380,7 @@ async function setPhoto(file) {
   try {
     editing.photo = await photoFrom(file);
     editing.photoColor = await colorOfPhoto(editing.photo);
-    editing.color = editing.photoColor;
+    editing.color = '';
     renderEditor();
   } catch (e) {
     renderStatus(String(e));
@@ -1392,7 +1410,6 @@ el.people.addEventListener('paste', (e) => {
   setPhoto(file);
 });
 el.personPhotoRemove.addEventListener('click', () => {
-  if (editing.color === editing.photoColor) editing.color = '';
   editing.photo = '';
   editing.photoColor = '';
   renderEditor();
