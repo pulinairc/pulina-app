@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/lobby.gif" width="440" alt="Lobby in a narrow window: backlog with photos, a video and link cards, a reply that gets reactions, marking read, switching channels and the slash command menu">
+  <img src="docs/lobby.gif" width="760" alt="Lobby in a narrow window: backlog with photos, a video and link cards, a reply that gets reactions, marking read, switching channels and the slash command menu">
 </p>
 
 ## Features

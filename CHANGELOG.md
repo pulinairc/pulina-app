@@ -4,6 +4,7 @@
 * Change the message box to a borderless one
 * Change the app icon to a larger, centred plant
 * Fix YouTube error screen on refused videos
+* Update the demo GIF to a desktop scene
 * Fix losing the latest message on window resize
 * Fix a stray new line after switching channels
 
