@@ -45,3 +45,4 @@
 - Fix photos sitting too low next to names
 - Fix pill heights, neutral Mark read
 - Fix freeze when opening People
+- Fix pasting a photo into a person

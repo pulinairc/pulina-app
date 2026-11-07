@@ -1572,9 +1572,19 @@ el.personFile.addEventListener('change', () => {
   setPhoto(el.personFile.files[0]);
   el.personFile.value = '';
 });
+/** An image on the clipboard: as a file, or as a clipboard item (copied from a browser or viewer). */
+function clipboardImage(e) {
+  const data = e.clipboardData;
+  if (!data) return null;
+  const file = [...(data.files || [])].find((f) => f.type.startsWith('image/'));
+  if (file) return file;
+  const item = [...(data.items || [])].find((i) => i.kind === 'file' && i.type.startsWith('image/'));
+  return item ? item.getAsFile() : null;
+}
+
 el.people.addEventListener('paste', (e) => {
-  const file = [...(e.clipboardData?.files || [])].find((f) => f.type.startsWith('image/'));
-  if (!file || !editing) return;
+  const file = editing && clipboardImage(e);
+  if (!file) return;
   e.preventDefault();
   setPhoto(file);
 });
