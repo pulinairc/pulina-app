@@ -48,3 +48,4 @@
 - Fix pasting a photo into a person
 - Add an emoji button to the message box
 - Fix emoji search to put whole words first
+- Add desktop notifications for mentions

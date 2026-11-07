@@ -1079,7 +1079,7 @@ dialog:focus { outline: none; }
 
 #person-edit:not(.channel-mode) .channel-only { display: none; }
 
-#person-edit label.mute-row {
+#person-edit label.mute-row, #settings label.mute-row {
   display: flex;
   align-items: center;
   justify-content: space-between;

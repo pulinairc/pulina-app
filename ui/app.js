@@ -38,7 +38,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), emojiBtn: $('emoji-btn'),
+  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emojiBtn: $('emoji-btn'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -261,7 +261,9 @@ function onLine(l) {
   if (!CHAT_KINDS.has(l.kind) || l.own) return;
 
   b.unread += 1;
-  if (isPrivate(b) || mentions(l.text, state.me[l.net])) b.mention = true;
+  const mentioned = isPrivate(b) || mentions(l.text, state.me[l.net]);
+  if (mentioned) b.mention = true;
+  if (mentioned && !(visible && document.hasFocus())) notify(b, l);
   renderHeader();
 }
 
@@ -484,6 +486,7 @@ el.switcher.addEventListener('click', (e) => {
 // Settings
 
 function renderSettings() {
+  el.notifyToggle.checked = notifyOn();
   const rows = state.networks.map((n) => {
     const row = h('div', 'conn');
     const name = h('span', '', state.me[n] ? `${n} · ${state.me[n]}` : n);
@@ -1834,3 +1837,27 @@ document.addEventListener('keydown', (e) => {
     closePicker();
   }
 }, true);
+
+
+// Desktop notifications for mentions and private messages, on unless turned off in Settings.
+
+const NOTIFY_SETTING = 'notify';
+const NOTIFY_TEXT_CHARS = 160;
+const notifier = window.__TAURI__.notification;
+let notifyAllowed = null;
+
+function notifyOn() {
+  return state.settings[NOTIFY_SETTING] !== 'off';
+}
+
+async function notify(b, l) {
+  if (!notifyOn() || !notifier) return;
+  notifyAllowed ??= (await notifier.isPermissionGranted()) || (await notifier.requestPermission()) === 'granted';
+  if (!notifyAllowed) return;
+  const title = isPrivate(b) ? l.nick : `${identity(l.nick, l.mask).name} in ${label(b)}`;
+  notifier.sendNotification({ title, body: stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS) });
+}
+
+el.notifyToggle.addEventListener('change', () => {
+  saveSetting(NOTIFY_SETTING, el.notifyToggle.checked ? 'on' : 'off');
+});
