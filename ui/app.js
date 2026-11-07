@@ -178,6 +178,11 @@ function trackMembers(b, l) {
     b.members.delete(l.nick);
     b.members.add(l.text);
   }
+  // First time this channel is seen anywhere: its old history counts as read.
+  if (readMap[b.key] === undefined) {
+    readMap[b.key] = lines.reduce((max, l) => Math.max(max, l.id || 0), 0);
+    saveReadSoon();
+  }
 }
 
 function onLine(l) {
@@ -194,12 +199,11 @@ function onLine(l) {
   trackMembers(b, l);
 
   const visible = state.current === b.key;
-  if (visible) appendLine(l, true);
-  if (visible && document.hasFocus() && atBottom()) {
-    markRead(b);
-    return;
+  if (visible) {
+    appendLine(l, true);
+    updateJumps();
   }
-  if (visible) updateJumps();
+  // Nothing is marked read on its own: only the Mark as read button does that.
   if (!CHAT_KINDS.has(l.kind) || l.own) return;
 
   b.unread += 1;
@@ -272,13 +276,7 @@ function renderStatus(message) {
 function select(k) {
   const b = state.buffers.get(k);
   if (!b) return;
-  const previous = state.buffers.get(state.current);
-  if (previous && previous !== b) markRead(previous);
   state.current = k;
-  // The "New" line goes where reading stopped, and stays put while this channel is open.
-  b.separatorAfter = b.unread ? readMap[b.key] : null;
-  b.unread = 0;
-  b.mention = false;
   try { localStorage.setItem(LAST_BUFFER_KEY, k); } catch { /* storage may be unavailable */ }
   el.input.placeholder = `Message ${label(b)}`;
   renderHeader();
@@ -398,7 +396,7 @@ function renderLog() {
   view = { lastLine: null, group: null, events: null, lastByNick: new Map(), separator: null, separatorAfter: null };
   const b = state.buffers.get(state.current);
   if (!b) return updateJumps();
-  view.separatorAfter = b.separatorAfter ?? null;
+  view.separatorAfter = readMap[b.key] ?? lastId(b);
   for (const l of b.lines) appendLine(l, false);
   if (view.separator) toSeparator();
   else toBottom();
@@ -432,8 +430,7 @@ function appendLine(l, live) {
   const firstUnread = view.separatorAfter !== null && !view.separator
     && l.id > view.separatorAfter && CHAT_KINDS.has(l.kind) && !l.own;
   if (firstUnread) {
-    view.separator = h('div', 'unread-sep', 'New');
-    view.separator.setAttribute('role', 'separator');
+    view.separator = separatorNode();
     el.col.append(view.separator);
     view.group = null;
     view.events = null;
@@ -989,10 +986,31 @@ document.addEventListener('click', (e) => {
   openUrl(a.href);
 });
 
-window.addEventListener('focus', () => {
+function separatorNode() {
+  const sep = h('div', 'unread-sep');
+  sep.setAttribute('role', 'separator');
+  const done = h('button', 'mark-read', 'Mark as read');
+  done.type = 'button';
+  done.dataset.tip = 'Shift+Esc';
+  done.addEventListener('click', markCurrentRead);
+  sep.append(h('span', 'sep-label', 'New'), done);
+  return sep;
+}
+
+function markCurrentRead() {
   const b = state.buffers.get(state.current);
-  if (b && atBottom()) markRead(b);
-});
+  if (!b) return;
+  markRead(b);
+  view.separator?.remove();
+  view.separator = null;
+  view.separatorAfter = readMap[b.key] ?? lastId(b);
+  updateJumps();
+}
+  if (e.shiftKey && e.key === 'Escape') {
+    e.preventDefault();
+    markCurrentRead();
+    return;
+  }
 
 // Jumping: to the channel with unread, to the "New" line, back to the latest.
 
@@ -1021,8 +1039,6 @@ el.log.addEventListener('scroll', () => {
   cancelAnimationFrame(jumpFrame);
   jumpFrame = requestAnimationFrame(() => {
     updateJumps();
-    const b = state.buffers.get(state.current);
-    if (b && atBottom() && document.hasFocus()) markRead(b);
   });
 }, { passive: true });
 
