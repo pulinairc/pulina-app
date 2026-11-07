@@ -30,3 +30,5 @@
 - Add a tool to import photos from a folder
 - Change the app icon to the new colours
 - Change README to a presentable one with a demo
+- Add a full emoji picker, actions only on hover
+- Fix photo alignment with the name

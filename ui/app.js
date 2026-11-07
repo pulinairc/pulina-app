@@ -681,10 +681,6 @@ const ICONS = {
   moreH: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
 };
 
-const MORE_EMOJIS = ['😀', '😁', '😆', '😅', '🤣', '😊', '🙂', '😉', '😍', '😘', '😋', '😜', '🤔', '🤨', '😐', '🙄',
-  '😏', '😴', '😮', '😳', '🥺', '😢', '😭', '😤', '😡', '🤯', '😱', '🤗', '🤭', '🤫', '👏', '🙌',
-  '🙏', '💪', '👀', '🔥', '💯', '❤️', '💔', '✨', '🎉', '✅', '❌', '🍺', '☕', '🤝', '💀', '🫡'];
-
 const actions = h('div', 'actions');
 let actionPanel = null;
 
@@ -721,15 +717,18 @@ function togglePanel(build) {
   actions.append(actionPanel);
 }
 
-function emojiGrid() {
-  const grid = h('div', 'glass emoji-grid');
-  for (const e of MORE_EMOJIS) {
-    grid.append(menuButton(`React ${e}`, e, (line) => {
+function quickRow() {
+  const row = h('div', 'glass emoji-row quick-row');
+  row.append(
+    ...topReactions().map((e) => menuButton(`React ${e}`, e, (line) => {
       closePanel();
       react(line, e);
-    }, 'act emoji'));
-  }
-  return grid;
+    }, 'act emoji')),
+    menuButton('More emojis', ICONS.moreH, (line, button) => {
+      openPicker(button, (e) => react(line, e));
+    }),
+  );
+  return row;
 }
 
 function moreMenu() {
@@ -755,18 +754,13 @@ function moreMenu() {
 
 function fillActions() {
   closePanel();
-  const quick = h('div', 'glass emoji-row');
-  quick.append(
-    ...topReactions().map((e) => menuButton(`React ${e}`, e, (line) => react(line, e), 'act emoji')),
-    menuButton('More emojis', ICONS.moreH, () => togglePanel(emojiGrid)),
-  );
   const tools = h('div', 'glass action-row');
   tools.append(
-    menuButton('Add reaction', ICONS.addReaction, () => togglePanel(emojiGrid)),
+    menuButton('Add reaction', ICONS.addReaction, () => togglePanel(quickRow)),
     menuButton('Reply', ICONS.reply, startReply),
     menuButton('More', ICONS.moreV, () => togglePanel(moreMenu)),
   );
-  actions.replaceChildren(quick, tools);
+  actions.replaceChildren(tools);
 }
 
 el.col.addEventListener('pointerover', (e) => {
@@ -1554,3 +1548,177 @@ el.personDelete.addEventListener('click', async () => {
   }
 });
 el.people.addEventListener('close', () => el.input.focus());
+
+
+// Emoji picker: search, frequently used, every category, and a bar to jump between them.
+
+const PICKER_WIDTH = 340;
+const PICKER_HEIGHT = 400;
+const PICKER_GAP = 8;
+const FREQUENT_COUNT = 18;
+const SEARCH_LIMIT = 120;
+const CATEGORY_ICONS = {
+  frequent: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  people: '<circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/>',
+  nature: '<path d="M11 20a7 7 0 0 1-7-7c0-5 5-9 15-9 0 10-4 16-8 16z"/><path d="M4 20c4-4 7-7 11-11"/>',
+  foods: '<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M8 8c0-2 1-3 2-4M12 8c0-2 1-3 2-4M16 8c0-2 1-3 2-4"/>',
+  activity: '<circle cx="12" cy="12" r="9"/><path d="M3.5 9.5c5 2 12 2 17 0M5 18c3-4 11-4 14 0"/>',
+  places: '<path d="M5 16V11l2-5h10l2 5v5z"/><circle cx="8" cy="16" r="2"/><circle cx="16" cy="16" r="2"/>',
+  objects: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/>',
+  symbols: '<path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>',
+  flags: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
+};
+
+const pickerState = { el: null, data: null, onPick: null, sections: [], tabs: [] };
+
+async function emojiData() {
+  pickerState.data ??= await fetch('vendor/emoji.json').then((r) => r.json());
+  return pickerState.data;
+}
+
+function categoryIcon(id) {
+  return svg(`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CATEGORY_ICONS[id]}</svg>`);
+}
+
+function emojiButton(native, label) {
+  const b = h('button', 'pick', native);
+  b.type = 'button';
+  b.setAttribute('aria-label', label);
+  b.addEventListener('click', () => choose(native));
+  return b;
+}
+
+function choose(native) {
+  const onPick = pickerState.onPick;
+  closePicker();
+  onPick?.(native);
+}
+
+function section(id, title, buttons) {
+  const wrap = h('section', 'picker-section');
+  wrap.dataset.cat = id;
+  const grid = h('div', 'picker-grid');
+  grid.append(...buttons);
+  wrap.append(h('h4', '', title), grid);
+  return wrap;
+}
+
+function frequentButtons() {
+  const counts = reactionCounts();
+  const used = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([e]) => e);
+  return [...new Set([...used, ...QUICK_REACTIONS])].slice(0, FREQUENT_COUNT).map((e) => emojiButton(e, e));
+}
+
+async function buildPicker() {
+  const data = await emojiData();
+  const root = h('div', 'glass picker');
+  root.setAttribute('role', 'dialog');
+  root.setAttribute('aria-label', 'Emoji');
+
+  const search = h('label', 'picker-search');
+  const input = h('input');
+  input.placeholder = 'Search';
+  input.setAttribute('aria-label', 'Search emoji');
+  search.append(svg('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>'), input);
+
+  const scroll = h('div', 'picker-scroll');
+  const results = section('results', 'Search results', []);
+  results.hidden = true;
+  const frequent = section('frequent', 'Frequently used', frequentButtons());
+  const cats = data.map((c) => section(c.id, c.name, c.emojis.map(([native, words]) => emojiButton(native, words.split(' ')[0]))));
+  scroll.append(results, frequent, ...cats);
+
+  const tabs = h('nav', 'picker-tabs');
+  const ids = ['frequent', ...data.map((c) => c.id)];
+  pickerState.tabs = ids.map((id) => {
+    const t = h('button', 'picker-tab');
+    t.type = 'button';
+    t.dataset.cat = id;
+    t.setAttribute('aria-label', id === 'frequent' ? 'Frequently used' : data.find((c) => c.id === id).name);
+    t.append(categoryIcon(id));
+    t.addEventListener('click', () => {
+      input.value = '';
+      showSearch('');
+      const target = scroll.querySelector(`section[data-cat="${id}"]`);
+      scroll.scrollTop = target.offsetTop - scroll.offsetTop;
+    });
+    return t;
+  });
+  tabs.append(...pickerState.tabs);
+
+  function showSearch(q) {
+    const query = q.trim().toLowerCase();
+    results.hidden = !query;
+    for (const sec of scroll.querySelectorAll('section:not([data-cat="results"])')) sec.hidden = Boolean(query);
+    if (!query) return;
+    const found = [];
+    for (const c of data) {
+      for (const [native, words] of c.emojis) {
+        if (words.includes(query)) found.push(emojiButton(native, words.split(' ')[0]));
+        if (found.length >= SEARCH_LIMIT) break;
+      }
+    }
+    results.querySelector('.picker-grid').replaceChildren(...found);
+    scroll.scrollTop = 0;
+  }
+
+  input.addEventListener('input', () => showSearch(input.value));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const first = results.querySelector('.pick');
+      if (first) choose(first.textContent);
+    }
+  });
+  scroll.addEventListener('scroll', () => {
+    const top = scroll.scrollTop + scroll.offsetTop + PICKER_GAP;
+    let current = 'frequent';
+    for (const sec of scroll.querySelectorAll('section:not([hidden])')) if (sec.offsetTop <= top) current = sec.dataset.cat;
+    for (const t of pickerState.tabs) t.classList.toggle('active', t.dataset.cat === current);
+  }, { passive: true });
+
+  root.append(search, scroll, tabs);
+  root.addEventListener('pointerdown', (e) => e.stopPropagation());
+  pickerState.el = root;
+  pickerState.input = input;
+  pickerState.frequent = frequent;
+  pickerState.scroll = scroll;
+  pickerState.showSearch = showSearch;
+}
+
+/** Open the picker next to `anchor`; `onPick` gets the chosen emoji. */
+async function openPicker(anchor, onPick) {
+  if (!pickerState.el) await buildPicker();
+  const p = pickerState;
+  p.onPick = onPick;
+  p.frequent.querySelector('.picker-grid').replaceChildren(...frequentButtons());
+  p.input.value = '';
+  p.showSearch('');
+  p.scroll.scrollTop = 0;
+  p.tabs.forEach((t, i) => t.classList.toggle('active', i === 0));
+
+  const box = anchor.getBoundingClientRect();
+  const left = Math.min(Math.max(box.right - PICKER_WIDTH, PICKER_GAP), window.innerWidth - PICKER_WIDTH - PICKER_GAP);
+  const above = box.top - PICKER_HEIGHT - PICKER_GAP;
+  const top = above >= PICKER_GAP ? above : Math.min(box.bottom + PICKER_GAP, window.innerHeight - PICKER_HEIGHT - PICKER_GAP);
+  p.el.style.left = `${Math.max(left, PICKER_GAP)}px`;
+  p.el.style.top = `${Math.max(top, PICKER_GAP)}px`;
+  document.body.append(p.el);
+  closePanel();
+  p.input.focus();
+}
+
+function closePicker() {
+  pickerState.el?.remove();
+  pickerState.onPick = null;
+}
+
+document.addEventListener('pointerdown', () => {
+  if (pickerState.el?.isConnected) closePicker();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && pickerState.el?.isConnected) {
+    e.stopPropagation();
+    closePicker();
+  }
+}, true);
