@@ -10,7 +10,7 @@
 <body>
   <header id="top" data-tauri-drag-region="deep">
     <button id="title" type="button" aria-haspopup="dialog" aria-controls="switcher">
-      <span id="chan-icon" class="chan-icon" aria-hidden="true">#</span>
+      <span id="chan-icon" class="chan-icon" data-tip="Channel picture">#</span>
       <span class="title-text">
         <span id="chan-name">Lobby</span>
         <span id="chan-meta"></span>
@@ -95,7 +95,7 @@
     <form id="person-edit" hidden>
       <div class="person-top">
         <button id="person-photo" class="photo-btn" type="button" aria-label="Choose a photo" data-tip="Choose a photo, or paste one"></button>
-        <div class="person-name-wrap">
+        <div class="person-name-wrap person-only">
           <label for="person-name" class="sr">Name</label>
           <input id="person-name" class="field" autocomplete="off" placeholder="Name">
           <div class="photo-links">
@@ -109,12 +109,12 @@
       <div id="person-colors" class="swatches" role="radiogroup" aria-labelledby="person-color-label"></div>
       <input id="person-color" type="color" class="sr" tabindex="-1" aria-hidden="true">
 
-      <label for="person-nick" class="field-label">Nicks</label>
-      <div class="tag-field">
+      <label for="person-nick" class="field-label person-only">Nicks</label>
+      <div class="tag-field person-only">
         <div id="person-nicks" class="chips"></div>
         <input id="person-nick" autocomplete="off" placeholder="Add a nick, Enter">
       </div>
-      <p class="hint">Kaisla covers Kaisla_ too. Kaisla* matches any ending, kaisla@*.example.net matches ident and host.</p>
+      <p class="hint person-only">Kaisla covers Kaisla_ too. Kaisla* matches any ending, kaisla@*.example.net matches ident and host.</p>
 
       <div class="person-buttons">
         <button id="person-delete" class="link-btn danger" type="button">Delete person</button>

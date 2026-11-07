@@ -263,17 +263,40 @@ function ordered() {
 
 // Header
 
+const CHANNELS_SETTING = 'channels';
+
+/** A channel's own picture and colour, set from its header icon. */
+function channelLook(b) {
+  try { return JSON.parse(state.settings[CHANNELS_SETTING] || '{}')[b.key] || {}; } catch { return {}; }
+}
+
 function icon(b, node) {
   node.style.background = '';
   node.style.color = '';
+  node.replaceChildren();
   if (isPrivate(b)) {
     const who = identity(b.name);
+    if (who.photo) return photoInto(node, who.photo);
     node.textContent = initial(who.name);
     node.style.background = who.color;
     node.style.color = 'var(--bg)';
-  } else {
-    node.textContent = b.name === '' ? '~' : '#';
+    return node;
   }
+  const look = channelLook(b);
+  if (look.photo) return photoInto(node, shownPhoto(look.photo));
+  node.textContent = b.name === '' ? '~' : '#';
+  if (look.color) {
+    node.style.background = look.color;
+    node.style.color = 'var(--bg)';
+  }
+  return node;
+}
+
+function photoInto(node, src) {
+  const img = h('img');
+  img.src = src;
+  img.alt = '';
+  node.append(img);
   return node;
 }
 
@@ -369,6 +392,13 @@ function pick(k) {
 }
 
 el.title.addEventListener('click', openSwitcher);
+el.chanIcon.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const b = state.buffers.get(state.current);
+  if (!b || b.name === '') return;
+  if (isPrivate(b)) openPerson(b.name, '');
+  else editChannel(b);
+});
 el.unread.addEventListener('click', jumpToUnreadChannel);
 el.filter.addEventListener('input', () => {
   picked = 0;
@@ -1225,17 +1255,25 @@ function showList() {
   renderPeople();
 }
 
+function editChannel(b) {
+  const look = channelLook(b);
+  el.people.showModal();
+  editPerson({ id: 0, channel: b.key, name: label(b), color: look.color || '', photo: look.photo || '', nicks: [] });
+  editingFromChat = true;
+}
+
 function editPerson(p) {
   editing = structuredClone(p);
-  el.peopleTitle.textContent = p.id ? p.name : 'New person';
-  el.peopleBack.hidden = false;
+  el.personEdit.classList.toggle('channel-mode', Boolean(p.channel));
+  el.peopleTitle.textContent = p.channel ? p.name : p.id ? p.name : 'New person';
+  el.peopleBack.hidden = Boolean(p.channel);
   el.personNew.hidden = true;
   el.peopleList.hidden = true;
   el.personEdit.hidden = false;
   el.personDelete.hidden = !p.id;
   el.personName.value = editing.name;
   renderEditor();
-  el.personName.focus();
+  if (!p.channel) el.personName.focus();
   if (editing.photo) {
     colorOfPhoto(editing.photo).then((c) => {
       if (!editing || editing.id !== p.id) return;
@@ -1265,8 +1303,8 @@ function swatch(color, label, selected, content = '') {
 
 function renderEditor() {
   const p = editing;
-  const name = el.personName.value || p.nicks[0] || '';
-  const auto = p.photoColor || nickColor(p.nicks[0] || p.name || '?');
+  const name = p.channel ? '#' : el.personName.value || p.nicks[0] || '';
+  const auto = p.photoColor || (p.channel ? '#3a3a42' : nickColor(p.nicks[0] || p.name || '?'));
   const color = p.color || auto;
 
   el.personPhoto.replaceChildren();
@@ -1278,7 +1316,7 @@ function renderEditor() {
     img.alt = '';
     el.personPhoto.append(img);
   } else if (name) {
-    el.personPhoto.textContent = initial(name);
+    el.personPhoto.textContent = p.channel ? '#' : initial(name);
     el.personPhoto.style.background = color;
   } else {
     el.personPhoto.append(svg(PERSON_ICON));
@@ -1488,6 +1526,15 @@ el.personEdit.addEventListener('submit', async (e) => {
   if (pending && !editing.nicks.includes(pending)) editing.nicks.push(pending);
   el.personNick.value = '';
   editing.name = el.personName.value.trim() || editing.nicks[0] || 'Someone';
+  if (editing.channel) {
+    let all = {};
+    try { all = JSON.parse(state.settings[CHANNELS_SETTING] || '{}'); } catch { /* start fresh */ }
+    all[editing.channel] = { photo: editing.photo, color: editing.color };
+    saveSetting(CHANNELS_SETTING, JSON.stringify(all));
+    el.people.close();
+    renderHeader();
+    return;
+  }
   try {
     const { photoColor: _, ...person } = editing;
     await invoke('save_person', { person });

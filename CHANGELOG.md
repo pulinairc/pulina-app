@@ -26,3 +26,4 @@
 - Change reading to manual with Mark as read
 - Fix automatic colour to follow the photo
 - Fix round photos to fill the squircle
+- Add channel pictures and colours

@@ -445,7 +445,6 @@ dialog:focus { outline: none; }
   #composer { padding: 0 10px 10px; }
   .tm { display: none; }
   .card-media { width: 84px; }
-  .chan-icon { width: 28px; height: 28px; }
 }
 
 /* macOS keeps its window buttons, drawn over the left end of the header. */
@@ -955,3 +954,10 @@ dialog:focus { outline: none; }
 }
 
 .av img { border-radius: 0; }
+
+/* Channel picture editing reuses the person editor without name and nicks. */
+#person-edit.channel-mode .person-only { display: none; }
+
+/* The header icon is as tall as the two lines beside it, and opens its picture editor. */
+#top .chan-icon { width: 36px; height: 36px; font-size: 16px; cursor: pointer; overflow: hidden; }
+.chan-icon img { width: 100%; height: 100%; object-fit: cover; }
