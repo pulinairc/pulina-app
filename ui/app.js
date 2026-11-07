@@ -131,7 +131,7 @@ function renderHeader() {
     el.chanName.textContent = label(b);
     const who = isPrivate(b) ? 'private' : b.name === '' ? 'server messages' : `${b.members.size} people`;
     el.chanMeta.textContent = `${b.net} · ${who}`;
-    el.title.title = b.topic || '';
+    el.title.dataset.tip = b.topic || '';
   }
 
   const others = [...state.buffers.values()].filter((x) => x.key !== state.current && x.unread);
@@ -333,7 +333,7 @@ function newGroup(l) {
 
 function row(l) {
   const r = h('div', `text ${l.kind}`);
-  r.title = clock(l.ts);
+  r.dataset.tip = clock(l.ts);
 
   let firstUrl = null;
   const tokens = tokenize(l.text, state.me[l.net]);
@@ -341,7 +341,7 @@ function row(l) {
     if (t.type === 'url') {
       const a = h('a', 'link', shortUrl(t.value));
       a.href = t.value;
-      a.title = t.value;
+      a.dataset.tip = t.value;
       r.append(a);
       firstUrl ??= t.value;
     } else if (t.type === 'mention') {
@@ -399,7 +399,7 @@ function imageCard(p) {
 function pageCard(p) {
   const a = h('a', 'card');
   a.href = p.url;
-  a.title = p.url;
+  a.dataset.tip = p.url;
   const text = h('div', 'card-text');
   text.append(h('span', 'card-site', p.site || shortUrl(p.url)));
   if (p.title) text.append(h('span', 'card-title', p.title));
@@ -547,3 +547,38 @@ function scheduleFirstPick() {
 }
 
 start();
+
+// Tooltips: one small black label, shown at once, for anything with data-tip.
+
+const tip = h('div', 'tip');
+tip.setAttribute('role', 'tooltip');
+tip.hidden = true;
+document.body.append(tip);
+const TIP_GAP_PX = 8;
+
+function showTip(target, x) {
+  const text = target.dataset.tip;
+  if (!text) return hideTip();
+  tip.textContent = text;
+  tip.hidden = false;
+  const box = target.getBoundingClientRect();
+  const w = tip.offsetWidth;
+  const h = tip.offsetHeight;
+  const left = Math.min(Math.max(x - w / 2, 4), window.innerWidth - w - 4);
+  const above = box.top - h - TIP_GAP_PX;
+  tip.style.left = `${left}px`;
+  tip.style.top = `${above >= 4 ? above : box.bottom + TIP_GAP_PX}px`;
+}
+
+function hideTip() {
+  tip.hidden = true;
+}
+
+document.addEventListener('pointermove', (e) => {
+  const target = e.target.closest?.('[data-tip]');
+  if (target) showTip(target, e.clientX);
+  else if (!tip.hidden) hideTip();
+});
+document.addEventListener('pointerdown', hideTip);
+el.log.addEventListener('scroll', hideTip, { passive: true });
+document.addEventListener('pointerleave', hideTip);

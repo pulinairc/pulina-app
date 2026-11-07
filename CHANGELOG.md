@@ -13,3 +13,4 @@
 - Change link cards to a full-height picture
 - Fix the header hover box
 - Remove the system title bar
+- Add instant black tooltips

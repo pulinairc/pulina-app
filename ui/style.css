@@ -442,3 +442,21 @@ dialog::backdrop { background: rgb(10 10 16 / 55%); }
 
 /* macOS keeps its window buttons, drawn over the left end of the header. */
 .mac #top { padding-left: 80px; }
+
+/* Tooltips */
+
+.tip {
+  position: fixed;
+  z-index: 100;
+  max-width: min(360px, calc(100vw - 8px));
+  padding: 3px 7px;
+  border-radius: 5px;
+  background: #000;
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
