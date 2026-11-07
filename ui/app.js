@@ -572,7 +572,7 @@ function appendLine(l, live) {
       el.col.append(view.events.node);
     }
     view.events.list.push(l);
-    view.events.node.textContent = summarize(view.events.list);
+    view.events.node.replaceChildren(summarize(view.events.list), h('span', 'tm', clock(l.ts)));
     view.group = null;
   } else if (CHAT_KINDS.has(l.kind)) {
     view.events = null;
@@ -850,8 +850,10 @@ el.log.addEventListener('pointerleave', () => {
 });
 
 function note(l) {
-  if (l.kind === 'topic') return h('div', 'events', `${l.nick} changed the topic to “${l.text}”`);
-  return h('div', 'events', l.text);
+  const text = l.kind === 'topic' ? `${l.nick} changed the topic to “${l.text}”` : l.text;
+  const n = h('div', 'events');
+  n.append(text, h('span', 'tm', clock(l.ts)));
+  return n;
 }
 
 // Link previews

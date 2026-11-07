@@ -246,6 +246,8 @@ a:hover { text-decoration-color: var(--dim); }
   padding-left: calc(var(--avatar) + 10px);
 }
 
+.events .tm { margin-left: 8px; }
+
 /* Link previews */
 
 /* Media keeps its shape inside a box well short of the column: tall pictures are held by height, wide ones by width. */

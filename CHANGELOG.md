@@ -1,5 +1,6 @@
 ### 0.5.1: 2026-11-07
 
+* Add times to join, quit and topic lines
 * Change own messages to white text
 * Remove the you label from own messages
 
