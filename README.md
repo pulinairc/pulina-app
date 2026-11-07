@@ -5,12 +5,11 @@
 <h1 align="center">Lobby</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.1.0-ff9e64?style=for-the-badge" alt="Version 0.1.0">
-  <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/Rust-1f1f23?style=for-the-badge&logo=rust&logoColor=white" alt="Rust"></a>
-  <a href="https://tauri.app"><img src="https://img.shields.io/badge/Tauri_2-1f1f23?style=for-the-badge&logo=tauri&logoColor=ffc131" alt="Tauri 2"></a>
-  <img src="https://img.shields.io/badge/Linux-1f1f23?style=for-the-badge&logo=linux&logoColor=white" alt="Linux">
-  <img src="https://img.shields.io/badge/macOS-1f1f23?style=for-the-badge&logo=apple&logoColor=white" alt="macOS">
-  <img src="https://img.shields.io/badge/self--hosted-1f1f23?style=for-the-badge" alt="Self-hosted">
+  <a href="https://github.com/rollecode/lobby/releases/latest"><img src="https://img.shields.io/github/v/release/rollecode/lobby?style=for-the-badge&color=ff7eb6&label=release" alt="Latest release"></a>
+  <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/Rust-CE422B?style=for-the-badge&logo=rust&logoColor=white" alt="Rust"></a>
+  <a href="https://tauri.app"><img src="https://img.shields.io/badge/Tauri-24C8D8?style=for-the-badge&logo=tauri&logoColor=white" alt="Tauri"></a>
+  <img src="https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black" alt="Linux">
+  <img src="https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white" alt="macOS">
 </p>
 
 <p align="center">
@@ -58,11 +57,22 @@ Lobby can also connect straight to irssiproxy or any IRC server. That works with
 
 ## Installation
 
-Lobby is built from source for now.
-
 ### The app
 
-You need Rust 1.85 or newer from [rustup.rs](https://rustup.rs), plus:
+Download the latest build from [Releases](https://github.com/rollecode/lobby/releases/latest):
+
+| System | File |
+|--------|------|
+| Debian, Ubuntu | `.deb`, install with `sudo apt install ./Lobby_*.deb` |
+| Other Linux | `.AppImage`, make it executable and run it |
+| macOS (Apple silicon) | `.dmg` |
+
+The macOS build is not signed. After moving Lobby to Applications, run `xattr -dr com.apple.quarantine /Applications/Lobby.app` once, or macOS refuses to open it.
+
+<details>
+<summary><strong>Building from source</strong></summary>
+
+You need Rust from [rustup.rs](https://rustup.rs), plus:
 
 | System | Command |
 |--------|---------|
@@ -79,6 +89,8 @@ cargo build --release -p lobby
 ```
 
 To update: `git pull` and build again.
+
+</details>
 
 ### lobby-server
 
@@ -167,7 +179,7 @@ server {
 
     location = /upload.php {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_pass unix:/run/php/php-fpm.sock;
     }
 
     location ^~ /u/ {
@@ -214,6 +226,8 @@ flowchart TB
 cargo test --workspace
 node --test tests/lib.test.mjs
 ```
+
+Releases are automatic: when a new version heading lands in `CHANGELOG.md` on `main`, GitHub Actions tags it, publishes the release notes and attaches the Linux and macOS builds.
 
 <details>
 <summary><strong>The app and lobby-server protocol</strong></summary>
