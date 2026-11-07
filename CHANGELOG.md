@@ -51,3 +51,4 @@
 - Add desktop notifications for mentions
 - Add attachments through a file host
 - Add a file host script and setup guide
+- Fix Settings layout and switches

@@ -77,22 +77,24 @@
       </button>
     </div>
     <section>
-      <label class="mute-row" for="notify-toggle">
-        <span>Desktop notifications for mentions and private messages</span>
-        <input id="notify-toggle" type="checkbox" role="switch">
+      <h3>Notifications</h3>
+      <label class="switch-row" for="notify-toggle">
+        <span>Mentions and private messages</span>
+        <input id="notify-toggle" class="switch" type="checkbox" role="switch">
       </label>
     </section>
     <section>
-      <h3><label for="upload-url">File host for attachments</label></h3>
-      <input id="upload-url" class="field" type="url" autocomplete="off" spellcheck="false" placeholder="https://files.example.org/upload?k=secret">
-      <p class="hint">Any host that takes the file as a POST and answers with its address. The README shows how to run one. Stored on your server, so every device uses it.</p>
+      <h3><label for="upload-url">Attachments</label></h3>
+      <input id="upload-url" class="field" type="url" autocomplete="off" spellcheck="false" placeholder="https://files.example.org/upload.php?k=key">
+      <p class="hint">The file host your files go to. Any host that takes a POST and answers with the file's address works, the README shows how to run one.</p>
+    </section>
+    <section>
+      <h3>People</h3>
+      <button id="open-people" class="wide-btn" type="button">People and photos</button>
     </section>
     <section>
       <h3>Connections</h3>
       <div id="connections"></div>
-    </section>
-    <section>
-      <button id="open-people" class="wide-btn" type="button">People and photos</button>
     </section>
     <section>
       <h3>Config file</h3>
@@ -135,9 +137,9 @@
       <div id="person-colors" class="swatches" role="radiogroup" aria-labelledby="person-color-label"></div>
       <input id="person-color" type="color" class="sr" tabindex="-1" aria-hidden="true">
 
-      <label class="mute-row channel-only" for="channel-mute">
+      <label class="switch-row channel-only" for="channel-mute">
         <span>Mute this channel</span>
-        <input id="channel-mute" type="checkbox" role="switch">
+        <input id="channel-mute" class="switch" type="checkbox" role="switch">
       </label>
 
       <label for="person-nick" class="field-label person-only">Nicks</label>
