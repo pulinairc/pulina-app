@@ -310,21 +310,46 @@ a:hover { text-decoration-color: var(--dim); }
 
 #composer { padding: 0 16px 14px; flex-shrink: 0; }
 
-#input {
-  display: block;
-  width: 100%;
+.composer-box {
+  display: flex;
+  align-items: center;
   max-width: var(--column);
   margin: 0 auto;
-  padding: 10px 14px;
+  padding: 0 4px 0 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--panel);
+}
+
+.composer-box:focus-within { border-color: var(--line-strong); }
+
+#input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 0;
+  border: 0;
+  background: transparent;
   color: var(--strong);
   font: inherit;
   outline: none;
 }
 
-#input:focus { border-color: var(--line-strong); }
+.box-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.box-btn:hover { color: var(--strong); }
+.box-btn[hidden] { display: none; }
 #input::placeholder, #filter::placeholder { color: var(--faint); }
 
 /* Dialogs */

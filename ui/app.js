@@ -38,7 +38,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), markReadLabel: $('mark-read-label'),
+  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), emojiBtn: $('emoji-btn'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -1163,6 +1163,17 @@ function updateJumps() {
 }
 
 el.markRead.addEventListener('click', markCurrentRead);
+
+// The message box's emoji button: the same picker, inserting at the cursor.
+el.emojiBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const start = el.input.selectionStart ?? el.input.value.length;
+  const end = el.input.selectionEnd ?? start;
+  openPicker(el.emojiBtn, (emoji) => {
+    el.input.setRangeText(emoji, start, end, 'end');
+    el.input.focus();
+  });
+});
 
 el.jumpUnread.addEventListener('click', () => {
   if (view?.separator) view.separator.scrollIntoView({ block: 'start', behavior: 'smooth' });
