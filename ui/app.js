@@ -44,7 +44,7 @@ const el = {
   personEdit: $('person-edit'), personPhoto: $('person-photo'),
   personPhotoRemove: $('person-photo-remove'), personFile: $('person-file'), personName: $('person-name'),
   personColor: $('person-color'), personColors: $('person-colors'),
-  personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
+  channelMute: $('channel-mute'), personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
   switcher: $('switcher'), filter: $('filter'), list: $('list'),
   settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'),
 };
@@ -264,6 +264,29 @@ function ordered() {
 // Header
 
 const CHANNELS_SETTING = 'channels';
+const MUTED_SETTING = 'muted';
+
+/** Muted channels add nothing to unread counts or jumps, except mentions. */
+function mutedKeys() {
+  try { return new Set(JSON.parse(state.settings[MUTED_SETTING] || '[]')); } catch { return new Set(); }
+}
+
+function isMuted(b) {
+  return mutedKeys().has(b.key);
+}
+
+/** Does this channel's unread deserve attention? */
+function wantsAttention(b) {
+  return b.unread > 0 && (b.mention || !isMuted(b));
+}
+
+function setMuted(b, muted) {
+  const keys = mutedKeys();
+  if (muted) keys.add(b.key);
+  else keys.delete(b.key);
+  saveSetting(MUTED_SETTING, JSON.stringify([...keys]));
+  renderHeader();
+}
 
 /** A channel's own picture and colour, set from its header icon. */
 function channelLook(b) {
@@ -306,11 +329,11 @@ function renderHeader() {
     icon(b, el.chanIcon);
     el.chanName.textContent = label(b);
     const who = isPrivate(b) ? 'private' : b.name === '' ? 'server messages' : `${b.members.size} people`;
-    el.chanMeta.textContent = `${b.net} · ${who}`;
+    el.chanMeta.textContent = `${b.net} · ${who}${isMuted(b) ? ' · muted' : ''}`;
     el.title.dataset.tip = b.topic || '';
   }
 
-  const others = [...state.buffers.values()].filter((x) => x.key !== state.current && x.unread);
+  const others = [...state.buffers.values()].filter((x) => x.key !== state.current && wantsAttention(x));
   const total = others.reduce((n, x) => n + x.unread, 0);
   el.unread.hidden = total === 0;
   el.unread.textContent = `${total} unread`;
@@ -369,8 +392,10 @@ function renderList() {
     item.setAttribute('aria-selected', String(i === picked));
     item.classList.toggle('current', b.key === state.current);
     item.classList.toggle('mention', b.mention);
+    item.classList.toggle('muted', isMuted(b));
     item.append(icon(b, h('span', 'chan-icon')), h('span', 'name', label(b)));
-    if (b.unread) item.append(h('span', 'count', String(b.unread)));
+    if (isMuted(b)) item.append(svg(ICONS.bellOff));
+    if (wantsAttention(b)) item.append(h('span', 'count', String(b.unread)));
     item.addEventListener('click', () => pick(b.key));
     nodes.push(item);
   });
@@ -678,6 +703,7 @@ const ICONS = {
   addReaction: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.56"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/><path d="M19 2v6M16 5h6"/></svg>',
   reply: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
   moreV: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
+  bellOff: '<svg class="muted-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Muted"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>',
   moreH: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
 };
 
@@ -862,6 +888,11 @@ async function runLocal(b, text) {
     case 'close':
       if (isChannel(b.name) && b.joined) await invoke('send', { net: b.net, buffer: b.name, text: '/part' });
       closeBuffer(b);
+      return true;
+    case 'mute':
+    case 'unmute':
+      setMuted(b, cmd.toLowerCase() === 'mute');
+      localNote(cmd.toLowerCase() === 'mute' ? `${label(b)} muted` : `${label(b)} unmuted`);
       return true;
     case 'clear':
       b.lines = [];
@@ -1071,7 +1102,7 @@ function markCurrentRead() {
 // Jumping: to the channel with unread, to the "New" line, back to the latest.
 
 function jumpToUnreadChannel() {
-  const waiting = ordered().filter((b) => b.key !== state.current && b.unread);
+  const waiting = ordered().filter((b) => b.key !== state.current && wantsAttention(b));
   const next = waiting.find((b) => b.mention) || waiting[0];
   if (next) select(next.key);
 }
@@ -1131,6 +1162,7 @@ async function start() {
   await listen('setting', (e) => {
     state.settings[e.payload.key] = e.payload.value;
     if (e.payload.key === READ_SETTING) applyReadSetting(e.payload.value);
+    if (e.payload.key === MUTED_SETTING || e.payload.key === CHANNELS_SETTING) renderHeader();
   });
   // A lobby-server connection came back: fetch what was missed.
   await listen('resync', async () => {
@@ -1251,6 +1283,7 @@ function showList() {
 
 function editChannel(b) {
   const look = channelLook(b);
+  el.channelMute.checked = isMuted(b);
   el.people.showModal();
   editPerson({ id: 0, channel: b.key, name: label(b), color: look.color || '', photo: look.photo || '', nicks: [] });
   editingFromChat = true;
@@ -1525,6 +1558,8 @@ el.personEdit.addEventListener('submit', async (e) => {
     try { all = JSON.parse(state.settings[CHANNELS_SETTING] || '{}'); } catch { /* start fresh */ }
     all[editing.channel] = { photo: editing.photo, color: editing.color };
     saveSetting(CHANNELS_SETTING, JSON.stringify(all));
+    const b = state.buffers.get(editing.channel);
+    if (b && el.channelMute.checked !== isMuted(b)) setMuted(b, el.channelMute.checked);
     el.people.close();
     renderHeader();
     return;

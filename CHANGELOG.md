@@ -36,3 +36,4 @@
 - Change the demo to the current hover menu
 - Add seconds to timestamps
 - Change stacked lines to a little more air
+- Add muting channels

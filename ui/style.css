@@ -1042,3 +1042,48 @@ dialog:focus { outline: none; }
 
 .picker-tab:hover { color: var(--strong); }
 .picker-tab.active { background: rgb(255 255 255 / 10%); color: var(--strong); }
+
+/* Muting */
+
+#person-edit:not(.channel-mode) .channel-only { display: none; }
+
+#person-edit label.mute-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 18px 0 0;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.mute-row input {
+  appearance: none;
+  position: relative;
+  width: 34px;
+  height: 20px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.mute-row input::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--dim);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.mute-row input:checked { background: var(--accent); box-shadow: none; }
+.mute-row input:checked::after { transform: translateX(14px); background: var(--bg); }
+.item.muted .name { color: var(--faint); }
+.item .muted-icon { color: var(--faint); flex-shrink: 0; }
