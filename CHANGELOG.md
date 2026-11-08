@@ -17,6 +17,7 @@
 * Add managing lobby-server's networks in the app
 * Fix the violet focus ring on buttons
 * Fix the Linux icon looking larger than others
+* Fix muted channels filling the unread count
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night

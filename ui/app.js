@@ -316,7 +316,16 @@ function isMuted(b) {
 
 /** Does this channel's unread deserve attention? */
 function wantsAttention(b) {
-  return b.unread > 0 && (b.mention || !isMuted(b));
+  return attentionCount(b) > 0;
+}
+
+/** What a channel adds to the unread count: everything, or for a muted one only what names you. */
+function attentionCount(b) {
+  if (!b.unread) return 0;
+  if (!isMuted(b)) return b.unread;
+  if (!b.mention) return 0;
+  const seen = readMap[b.key] ?? Infinity;
+  return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && mentions(l.text, state.me[l.net])).length || 1;
 }
 
 const BELL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
@@ -406,7 +415,7 @@ function renderHeader() {
   }
 
   const others = [...state.buffers.values()].filter((x) => x.key !== state.current && wantsAttention(x));
-  const total = others.reduce((n, x) => n + x.unread, 0);
+  const total = others.reduce((n, x) => n + attentionCount(x), 0);
   el.unread.hidden = total === 0;
   el.unread.textContent = `${total} unread`;
   el.unread.classList.toggle('mention', others.some((x) => x.mention));
@@ -514,7 +523,7 @@ function renderList() {
     item.classList.toggle('muted', isMuted(b));
     item.append(icon(b, h('span', 'chan-icon')), h('span', 'name', label(b)));
     if (isMuted(b)) item.append(svg(ICONS.bellOff));
-    if (wantsAttention(b)) item.append(h('span', 'count', String(b.unread)));
+    if (wantsAttention(b)) item.append(h('span', 'count', String(attentionCount(b))));
     item.addEventListener('click', () => pick(b.key));
     nodes.push(item);
   });
