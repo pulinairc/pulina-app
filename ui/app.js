@@ -1736,6 +1736,8 @@ function jumpToUnreadChannel() {
   if (next) select(next.key);
 }
 
+const NARROW = matchMedia('(max-width: 520px)');
+
 function updateJumps() {
   const b = state.buffers.get(state.current);
   const count = b ? unreadCount(b) : 0;
@@ -1746,10 +1748,13 @@ function updateJumps() {
   const below = sep && sep.top > log.bottom;
   el.jumpUnread.hidden = !(count && (above || below));
   el.jumpUnread.classList.toggle('down', Boolean(below));
-  el.jumpUnreadLabel.textContent = `${count} new ${count === 1 ? 'message' : 'messages'} ${below ? 'below' : 'above'}`;
+  const messages = count === 1 ? 'message' : 'messages';
+  // A phone has room for the count and the arrow only.
+  const narrow = NARROW.matches;
+  el.jumpUnreadLabel.textContent = narrow ? `${count} new` : `${count} new ${messages} ${below ? 'below' : 'above'}`;
   el.jumpLatest.hidden = atBottom();
   el.markRead.hidden = count === 0;
-  el.markReadLabel.textContent = `Mark ${count} ${count === 1 ? 'message' : 'messages'} read`;
+  el.markReadLabel.textContent = narrow ? 'Mark read' : `Mark ${count} ${messages} read`;
 }
 
 el.markRead.addEventListener('click', markCurrentRead);
