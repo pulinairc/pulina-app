@@ -219,15 +219,17 @@ fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> R
     if name.is_empty() || !name.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
         return Err("Unknown icon".into());
     }
-    let asset = app.asset_resolver().get(format!("icons/{name}.png")).ok_or("Unknown icon")?;
     #[cfg(target_os = "macos")]
     {
+        // macOS draws the artwork inside a margin with a shadow; these versions carry it.
         let _ = &window;
+        let asset = app.asset_resolver().get(format!("icons/mac/{name}.png")).ok_or("Unknown icon")?;
         let png = asset.bytes.clone();
         app.run_on_main_thread(move || dock_icon(&png)).map_err(|e| e.to_string())?;
     }
     #[cfg(not(target_os = "macos"))]
     {
+        let asset = app.asset_resolver().get(format!("icons/{name}.png")).ok_or("Unknown icon")?;
         let image = tauri::image::Image::from_bytes(&asset.bytes).map_err(|e| e.to_string())?;
         window.set_icon(image).map_err(|e| e.to_string())?;
     }

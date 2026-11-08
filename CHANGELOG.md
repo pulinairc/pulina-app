@@ -5,6 +5,7 @@
 * Add nick highlights with WHOIS on hover
 * Add a choice of seven app icons in Settings
 * Add shortcut settings, Mark read on Ctrl+Enter
+* Fix oversized icons in the macOS Dock
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night

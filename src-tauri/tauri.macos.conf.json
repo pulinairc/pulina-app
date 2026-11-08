@@ -18,5 +18,10 @@
         }
       }
     ]
+  },
+  "bundle": {
+    "icon": [
+      "icons/macos.png"
+    ]
   }
 }
