@@ -41,7 +41,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
+  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -501,6 +501,7 @@ function renderSettings() {
   el.notifyToggle.checked = notifyOn();
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
+  renderIconChoices();
   el.uploadUrl.value = uploadHost();
   const rows = state.networks.map((n) => {
     const row = h('div', 'conn');
@@ -2238,6 +2239,46 @@ let notifyAllowed = null;
 function settingOn(key) {
   return state.settings[key] !== 'off';
 }
+
+// The app icon, chosen per device: Dock on macOS, window icon elsewhere.
+const ICONS_KEY = 'lobby.icon';
+const APP_ICONS = [
+  ['teal-night', 'Teal night'], ['neon-night', 'Neon night'], ['sunset', 'Sunset'], ['mint-glass', 'Mint glass'],
+  ['porcelain', 'Porcelain'], ['neon-glow', 'Neon glow'], ['neon-sign', 'Neon sign'],
+];
+const DEFAULT_ICON = APP_ICONS[0][0];
+
+function chosenIcon() {
+  try { return localStorage.getItem(ICONS_KEY) || DEFAULT_ICON; } catch { return DEFAULT_ICON; }
+}
+
+function useIcon(name) {
+  invoke('set_app_icon', { name }).catch((e) => renderStatus(`App icon: ${e}`));
+}
+
+function renderIconChoices() {
+  const current = chosenIcon();
+  el.iconChoices.replaceChildren(...APP_ICONS.map(([name, label]) => {
+    const b = h('button', 'icon-choice');
+    b.type = 'button';
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(name === current));
+    b.setAttribute('aria-label', label);
+    b.dataset.tip = label;
+    const img = h('img');
+    img.src = `icons/${name}.png`;
+    img.alt = '';
+    b.append(img);
+    b.addEventListener('click', () => {
+      try { localStorage.setItem(ICONS_KEY, name); } catch { /* the choice lasts this run */ }
+      useIcon(name);
+      renderIconChoices();
+    });
+    return b;
+  }));
+}
+
+if (chosenIcon() !== DEFAULT_ICON) useIcon(chosenIcon());
 
 function notifyOn() {
   return state.settings[NOTIFY_SETTING] !== 'off';

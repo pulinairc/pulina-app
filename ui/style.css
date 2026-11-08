@@ -622,6 +622,12 @@ dialog:focus { outline: none; }
 #settings section { padding: 0 18px; margin-top: 20px; }
 #settings section:last-child { margin-bottom: 20px; }
 #settings h3 { margin: 0 0 10px; font-size: 12px; font-weight: 600; color: var(--faint); }
+#settings .switch-row + .switch-row { margin-top: 12px; }
+.icon-choices { display: flex; flex-wrap: wrap; gap: 10px; }
+.icon-choice { width: 42px; height: 42px; padding: 0; border: 0; border-radius: 11px; background: none; cursor: pointer; outline: 2px solid transparent; outline-offset: 2px; transition: outline-color 0.15s ease; }
+.icon-choice img { display: block; width: 100%; height: 100%; }
+.icon-choice:hover { outline-color: var(--line-strong); }
+.icon-choice[aria-checked="true"] { outline-color: var(--accent); }
 #settings p { margin: 0; }
 #settings .hint { margin-top: 8px; font-size: 12px; line-height: 1.5; }
 #settings .mono { line-height: 1.5; }

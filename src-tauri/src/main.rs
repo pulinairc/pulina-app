@@ -213,6 +213,38 @@ fn notify_icon(app: tauri::AppHandle, request: tauri::ipc::Request<'_>) -> Resul
     Ok(path.to_string_lossy().into_owned())
 }
 
+/// Swap the app icon for one of the icons in `ui/icons`: the Dock icon on macOS, the window icon elsewhere.
+#[tauri::command]
+fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> Result<(), String> {
+    if name.is_empty() || !name.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
+        return Err("Unknown icon".into());
+    }
+    let asset = app.asset_resolver().get(format!("icons/{name}.png")).ok_or("Unknown icon")?;
+    #[cfg(target_os = "macos")]
+    {
+        let _ = &window;
+        let png = asset.bytes.clone();
+        app.run_on_main_thread(move || dock_icon(&png)).map_err(|e| e.to_string())?;
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let image = tauri::image::Image::from_bytes(&asset.bytes).map_err(|e| e.to_string())?;
+        window.set_icon(image).map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn dock_icon(png: &[u8]) {
+    use objc2::{AllocAnyThread, MainThreadMarker};
+    use objc2_app_kit::{NSApplication, NSImage};
+    use objc2_foundation::NSData;
+    let Some(mtm) = MainThreadMarker::new() else { return };
+    let data = NSData::with_bytes(png);
+    let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) else { return };
+    unsafe { NSApplication::sharedApplication(mtm).setApplicationIconImage(Some(&image)) };
+}
+
 #[tauri::command]
 fn player() -> String {
     embed::base()
@@ -248,7 +280,7 @@ fn main() {
             app.manage(AppState { source, store, error });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon])
+        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }
