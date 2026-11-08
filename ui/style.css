@@ -1460,10 +1460,10 @@ label.switch-row {
 .ios body { height: var(--app-h, 100%); }
 .ios #composer { padding-bottom: calc(env(safe-area-inset-bottom) + 10px); }
 .ios.keyboard #composer { padding-bottom: 8px; }
-/* No keyboard to set shortcuts for; icons four to a row, the last three centred. */
+/* No keyboard to set shortcuts for; icons four to a row from the left. */
 .ios body { font-size: 16px; }
 .ios #shortcut-section { display: none; }
-.ios .icon-choices { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.ios .icon-choices { display: flex; flex-wrap: wrap; gap: 14px; justify-content: flex-start; }
 .ios .icon-choice { width: calc((100% - 3 * 14px) / 4); height: auto; aspect-ratio: 1; border-radius: 24%; }
 
 .server-nets { display: grid; gap: 2px; margin-bottom: 4px; }

@@ -50,6 +50,7 @@
 * Fix sending not scrolling to your message
 * Change the photo and colour picker to even rows
 * Remove the Neon sign icon
+* Change the iPhone icon picker to start from the left
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
