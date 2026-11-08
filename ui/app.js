@@ -175,7 +175,19 @@ function lastId(b) {
 
 function saveReadSoon() {
   clearTimeout(readSaveTimer);
-  readSaveTimer = setTimeout(() => saveSetting(READ_SETTING, JSON.stringify(readMap)), READ_SAVE_DELAY_MS);
+  readSaveTimer = setTimeout(flushRead, READ_SAVE_DELAY_MS);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) flushRead();
+});
+
+/** Save the read markers now, so other devices hear of it before this one sleeps. */
+function flushRead() {
+  if (readSaveTimer === null) return;
+  clearTimeout(readSaveTimer);
+  readSaveTimer = null;
+  saveSetting(READ_SETTING, JSON.stringify(readMap));
 }
 
 function markRead(b) {
@@ -208,6 +220,11 @@ function applyReadSetting(value) {
   try { incoming = JSON.parse(value || '{}'); } catch { /* keep what we have */ }
   for (const [k, id] of Object.entries(incoming)) readMap[k] = Math.max(readMap[k] || 0, id);
   for (const b of state.buffers.values()) if (b.key !== state.current) recountUnread(b);
+  // Read on another device: the open channel drops its New line too, once all of it is read there.
+  const open = state.buffers.get(state.current);
+  if (open && view && (readMap[open.key] || 0) >= lastId(open) && (open.unread || view.separator)) {
+    markCurrentRead();
+  }
   renderHeader();
 }
 
@@ -1744,6 +1761,7 @@ function markCurrentRead() {
   const b = state.buffers.get(state.current);
   if (!b) return;
   markRead(b);
+  flushRead();
   dropSeparator();
   view.separatorAfter = readMap[b.key] ?? lastId(b);
   updateJumps();
