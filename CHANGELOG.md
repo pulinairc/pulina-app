@@ -36,6 +36,7 @@
 * Fix macOS window buttons sitting off the header
 * Add a count of newer messages to Latest
 * Add project links to the connection setup
+* Add a connected status to the connection setup
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night

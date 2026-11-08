@@ -1416,6 +1416,8 @@ label.switch-row {
 .segments button { flex: 1; padding: 6px 4px; border: 0; border-radius: 8px; background: none; color: var(--dim); font: inherit; font-size: 14px; cursor: pointer; }
 .segments button[aria-checked="true"] { background: var(--raised); color: var(--strong); font-weight: 600; }
 #connection-about { margin-top: 10px; }
+.conn-state { display: flex; align-items: center; gap: 9px; margin: 14px 0 0; font-size: 14px; color: var(--strong); --dot: var(--new); }
+.conn-state[data-ok="true"] { --dot: var(--ok); }
 .field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .key-box { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #000; }
 .key-box code { flex: 1; min-width: 0; font-size: 12px; line-height: 1.4; color: var(--text); overflow-wrap: anywhere; user-select: all; }

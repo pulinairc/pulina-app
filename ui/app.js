@@ -51,7 +51,7 @@ const el = {
   personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
   switcher: $('switcher'), filter: $('filter'), list: $('list'),
   settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'), openConnection: $('open-connection'),
-  connection: $('connection'), connectionForm: $('connection-form'), connectionClose: $('connection-close'), connectionAbout: $('connection-about'), connectionError: $('connection-error'),
+  connection: $('connection'), connectionState: $('connection-state'), connectionStateText: $('connection-state-text'), connectionForm: $('connection-form'), connectionClose: $('connection-close'), connectionAbout: $('connection-about'), connectionError: $('connection-error'),
   connSsh: $('conn-ssh'), connSshPort: $('conn-ssh-port'), connPort: $('conn-port'), connKey: $('conn-key'), connCopy: $('conn-copy'), connUrl: $('conn-url'),
   connToken: $('conn-token'), connNick: $('conn-nick'), connNetworks: $('conn-networks'), connAddNet: $('conn-add-net'),
   serverNets: $('server-nets'), serverNetsHint: $('server-nets-hint'), serverNetNew: $('server-net-new'), serverNetAdd: $('server-net-add'),
@@ -471,6 +471,7 @@ function connectionText() {
 }
 
 function renderConnection() {
+  if (el.connection.open) renderConnectionStatus();
   const c = connectionText();
   el.status.hidden = !c;
   if (!c) return;
@@ -1870,6 +1871,28 @@ const CONNECTION_ABOUT = {
   irc: 'Lobby connects to IRC servers or irssiproxy itself. History only covers the time Lobby is open.',
 };
 let connectionMode = 'ssh';
+/** The way Lobby is connected now, as saved; the dialog's tabs may show another. */
+let activeMode = null;
+
+/** Connected or not, for the tab on show: only the mode in use can be connected. */
+function connectionStatus(mode) {
+  if (state.setupError || mode !== activeMode) return { ok: false, text: 'Not connected' };
+  if (mode !== 'irc') {
+    const unreachable = state.serverDown || (state.networks.length && state.networks.every((n) => state.conn[n] === UNREACHABLE));
+    if (unreachable) return { ok: false, text: `Not connected${state.serverDown ? `: ${state.serverDown}` : ''}` };
+    return { ok: true, text: 'Connected to lobby-server' };
+  }
+  const up = state.networks.filter((n) => state.conn[n] === 'connected');
+  if (!up.length) return { ok: false, text: 'Not connected' };
+  if (up.length === state.networks.length) return { ok: true, text: 'Connected' };
+  return { ok: true, text: `Connected to ${up.join(', ')}, not to ${state.networks.filter((n) => !up.includes(n)).join(', ')}` };
+}
+
+function renderConnectionStatus() {
+  const c = connectionStatus(connectionMode);
+  el.connectionState.dataset.ok = String(c.ok);
+  el.connectionStateText.textContent = c.text;
+}
 
 async function openConnection() {
   const c = await invoke('get_connection');
@@ -1882,6 +1905,7 @@ async function openConnection() {
   el.connNick.value = c.nick;
   el.connNetworks.replaceChildren(...(c.networks.length ? c.networks : [{}]).map(networkRow));
   el.connectionError.hidden = true;
+  activeMode = c.mode;
   setConnectionMode(c.mode);
   el.serverNetNew.hidden = true;
   el.serverNetAdd.hidden = false;
@@ -1957,6 +1981,7 @@ function setConnectionMode(mode) {
   for (const b of el.connectionForm.querySelectorAll('.segments button')) b.setAttribute('aria-checked', String(b.dataset.mode === mode));
   for (const part of el.connectionForm.querySelectorAll('[data-modes]')) part.hidden = !part.dataset.modes.split(' ').includes(mode);
   el.connectionAbout.replaceChildren(...linkNames(CONNECTION_ABOUT[mode]));
+  renderConnectionStatus();
 }
 
 function networkRow(n = {}) {
