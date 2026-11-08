@@ -27,6 +27,7 @@
 * Fix unread pills blending into messages
 * Fix nick tooltips stuck on Looking up
 * Fix the iPhone composer around the keyboard
+* Change jump buttons to thumb size on touch
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
