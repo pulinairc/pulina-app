@@ -26,9 +26,9 @@
   <div id="logwrap">
     <main id="log"><div id="col"></div></main>
     <div id="unread-bar">
-      <button id="jump-unread" class="jump" type="button" hidden>
+      <button id="jump-unread" class="jump" type="button" data-tip="Jump to the first unread (Alt+U)" hidden>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-        Unread
+        <span id="jump-unread-label">Unread</span>
       </button>
       <button id="mark-read" class="jump" type="button" data-tip="Shift+Esc" hidden>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>

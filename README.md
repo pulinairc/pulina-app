@@ -146,6 +146,7 @@ Restart Lobby after changing the config.
 | `Alt+1` … `Alt+9` | Jump to a channel |
 | `Alt+Left`, `Alt+Right` | Previous and next channel |
 | `Alt+A`, or the unread counter | Next channel with unread, mentions first |
+| `Alt+U`, or the unread pill | Jump to the first unread message in this channel |
 | `Shift+Esc` | Mark this channel read |
 | `Tab` | Complete a nick |
 | `Up` in an empty input | Bring back the last message |

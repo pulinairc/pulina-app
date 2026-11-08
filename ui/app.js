@@ -37,7 +37,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
-  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
+  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'),
   markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
@@ -1327,6 +1327,10 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     jumpToUnreadChannel();
   }
+  if (e.altKey && e.key.toLowerCase() === 'u') {
+    e.preventDefault();
+    jumpToUnread();
+  }
   if ((e.altKey && e.key === 'ArrowRight') || (e.ctrlKey && e.key === 'PageDown')) step(1);
   if ((e.altKey && e.key === 'ArrowLeft') || (e.ctrlKey && e.key === 'PageUp')) step(-1);
 });
@@ -1390,12 +1394,17 @@ function jumpToUnreadChannel() {
 }
 
 function updateJumps() {
-  const sep = view?.separator;
-  const sepAbove = sep && sep.getBoundingClientRect().bottom < el.log.getBoundingClientRect().top;
-  el.jumpUnread.hidden = !sepAbove;
-  el.jumpLatest.hidden = atBottom();
   const b = state.buffers.get(state.current);
   const count = b ? unreadCount(b) : 0;
+  // The jump shows whenever the New line is out of sight, pointing the way to it.
+  const sep = view?.separator?.getBoundingClientRect();
+  const log = el.log.getBoundingClientRect();
+  const above = sep && sep.bottom < log.top;
+  const below = sep && sep.top > log.bottom;
+  el.jumpUnread.hidden = !(count && (above || below));
+  el.jumpUnread.classList.toggle('down', Boolean(below));
+  el.jumpUnreadLabel.textContent = `${count} unread`;
+  el.jumpLatest.hidden = atBottom();
   el.markRead.hidden = count === 0;
   el.markReadLabel.textContent = `Mark ${count} ${count === 1 ? 'message' : 'messages'} read`;
 }
@@ -1414,9 +1423,11 @@ el.emojiBtn.addEventListener('click', (e) => {
   });
 });
 
-el.jumpUnread.addEventListener('click', () => {
-  if (view?.separator) view.separator.scrollIntoView({ block: 'start', behavior: 'smooth' });
-});
+function jumpToUnread() {
+  view?.separator?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+el.jumpUnread.addEventListener('click', jumpToUnread);
 el.jumpLatest.addEventListener('click', () => {
   el.log.scrollTo({ top: el.log.scrollHeight, behavior: 'smooth' });
 });
