@@ -445,6 +445,20 @@ pub fn run() {
 
             let store = Store::open(&data.join("previews.db"))?;
             app.manage(AppState { source: source.into(), error: error.into(), store, data });
+
+            // A clicked notification brings Lobby forward and opens the message it was about.
+            #[cfg(target_os = "macos")]
+            {
+                let handle = app.handle().clone();
+                macos::on_notification_click(move |id| {
+                    if let Some(window) = handle.get_webview_window("main") {
+                        let _ = window.unminimize();
+                        let _ = window.show();
+                        let _ = window.set_focus();
+                    }
+                    let _ = handle.emit("notification-click", id);
+                });
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon, set_badge, notify_mac, allow_notifications, get_connection, save_connection, server_networks, save_server_network, delete_server_network])

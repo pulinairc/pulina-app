@@ -2103,6 +2103,7 @@ async function start() {
     if (el.people.open && !el.peopleList.hidden) renderPeople();
   });
   await listen('whois', (e) => onWhois(e.payload));
+  await listen('notification-click', (e) => openNotified(e.payload));
   await listen('setting', (e) => {
     state.settings[e.payload.key] = e.payload.value;
     if (e.payload.key === READ_SETTING) applyReadSetting(e.payload.value);
@@ -2840,13 +2841,37 @@ async function notify(b, l) {
   const who = identity(l.nick, l.mask);
   const title = isPrivate(b) ? l.nick : `${who.name} in ${label(b)}`;
   const icon = await notifyIcon(who.photo);
-  showNotification(title, stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS), icon);
+  showNotification(title, stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS), icon, { key: b.key, line: l.id });
+}
+
+/** Notification id to the message it was about, so a click can open it. */
+const notified = new Map();
+const NOTIFIED_KEEP = 50;
+const FLASH_MS = 2400;
+
+function openNotified(id) {
+  const target = notified.get(id);
+  if (!target) return;
+  select(target.key);
+  // After the channel's own scroll to its New line has run.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const row = [...el.col.querySelectorAll('.text')].find((r) => r.line?.id === target.line);
+    if (!row) return;
+    row.scrollIntoView({ block: 'center' });
+    row.classList.add('flash');
+    setTimeout(() => row.classList.remove('flash'), FLASH_MS);
+  }));
 }
 
 // macOS gets its notifications from the system notification centre, the rest through the plugin.
-function showNotification(title, body, icon) {
+function showNotification(title, body, icon, target = null) {
   if (IS_MAC) {
-    invoke('notify_mac', { id: `${Date.now()}`, title, body, image: icon || null }).catch((e) => renderStatus(`Notification: ${e}`));
+    const id = `${Date.now()}`;
+    if (target) {
+      notified.set(id, target);
+      if (notified.size > NOTIFIED_KEEP) notified.delete(notified.keys().next().value);
+    }
+    invoke('notify_mac', { id, title, body, image: icon || null }).catch((e) => renderStatus(`Notification: ${e}`));
   } else {
     notifier.sendNotification({ title, body, icon });
   }

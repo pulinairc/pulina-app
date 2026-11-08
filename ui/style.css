@@ -1485,3 +1485,7 @@ label.switch-row {
   .primary-btn { padding: 10px 20px; }
   .photo-badge { width: 32px; height: 32px; }
 }
+
+/* The message a clicked notification was about lights up for a moment. */
+.text.flash { border-radius: 6px; animation: flash 2.4s ease-out; }
+@keyframes flash { 0%, 35% { background: color-mix(in srgb, var(--accent) 22%, transparent); } 100% { background: transparent; } }
