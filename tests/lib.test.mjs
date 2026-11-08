@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor, convertEmoticons, colonQuery, emojiSearch, splitNicks, formatWhois } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor, convertEmoticons, colonQuery, emojiSearch, splitNicks, formatWhois, comboOf, comboMods, comboLabel } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -151,4 +151,17 @@ test('formats whois for a tooltip', () => {
   const w = { nick: 'kaisla', found: true, user: 'ka', host: 'example.net', realname: 'Kaisla Example', channels: '#rust', idle_secs: 300, server: 'irc.example.net', server_info: '', account: '', away: '', secure: false, oper: false };
   assert.equal(formatWhois(w), 'kaisla (Kaisla Example)\nka@example.net\nOn #rust\nVia irc.example.net\nIdle 5 min');
   assert.equal(formatWhois({ nick: 'x', found: false }), 'x is not online');
+});
+
+test('reads key presses as shortcut combos', () => {
+  const key = (k, mods = {}) => ({ key: k, ctrlKey: false, metaKey: false, altKey: false, shiftKey: false, ...mods });
+  assert.equal(comboOf(key('Enter', { ctrlKey: true }), false), 'Mod+Enter');
+  assert.equal(comboOf(key('Enter', { metaKey: true }), true), 'Mod+Enter');
+  assert.equal(comboOf(key('Enter', { ctrlKey: true }), true), 'Ctrl+Enter');
+  assert.equal(comboOf(key('a', { altKey: true }), false), 'Alt+A');
+  assert.equal(comboOf(key('å', { altKey: true, code: 'KeyA' }), true), 'Alt+A');
+  assert.equal(comboOf(key('Shift', { shiftKey: true }), false), null);
+  assert.equal(comboMods('Alt+3'), 'Alt');
+  assert.equal(comboLabel('Mod+Enter', true), 'Cmd+Enter');
+  assert.equal(comboLabel('Alt+ArrowLeft', false), 'Alt+←');
 });

@@ -399,3 +399,49 @@ export function formatWhois(w) {
   if (extra.length) lines.push(extra.join(', '));
   return lines.join('\n');
 }
+
+// Keyboard shortcuts. "Mod" is Cmd on macOS and Ctrl elsewhere, so one setting works on both.
+
+export const DEFAULT_SHORTCUTS = {
+  switcher: 'Mod+K',
+  markRead: 'Mod+Enter',
+  nextUnreadChannel: 'Alt+A',
+  jumpUnread: 'Alt+U',
+  prevChannel: 'Alt+ArrowLeft',
+  nextChannel: 'Alt+ArrowRight',
+  channelNumber: 'Alt',
+  complete: 'Tab',
+  recall: 'ArrowUp',
+};
+
+const MODIFIER_KEYS = ['Control', 'Meta', 'Alt', 'Shift'];
+
+/** A key press as a combo like "Mod+Enter", or null for a lone modifier. */
+export function comboOf(e, mac) {
+  if (MODIFIER_KEYS.includes(e.key)) return null;
+  const mods = [];
+  if (mac ? e.metaKey : e.ctrlKey) mods.push('Mod');
+  if (mac && e.ctrlKey) mods.push('Ctrl');
+  if (e.altKey) mods.push('Alt');
+  if (e.shiftKey) mods.push('Shift');
+  // Letters and digits by position, so Option+A on a Mac still reads as A, not å.
+  const byCode = /^Key([A-Z])$/.exec(e.code || '')?.[1] ?? /^Digit(\d)$/.exec(e.code || '')?.[1];
+  const key = byCode ?? (e.key.length === 1 ? e.key.toUpperCase() : e.key);
+  return [...mods, key].join('+');
+}
+
+/** The modifier part of a combo: "Alt+3" gives "Alt". */
+export function comboMods(combo) {
+  return combo.split('+').slice(0, -1).join('+');
+}
+
+const KEY_NAMES = { ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓', Escape: 'Esc', ' ': 'Space' };
+
+/** How a combo reads to a person on this system. */
+export function comboLabel(combo, mac) {
+  return combo.split('+').map((part) => {
+    if (part === 'Mod') return mac ? 'Cmd' : 'Ctrl';
+    if (part === 'Alt' && mac) return 'Option';
+    return KEY_NAMES[part] ?? part;
+  }).join('+');
+}

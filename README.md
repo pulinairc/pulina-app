@@ -142,18 +142,20 @@ Restart Lobby after changing the config.
 
 | Keys | What they do |
 |------|--------------|
-| `Ctrl+K`, or click the channel name | Find and switch channels |
+| `Ctrl+K` (`Cmd+K` on a Mac), or click the channel name | Find and switch channels |
 | `Alt+1` … `Alt+9` | Jump to a channel |
 | `Alt+Left`, `Alt+Right` | Previous and next channel |
 | `Alt+A`, or the unread counter | Next channel with unread, mentions first |
 | `Alt+U`, or the unread pill | Jump to the first unread message in this channel |
-| `Shift+Esc` | Mark this channel read |
+| `Ctrl+Enter` (`Cmd+Enter` on a Mac) | Mark this channel read |
 | `Tab` | Complete a nick |
 | `Up` in an empty input | Bring back the last message |
 
+Every shortcut can be changed under Settings, Keyboard shortcuts.
+
 **Reactions and replies.** Point at a message for your favourite emojis, more emojis, reply and a menu. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a reaction under that person's message. A reply goes out as `nick: text` and shows the message it answers.
 
-**Unread.** A red New line marks where unread messages start. Nothing is marked read on its own: click the checkmark at the end of the New line, the Mark read button at the top, or press `Shift+Esc`.
+**Unread.** A red New line marks where unread messages start. Nothing is marked read on its own: click the checkmark at the end of the New line, the Mark read button at the top, or press `Ctrl+Enter` (`Cmd+Enter` on a Mac).
 
 **People.** Click a name or photo in the chat, or open the gear and People. `Kaisla` also covers `Kaisla_` and `Kaisla-`, `Kaisla*` covers any ending, and `kaisla@*.example.net` matches by ident and host. The colour follows the photo unless you pick one. Click the channel icon in the header to give a channel its own picture or colour, or to mute it. A muted channel adds nothing to unread counts or jumps, except when someone mentions you. `/mute` and `/unmute` work too.
 

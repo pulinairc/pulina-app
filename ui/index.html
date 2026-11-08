@@ -30,7 +30,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
         <span id="jump-unread-label">Unread</span>
       </button>
-      <button id="mark-read" class="jump" type="button" data-tip="Shift+Esc" hidden>
+      <button id="mark-read" class="jump" type="button" data-tip="Ctrl+Enter" hidden>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
         <span id="mark-read-label">Mark read</span>
       </button>
@@ -86,6 +86,11 @@
     <section>
       <h3>App icon</h3>
       <div id="icon-choices" class="icon-choices" role="radiogroup" aria-label="App icon"></div>
+    </section>
+    <section>
+      <h3>Keyboard shortcuts</h3>
+      <div id="shortcut-list" class="shortcut-list"></div>
+      <button id="shortcut-reset" class="link-btn" type="button">Reset to defaults</button>
     </section>
     <section>
       <h3>Emoji</h3>

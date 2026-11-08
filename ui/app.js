@@ -1,6 +1,6 @@
 import {
   CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel,
-  animalFor, colonQuery, colorFromRgb, convertEmoticons, emojiSearch, formatWhois, splitNicks, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
+  DEFAULT_SHORTCUTS, animalFor, colonQuery, comboLabel, comboMods, comboOf, colorFromRgb, convertEmoticons, emojiSearch, formatWhois, splitNicks, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -41,7 +41,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
+  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -502,6 +502,7 @@ function renderSettings() {
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
   renderIconChoices();
+  renderShortcuts();
   el.uploadUrl.value = uploadHost();
   const rows = state.networks.map((n) => {
     const row = h('div', 'conn');
@@ -1417,7 +1418,7 @@ el.input.addEventListener('keydown', (e) => {
       return;
     }
   }
-  if (e.key === 'Tab') {
+  if (pressed(e, 'complete')) {
     e.preventDefault();
     complete();
     return;
@@ -1434,39 +1435,113 @@ el.input.addEventListener('keydown', (e) => {
     stopReply();
     return;
   }
-  if (e.key === 'ArrowUp' && !el.input.value && lastSent) {
+  if (pressed(e, 'recall') && !el.input.value && lastSent) {
     e.preventDefault();
     el.input.value = lastSent;
   }
 });
 
+// Keyboard shortcuts, each one changeable in Settings. Checked before the message box sees the key.
+const IS_MAC = navigator.userAgent.includes('Mac');
+const SHORTCUT_SETTING = 'shortcuts';
+const SHORTCUT_ACTIONS = [
+  ['switcher', 'Find a channel'],
+  ['markRead', 'Mark this channel read'],
+  ['jumpUnread', 'Jump to the first unread'],
+  ['nextUnreadChannel', 'Next channel with unread'],
+  ['prevChannel', 'Previous channel'],
+  ['nextChannel', 'Next channel'],
+  ['channelNumber', 'Channel 1 to 9 (with a number)'],
+  ['complete', 'Complete a nick'],
+  ['recall', 'Bring back the last message'],
+];
+let recordingShortcut = null;
+
+function shortcuts() {
+  try { return { ...DEFAULT_SHORTCUTS, ...JSON.parse(state.settings[SHORTCUT_SETTING] || '{}') }; } catch { return { ...DEFAULT_SHORTCUTS }; }
+}
+
+function shortcutLabel(action) {
+  const combo = shortcuts()[action];
+  return action === 'channelNumber' ? comboLabel(`${combo}+1…9`, IS_MAC) : comboLabel(combo, IS_MAC);
+}
+
+function pressed(e, action) {
+  return comboOf(e, IS_MAC) === shortcuts()[action];
+}
+
+const SHORTCUT_RUN = {
+  switcher: () => (el.switcher.open ? el.switcher.close() : openSwitcher()),
+  markRead: () => markCurrentRead(),
+  jumpUnread: () => jumpToUnread(),
+  nextUnreadChannel: () => jumpToUnreadChannel(),
+  prevChannel: () => step(-1),
+  nextChannel: () => step(1),
+};
+
 document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-    e.preventDefault();
-    if (el.switcher.open) el.switcher.close();
-    else openSwitcher();
-    return;
-  }
-  if (e.altKey && /^[1-9]$/.test(e.key)) {
-    const b = ordered()[Number(e.key) - 1];
+  if (recordingShortcut) return;
+  const combo = comboOf(e, IS_MAC);
+  if (!combo) return;
+  const keys = shortcuts();
+  const action = Object.keys(SHORTCUT_RUN).find((a) => keys[a] === combo);
+  const number = /^[1-9]$/.test(combo.split('+').pop()) && comboMods(combo) === keys.channelNumber && comboMods(combo) !== '';
+  if (!action && !number) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (action) SHORTCUT_RUN[action]();
+  else {
+    const b = ordered()[Number(combo.split('+').pop()) - 1];
     if (b) select(b.key);
-    e.preventDefault();
   }
-  if (e.shiftKey && e.key === 'Escape') {
-    e.preventDefault();
-    markCurrentRead();
-    return;
+  refreshShortcutTips();
+}, true);
+
+/** Tooltips that name a shortcut follow the current setting. */
+function refreshShortcutTips() {
+  el.markRead.dataset.tip = shortcutLabel('markRead');
+  el.jumpUnread.dataset.tip = `Jump to the first unread (${shortcutLabel('jumpUnread')})`;
+  for (const m of document.querySelectorAll('.sep-mark')) m.dataset.tip = `Mark as read (${shortcutLabel('markRead')})`;
+}
+
+function renderShortcuts() {
+  el.shortcutList.replaceChildren(...SHORTCUT_ACTIONS.map(([action, label]) => {
+    const row = h('div', 'shortcut-row');
+    const key = h('button', 'shortcut-key', recordingShortcut === action ? 'Press keys…' : shortcutLabel(action));
+    key.type = 'button';
+    key.classList.toggle('recording', recordingShortcut === action);
+    key.addEventListener('click', () => {
+      recordingShortcut = recordingShortcut === action ? null : action;
+      renderShortcuts();
+    });
+    row.append(h('span', null, label), key);
+    return row;
+  }));
+}
+
+// While a shortcut is being set, the next key press is the new shortcut. Escape cancels.
+document.addEventListener('keydown', (e) => {
+  if (!recordingShortcut) return;
+  const combo = comboOf(e, IS_MAC);
+  if (!combo) return;
+  e.preventDefault();
+  e.stopPropagation();
+  if (combo !== 'Escape') {
+    let saved = {};
+    try { saved = JSON.parse(state.settings[SHORTCUT_SETTING] || '{}'); } catch { /* start over */ }
+    saved[recordingShortcut] = recordingShortcut === 'channelNumber' ? comboMods(combo) || 'Alt' : combo;
+    saveSetting(SHORTCUT_SETTING, JSON.stringify(saved));
   }
-  if (e.altKey && e.key.toLowerCase() === 'a') {
-    e.preventDefault();
-    jumpToUnreadChannel();
-  }
-  if (e.altKey && e.key.toLowerCase() === 'u') {
-    e.preventDefault();
-    jumpToUnread();
-  }
-  if ((e.altKey && e.key === 'ArrowRight') || (e.ctrlKey && e.key === 'PageDown')) step(1);
-  if ((e.altKey && e.key === 'ArrowLeft') || (e.ctrlKey && e.key === 'PageUp')) step(-1);
+  recordingShortcut = null;
+  renderShortcuts();
+  refreshShortcutTips();
+}, true);
+
+el.shortcutReset.addEventListener('click', () => {
+  saveSetting(SHORTCUT_SETTING, '{}');
+  recordingShortcut = null;
+  renderShortcuts();
+  refreshShortcutTips();
 });
 
 document.addEventListener('click', (e) => {
@@ -1481,7 +1556,7 @@ function separatorNode() {
   sep.setAttribute('role', 'separator');
   const mark = h('button', 'sep-mark');
   mark.type = 'button';
-  mark.dataset.tip = 'Mark as read (Shift+Esc)';
+  mark.dataset.tip = `Mark as read (${shortcutLabel('markRead')})`;
   mark.setAttribute('aria-label', 'Mark as read');
   mark.innerHTML = ICONS.check;
   mark.addEventListener('click', markCurrentRead);
@@ -1590,6 +1665,7 @@ function applyStatus(st) {
   }
   state.people = st.people || [];
   state.settings = st.settings || {};
+  refreshShortcutTips();
   renderAttach();
   applyReadSetting(state.settings[READ_SETTING]);
   for (const info of st.channels) onBuffer(info);
@@ -1614,6 +1690,7 @@ async function start() {
   await listen('setting', (e) => {
     state.settings[e.payload.key] = e.payload.value;
     if (e.payload.key === READ_SETTING) applyReadSetting(e.payload.value);
+    if (e.payload.key === SHORTCUT_SETTING) refreshShortcutTips();
     if (e.payload.key === MUTED_SETTING || e.payload.key === CHANNELS_SETTING) renderHeader();
     if (e.payload.key === UPLOAD_SETTING) renderAttach();
   });
