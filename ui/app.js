@@ -1847,6 +1847,23 @@ function applyStatus(st) {
 
 // Connection setup: the same choices on every device, saved to the config file.
 
+const PROJECT_LINKS = {
+  Lobby: 'https://github.com/rollecode/lobby',
+  'lobby-server': 'https://github.com/rollecode/lobby#lobby-server',
+};
+
+/** The text with the first mention of Lobby and of lobby-server linked to the project. */
+function linkNames(text) {
+  const linked = new Set();
+  return text.split(/(lobby-server|Lobby)/).map((part) => {
+    if (!PROJECT_LINKS[part] || linked.has(part)) return part;
+    linked.add(part);
+    const a = h('a', null, part);
+    a.href = PROJECT_LINKS[part];
+    return a;
+  });
+}
+
 const CONNECTION_ABOUT = {
   ssh: 'Lobby signs in to the machine where lobby-server runs and reaches it from there. Your whole history, and nothing on the server is opened to the internet.',
   url: 'lobby-server behind a web server with TLS, at an address of its own. Your whole history.',
@@ -1939,7 +1956,7 @@ function setConnectionMode(mode) {
   connectionMode = mode;
   for (const b of el.connectionForm.querySelectorAll('.segments button')) b.setAttribute('aria-checked', String(b.dataset.mode === mode));
   for (const part of el.connectionForm.querySelectorAll('[data-modes]')) part.hidden = !part.dataset.modes.split(' ').includes(mode);
-  el.connectionAbout.textContent = CONNECTION_ABOUT[mode];
+  el.connectionAbout.replaceChildren(...linkNames(CONNECTION_ABOUT[mode]));
 }
 
 function networkRow(n = {}) {
