@@ -33,7 +33,7 @@
 * Fix unread pills running off narrow screens
 * Fix the text size setting on iPhone
 * Fix the desktop default text size being too large
-* Fix the macOS window buttons sitting off the header
+* Fix macOS window buttons sitting off the header
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
