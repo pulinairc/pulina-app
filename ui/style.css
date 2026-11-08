@@ -1492,5 +1492,9 @@ label.switch-row {
 }
 
 /* The message a clicked notification was about lights up for a moment. */
-.text.flash { border-radius: 6px; animation: flash 2.4s ease-out; }
-@keyframes flash { 0%, 35% { background: color-mix(in srgb, var(--accent) 22%, transparent); } 100% { background: transparent; } }
+/* The shadow widens the colour past the text without moving anything. */
+.text.flash { --flash: color-mix(in srgb, var(--accent) 22%, transparent); border-radius: 4px; animation: flash 2.4s ease-out; }
+@keyframes flash {
+  0%, 35% { background: var(--flash); box-shadow: 0 0 0 8px var(--flash); }
+  100% { background: transparent; box-shadow: 0 0 0 8px transparent; }
+}
