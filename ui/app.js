@@ -744,14 +744,11 @@ function startReply(line) {
   el.replyNick.style.color = identity(line.nick, line.mask).color;
   el.replyText.textContent = stripFormatting(line.text);
   el.replying.hidden = false;
-  const prefix = `${line.nick}: `;
-  if (!el.input.value.startsWith(prefix)) el.input.value = prefix + el.input.value;
   el.input.focus();
   el.input.setSelectionRange(el.input.value.length, el.input.value.length);
 }
 
 function stopReply() {
-  if (replying && el.input.value === `${replying.nick}: `) el.input.value = '';
   replying = null;
   el.replying.hidden = true;
 }
@@ -1170,10 +1167,14 @@ async function send() {
         return;
       }
     }
-    if (replying && text.startsWith(`${replying.nick}: `)) {
-      replyHints.set(text, { line: replying, row: findRow(replying) });
+    // On IRC a reply is "nick: text"; the box shows only the text.
+    let out = text;
+    if (replying && !text.startsWith('/')) {
+      const prefix = `${replying.nick}: `;
+      if (!out.startsWith(prefix)) out = prefix + out;
+      replyHints.set(out, { line: replying, row: findRow(replying) });
     }
-    await invoke('send', { net: b.net, buffer: b.name, text });
+    await invoke('send', { net: b.net, buffer: b.name, text: out });
     lastSent = text;
     el.input.value = '';
     stopReply();
