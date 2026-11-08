@@ -1503,3 +1503,12 @@ label.switch-row {
   0%, 35% { background: var(--flash); box-shadow: 0 0 0 8px var(--flash); }
   100% { background: transparent; box-shadow: 0 0 0 8px transparent; }
 }
+
+/* Touch screens: the message actions are thumb-sized too. */
+@media (pointer: coarse) {
+  .act, .action-row .act { width: 44px; height: 44px; }
+  .act svg { width: 22px; height: 22px; }
+  .act.emoji { font-size: 24px; }
+  .emoji-row, .action-row { padding: 4px; gap: 4px; }
+  .menu-item { padding: 12px 14px; font-size: 16px; }
+}
