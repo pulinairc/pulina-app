@@ -1228,7 +1228,7 @@ dialog:focus { outline: none; }
 
 .jump:hover { border-color: var(--line-strong); color: var(--strong); }
 .jump[hidden] { display: none; }
-#jump-unread { color: var(--new); }
+#jump-unread svg { color: var(--accent); }
 #jump-unread.down svg { transform: rotate(180deg); }
 #jump-latest { bottom: 10px; }
 

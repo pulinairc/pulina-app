@@ -1709,7 +1709,7 @@ function updateJumps() {
   const below = sep && sep.top > log.bottom;
   el.jumpUnread.hidden = !(count && (above || below));
   el.jumpUnread.classList.toggle('down', Boolean(below));
-  el.jumpUnreadLabel.textContent = `${count} unread`;
+  el.jumpUnreadLabel.textContent = `${count} new ${count === 1 ? 'message' : 'messages'} ${below ? 'below' : 'above'}`;
   el.jumpLatest.hidden = atBottom();
   el.markRead.hidden = count === 0;
   el.markReadLabel.textContent = `Mark ${count} ${count === 1 ? 'message' : 'messages'} read`;
