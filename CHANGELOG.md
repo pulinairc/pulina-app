@@ -13,6 +13,7 @@
 * Add connection setup in the app
 * Add an iPhone build
 * Fix ä and ö showing as codes in link cards
+* Change connection notices to one clear line
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night

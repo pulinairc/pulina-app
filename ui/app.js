@@ -39,7 +39,7 @@ const COMMAND_ANSWER_MS = 15000;
 const $ = (id) => document.getElementById(id);
 const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
-  unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
+  unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), statusText: $('status-text'), statusAction: $('status-action'), toast: $('toast'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'),
   markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
@@ -414,12 +414,58 @@ function renderHeader() {
   if (el.switcher.open) renderList();
 }
 
+// Connection trouble shows as one clear line under the header; other messages as a toast that goes away.
+const TOAST_MS = 6000;
+const UNREACHABLE = 'lobby-server unreachable';
+let toastTimer = null;
+
 function renderStatus(message) {
-  const down = state.networks.filter((n) => state.conn[n] && state.conn[n] !== 'connected');
-  const text = message || down.map((n) => `${n}: ${state.conn[n]}`).join(' · ');
-  el.status.textContent = text;
-  el.status.hidden = !text;
+  if (message !== undefined) showToast(message);
+  else if (el.toast.dataset.sticky) hideToast();
+  renderConnection();
   if (el.settings.open) renderSettings();
+}
+
+function showToast(text) {
+  clearTimeout(toastTimer);
+  el.toast.textContent = text;
+  el.toast.hidden = false;
+  // A message ending in … is work in progress: it stays until the next one.
+  const sticky = text.endsWith('…');
+  el.toast.dataset.sticky = sticky ? '1' : '';
+  if (!sticky) toastTimer = setTimeout(hideToast, TOAST_MS);
+}
+
+function hideToast() {
+  el.toast.hidden = true;
+  el.toast.dataset.sticky = '';
+}
+
+function connectionText() {
+  if (state.setupError) return { level: 'error', text: 'Lobby is not connected to anything yet.' };
+  const down = state.networks.filter((n) => state.conn[n] && state.conn[n] !== 'connected');
+  if (!down.length) return null;
+  if (down.every((n) => state.conn[n] === UNREACHABLE)) {
+    return { level: 'warn', text: "Can't reach lobby-server. Trying again every few seconds." };
+  }
+  const connecting = down.filter((n) => state.conn[n] === 'connecting');
+  const parts = [];
+  if (connecting.length) parts.push(`Connecting to ${connecting.join(', ')}…`);
+  for (const n of down.filter((x) => !connecting.includes(x))) {
+    const reason = state.conn[n].replace(/^disconnected:?\s*/, '').replace(/\s*\(os error \d+\)/, '');
+    const why = reason && reason !== UNREACHABLE ? `: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}` : '';
+    parts.push(`${n} is disconnected${why}. Trying again.`);
+  }
+  return { level: connecting.length === down.length ? 'info' : 'warn', text: parts.join(' ') };
+}
+
+function renderConnection() {
+  const c = connectionText();
+  el.status.hidden = !c;
+  if (!c) return;
+  el.status.dataset.level = c.level;
+  el.statusText.textContent = c.text;
+  el.statusAction.textContent = c.level === 'error' ? 'Set up' : 'Connection';
 }
 
 function select(k) {
@@ -1702,7 +1748,9 @@ function applyStatus(st) {
   renderAttach();
   applyReadSetting(state.settings[READ_SETTING]);
   for (const info of st.channels) onBuffer(info);
-  renderStatus(st.error || undefined);
+  state.setupError = st.error && !st.networks.length ? st.error : null;
+  if (st.error && st.networks.length) showToast(st.error);
+  renderStatus();
   // Nothing set up yet, like on a phone's first start: go straight to the setup.
   if (st.error && !st.networks.length && !el.connection.open) openConnection();
 }
@@ -1784,6 +1832,7 @@ function connectionProblem(c) {
 
 for (const b of el.connectionForm.querySelectorAll('.segments button')) b.addEventListener('click', () => setConnectionMode(b.dataset.mode));
 el.openConnection.addEventListener('click', openConnection);
+el.statusAction.addEventListener('click', openConnection);
 el.connectionClose.addEventListener('click', () => el.connection.close());
 el.connAddNet.addEventListener('click', () => el.connNetworks.append(networkRow()));
 el.connCopy.addEventListener('click', async () => {

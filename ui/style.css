@@ -150,12 +150,46 @@ button:focus:not(:focus-visible) { outline: none; }
 #bell[aria-pressed="true"] { color: var(--dim); }
 #gear:focus-visible, #bell:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 
+/* One line about the connection, under the header. */
 #status {
-  padding: 4px 16px;
-  font-size: 12px;
-  color: var(--mention);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 12px 7px 16px;
   border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 13px;
+  --dot: #e0af68;
 }
+
+#status[hidden] { display: none; }
+#status[data-level="info"] { --dot: var(--dim); }
+#status[data-level="error"] { --dot: var(--new); }
+.status-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--dot); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 22%, transparent); }
+#status[data-level="warn"] .status-dot, #status[data-level="info"] .status-dot { animation: status-pulse 1.6s ease-in-out infinite; }
+#status-text { flex: 1; min-width: 0; }
+.status-action { flex: none; padding: 3px 10px; border: 0; border-radius: 7px; background: var(--raised); color: var(--strong); font: inherit; font-size: 12px; cursor: pointer; }
+.status-action:hover { background: var(--hover); }
+
+@keyframes status-pulse { 50% { opacity: 0.35; } }
+
+/* Short messages: a toast above the message box that goes away by itself. */
+.toast {
+  position: absolute;
+  left: 50%;
+  bottom: 52px;
+  z-index: 7;
+  max-width: min(420px, calc(100% - 32px));
+  padding: 7px 14px;
+  border-radius: 10px;
+  color: var(--strong);
+  font-size: 13px;
+  transform: translateX(-50%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+}
+
+.toast[hidden] { display: none; }
 
 /* Log */
 
