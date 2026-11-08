@@ -21,6 +21,7 @@
 * Add a text size setting
 * Fix zooming and the reaction menu on iPhone
 * Add app icon choice on iPhone
+* Change the smiley setting name
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
