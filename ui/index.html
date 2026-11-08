@@ -116,11 +116,8 @@
     <section>
       <h3>Connections</h3>
       <div id="connections"></div>
-    </section>
-    <section>
-      <h3>Config file</h3>
-      <p id="config-path" class="mono"></p>
-      <p class="hint">Networks and the server address are set in this file.</p>
+      <button id="open-connection" class="wide-btn" type="button">Set up the connection</button>
+      <p class="hint">Saved in <span id="config-path" class="mono"></span></p>
     </section>
   </dialog>
   <dialog id="people" tabindex="-1" aria-labelledby="people-title">
@@ -168,6 +165,58 @@
       <div class="person-buttons">
         <button id="person-delete" class="link-btn danger" type="button">Delete person</button>
         <button id="person-save" class="primary-btn" type="submit">Save</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="connection" tabindex="-1" aria-labelledby="connection-title">
+    <div class="sheet-head">
+      <h2 id="connection-title">Connection</h2>
+      <button id="connection-close" class="icon-btn" type="button" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <form id="connection-form">
+      <div class="segments" role="radiogroup" aria-label="How Lobby connects">
+        <button type="button" role="radio" data-mode="ssh">Through SSH</button>
+        <button type="button" role="radio" data-mode="url">Server address</button>
+        <button type="button" role="radio" data-mode="irc">Straight to IRC</button>
+      </div>
+      <p id="connection-about" class="hint"></p>
+
+      <div data-modes="ssh">
+        <label for="conn-ssh" class="field-label">SSH login</label>
+        <input id="conn-ssh" class="field" autocomplete="off" spellcheck="false" placeholder="you@shell.example.org">
+        <div class="field-pair">
+          <div><label for="conn-ssh-port" class="field-label">SSH port</label><input id="conn-ssh-port" class="field" inputmode="numeric" placeholder="22"></div>
+          <div><label for="conn-port" class="field-label">lobby-server port</label><input id="conn-port" class="field" inputmode="numeric" placeholder="7667"></div>
+        </div>
+        <span class="field-label">Lobby's key</span>
+        <p class="hint">Add this line to <span class="mono">~/.ssh/authorized_keys</span> on the SSH host. It lets Lobby reach lobby-server and nothing else. Your own SSH keys and agent work too, where the system has them.</p>
+        <div class="key-box"><code id="conn-key"></code><button id="conn-copy" class="link-btn" type="button">Copy</button></div>
+      </div>
+
+      <div data-modes="url">
+        <label for="conn-url" class="field-label">Server address</label>
+        <input id="conn-url" class="field" autocomplete="off" spellcheck="false" placeholder="wss://lobby.example.org">
+      </div>
+
+      <div data-modes="ssh url">
+        <label for="conn-token" class="field-label">lobby-server token</label>
+        <input id="conn-token" class="field" type="password" autocomplete="off" spellcheck="false">
+        <p class="hint">Found in <span class="mono">~/.config/lobby-server/token</span> on the server.</p>
+      </div>
+
+      <div data-modes="irc">
+        <label for="conn-nick" class="field-label">Nick</label>
+        <input id="conn-nick" class="field" autocomplete="off" spellcheck="false">
+        <span class="field-label">Networks</span>
+        <div id="conn-networks" class="net-rows"></div>
+        <button id="conn-add-net" class="link-btn" type="button">Add a network</button>
+        <p class="hint">For an IRC server or an irssiproxy port, one network each. Without lobby-server, history only covers the time Lobby is open.</p>
+      </div>
+
+      <p id="connection-error" class="hint error" hidden></p>
+      <div class="person-buttons">
+        <span></span>
+        <button class="primary-btn" type="submit">Save and connect</button>
       </div>
     </form>
   </dialog>

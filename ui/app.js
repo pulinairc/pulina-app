@@ -50,7 +50,10 @@ const el = {
   personColor: $('person-color'), personColors: $('person-colors'),
   personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
   switcher: $('switcher'), filter: $('filter'), list: $('list'),
-  settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'),
+  settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'), openConnection: $('open-connection'),
+  connection: $('connection'), connectionForm: $('connection-form'), connectionClose: $('connection-close'), connectionAbout: $('connection-about'), connectionError: $('connection-error'),
+  connSsh: $('conn-ssh'), connSshPort: $('conn-ssh-port'), connPort: $('conn-port'), connKey: $('conn-key'), connCopy: $('conn-copy'), connUrl: $('conn-url'),
+  connToken: $('conn-token'), connNick: $('conn-nick'), connNetworks: $('conn-networks'), connAddNet: $('conn-add-net'),
 };
 
 const state = { networks: [], buffers: new Map(), current: null, me: {}, conn: {}, configPath: '', people: [], settings: {} };
@@ -1692,7 +1695,112 @@ function applyStatus(st) {
   applyReadSetting(state.settings[READ_SETTING]);
   for (const info of st.channels) onBuffer(info);
   renderStatus(st.error || undefined);
+  // Nothing set up yet, like on a phone's first start: go straight to the setup.
+  if (st.error && !st.networks.length && !el.connection.open) openConnection();
 }
+
+// Connection setup: the same choices on every device, saved to the config file.
+
+const CONNECTION_ABOUT = {
+  ssh: 'Lobby signs in to the machine where lobby-server runs and reaches it from there. Your whole history, and nothing on the server is opened to the internet.',
+  url: 'lobby-server behind a web server with TLS, at an address of its own. Your whole history.',
+  irc: 'Lobby connects to IRC servers or irssiproxy itself. History only covers the time Lobby is open.',
+};
+let connectionMode = 'ssh';
+
+async function openConnection() {
+  const c = await invoke('get_connection');
+  el.connSsh.value = c.ssh;
+  el.connSshPort.value = c.ssh_port ?? '';
+  el.connPort.value = c.port ?? '';
+  el.connKey.textContent = c.key_line;
+  el.connUrl.value = c.url;
+  el.connToken.value = c.token;
+  el.connNick.value = c.nick;
+  el.connNetworks.replaceChildren(...(c.networks.length ? c.networks : [{}]).map(networkRow));
+  el.connectionError.hidden = true;
+  setConnectionMode(c.mode);
+  if (el.settings.open) el.settings.close();
+  el.connection.showModal();
+}
+
+function setConnectionMode(mode) {
+  connectionMode = mode;
+  for (const b of el.connectionForm.querySelectorAll('.segments button')) b.setAttribute('aria-checked', String(b.dataset.mode === mode));
+  for (const part of el.connectionForm.querySelectorAll('[data-modes]')) part.hidden = !part.dataset.modes.split(' ').includes(mode);
+  el.connectionAbout.textContent = CONNECTION_ABOUT[mode];
+}
+
+function networkRow(n = {}) {
+  const row = h('div', 'net-row');
+  const field = (cls, placeholder, value, type = 'text') => {
+    const f = h('input', `field ${cls}`);
+    Object.assign(f, { placeholder, value: value ?? '', type, autocomplete: 'off', spellcheck: false });
+    f.setAttribute('aria-label', placeholder);
+    return f;
+  };
+  const remove = h('button', 'icon-btn');
+  remove.type = 'button';
+  remove.setAttribute('aria-label', 'Remove network');
+  remove.dataset.tip = 'Remove';
+  remove.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  remove.addEventListener('click', () => row.remove());
+  row.append(field('name', 'Name', n.name), field('host', 'Host', n.host), field('port', 'Port', n.port), remove, field('pass', 'Password, if any', n.password, 'password'));
+  if (n.password_file) row.dataset.passwordFile = n.password_file;
+  return row;
+}
+
+function readConnection() {
+  const num = (v) => (v.trim() ? Number(v) : null);
+  const networks = [...el.connNetworks.querySelectorAll('.net-row')].map((r) => ({
+    name: r.querySelector('.name').value.trim(),
+    host: r.querySelector('.host').value.trim(),
+    port: Number(r.querySelector('.port').value) || 6667,
+    password: r.querySelector('.pass').value || null,
+    password_file: r.querySelector('.pass').value ? null : r.dataset.passwordFile || null,
+  })).filter((n) => n.name && n.host);
+  return {
+    mode: connectionMode, ssh: el.connSsh.value, ssh_port: num(el.connSshPort.value), port: num(el.connPort.value),
+    url: el.connUrl.value, token: el.connToken.value, nick: el.connNick.value, networks, key_line: '',
+  };
+}
+
+function connectionProblem(c) {
+  if (c.mode === 'ssh' && !/^[^@\s]+@[^@\s]+$/.test(c.ssh.trim())) return 'Write the SSH login as you@host.';
+  if (c.mode === 'url' && !/^wss?:\/\//.test(c.url.trim())) return 'The server address starts with wss:// or ws://.';
+  if (c.mode !== 'irc' && !c.token.trim()) return 'Paste the lobby-server token.';
+  if (c.mode === 'irc' && !c.nick.trim()) return 'Pick a nick.';
+  if (c.mode === 'irc' && !c.networks.length) return 'Add at least one network with a name and a host.';
+  return null;
+}
+
+for (const b of el.connectionForm.querySelectorAll('.segments button')) b.addEventListener('click', () => setConnectionMode(b.dataset.mode));
+el.openConnection.addEventListener('click', openConnection);
+el.connectionClose.addEventListener('click', () => el.connection.close());
+el.connAddNet.addEventListener('click', () => el.connNetworks.append(networkRow()));
+el.connCopy.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(el.connKey.textContent);
+    el.connCopy.textContent = 'Copied';
+  } catch {
+    getSelection().selectAllChildren(el.connKey);
+  }
+});
+el.connectionForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const c = readConnection();
+  const problem = connectionProblem(c);
+  el.connectionError.hidden = !problem;
+  el.connectionError.textContent = problem || '';
+  if (problem) return;
+  try {
+    await invoke('save_connection', { connection: c });
+    location.reload();
+  } catch (err) {
+    el.connectionError.hidden = false;
+    el.connectionError.textContent = String(err);
+  }
+});
 
 async function start() {
   await listen('line', (e) => onLine(e.payload));

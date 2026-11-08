@@ -1,7 +1,7 @@
 //! `config.toml`: either a lobby-server to use, or networks to connect to directly.
 
 use lobby_core::{Network, read_secret};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 const TEMPLATE: &str = r#"# Lobby config.
@@ -25,28 +25,36 @@ port = 6667
 # password_file = "~/.config/lobby/ircnet.pass"
 "#;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Config {
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub nick: String,
-    #[serde(rename = "network", default)]
-    pub networks: Vec<Network>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub server: Option<ServerLink>,
+    #[serde(rename = "network", default, skip_serializing_if = "Vec::is_empty")]
+    pub networks: Vec<Network>,
 }
 
-const DEFAULT_SERVER_PORT: u16 = 7667;
+pub const DEFAULT_SERVER_PORT: u16 = 7667;
 
-#[derive(Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Default)]
+#[serde(default)]
 pub struct ServerLink {
     /// `ws://` or `wss://` address, when the server is reachable directly.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
     /// SSH destination like `you@shell.example.org`: Lobby opens a tunnel itself.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ssh: Option<String>,
     /// SSH port when it is not 22.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ssh_port: Option<u16>,
     /// The server's port on that host, for the tunnel.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token_file: Option<String>,
 }
 
@@ -71,6 +79,26 @@ pub fn ssh_dir() -> PathBuf {
 
 pub fn path() -> PathBuf {
     dir().join("config.toml")
+}
+
+/// The config as it is, or an empty one, for the setup screen.
+pub fn read() -> Config {
+    // The first-run template's example network is not a setup to show.
+    std::fs::read_to_string(path()).ok().filter(|t| t != TEMPLATE).and_then(|t| toml::from_str(&t).ok()).unwrap_or_default()
+}
+
+/// Write the config from the setup screen. It may hold a token or password, so only the user can read it.
+pub fn save(config: &Config) -> Result<(), String> {
+    let text = toml::to_string(config).map_err(|e| e.to_string())?;
+    std::fs::create_dir_all(dir()).map_err(|e| e.to_string())?;
+    let path = path();
+    std::fs::write(&path, format!("# Lobby config, also editable in Settings.\n{text}")).map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600));
+    }
+    Ok(())
 }
 
 /// Load the config, writing a template on first run.

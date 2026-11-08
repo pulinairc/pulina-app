@@ -6,7 +6,7 @@ pub mod net;
 pub mod protocol;
 pub mod store;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -29,12 +29,14 @@ pub fn read_secret(path: &str) -> Option<String> {
 }
 
 /// One IRC server or irssiproxy port.
-#[derive(Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct Network {
     pub name: String,
     pub host: String,
     pub port: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub password_file: Option<String>,
 }
 

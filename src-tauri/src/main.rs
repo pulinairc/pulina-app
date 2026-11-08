@@ -19,6 +19,7 @@ use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::sync::broadcast::error::RecvError;
 
 /// Where chat comes from: our own IRC connections, or a lobby-server.
+#[derive(Clone)]
 enum Source {
     Local(Arc<Hub>),
     Remote(Arc<Remote>),
@@ -26,10 +27,41 @@ enum Source {
 }
 
 struct AppState {
-    source: Source,
-    /// Local file for link previews, and for history in local mode.
+    source: std::sync::Mutex<Source>,
+    error: std::sync::Mutex<Option<String>>,
+    /// Local file for link previews.
     store: Store,
-    error: Option<String>,
+    data: std::path::PathBuf,
+}
+
+impl AppState {
+    fn source(&self) -> Source {
+        self.source.lock().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+}
+
+/// Connect as the config says. Returns what to talk to, or why nothing is set up.
+fn start_source(app: &AppHandle, data: &std::path::Path) -> (Source, Option<String>) {
+    let (source, error) = match config::load() {
+        Ok(c) => match c.server {
+            Some(link) => (Source::Remote(Remote::new(link)), None),
+            None => match Store::open(&data.join("history.db")) {
+                Ok(store) => (Source::Local(Hub::new(store, c.networks, c.nick)), None),
+                Err(e) => (Source::Unconfigured, Some(e.to_string())),
+            },
+        },
+        Err(e) => (Source::Unconfigured, Some(e)),
+    };
+    match &source {
+        Source::Local(hub) => {
+            let hub = Arc::clone(hub);
+            let handle = app.clone();
+            tauri::async_runtime::spawn(async move { forward(handle, hub) });
+        }
+        Source::Remote(remote) => remote.start(app.clone()),
+        Source::Unconfigured => {}
+    }
+    (source, error)
 }
 
 #[derive(Serialize)]
@@ -59,17 +91,17 @@ fn from_value<T: serde::de::DeserializeOwned>(v: serde_json::Value) -> Result<T,
 
 #[tauri::command]
 fn status(state: State<AppState>) -> Status {
-    let snapshot = match &state.source {
+    let snapshot = match state.source() {
         Source::Local(hub) => hub.snapshot(),
         Source::Remote(remote) => remote.snapshot(),
         Source::Unconfigured => Snapshot::default(),
     };
-    Status { snapshot, error: state.error.clone(), config_path: config::path().display().to_string() }
+    Status { snapshot, error: state.error.lock().unwrap_or_else(|e| e.into_inner()).clone(), config_path: config::path().display().to_string() }
 }
 
 #[tauri::command]
 async fn recent_buffers(state: State<'_, AppState>) -> Result<Vec<BufferRef>, String> {
-    match &state.source {
+    match state.source() {
         Source::Local(hub) => hub.recent_buffers(),
         Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::Recent { id }).await?),
         Source::Unconfigured => Ok(vec![]),
@@ -78,7 +110,7 @@ async fn recent_buffers(state: State<'_, AppState>) -> Result<Vec<BufferRef>, St
 
 #[tauri::command]
 async fn history(state: State<'_, AppState>, net: String, buffer: String, before: Option<i64>) -> Result<Vec<Line>, String> {
-    match &state.source {
+    match state.source() {
         Source::Local(hub) => hub.history(&net, &buffer, before),
         Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::History { id, net, buffer, before }).await?),
         Source::Unconfigured => Ok(vec![]),
@@ -87,7 +119,7 @@ async fn history(state: State<'_, AppState>, net: String, buffer: String, before
 
 #[tauri::command]
 async fn send(state: State<'_, AppState>, net: String, buffer: String, text: String) -> Result<(), String> {
-    match &state.source {
+    match state.source() {
         Source::Local(hub) => hub.send(&net, &buffer, &text),
         Source::Remote(remote) => remote.request(|id| ClientMsg::Send { id, net, buffer, text }).await.map(|_| ()),
         Source::Unconfigured => Err("Nothing configured".into()),
@@ -96,7 +128,7 @@ async fn send(state: State<'_, AppState>, net: String, buffer: String, text: Str
 
 #[tauri::command]
 async fn save_person(state: State<'_, AppState>, person: Person) -> Result<i64, String> {
-    match &state.source {
+    match state.source() {
         Source::Local(hub) => hub.save_person(&person),
         Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::SavePerson { id, person }).await?),
         Source::Unconfigured => Err("Nothing configured".into()),
@@ -105,7 +137,7 @@ async fn save_person(state: State<'_, AppState>, person: Person) -> Result<i64, 
 
 #[tauri::command]
 async fn delete_person(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    match &state.source {
+    match state.source() {
         Source::Local(hub) => hub.delete_person(id),
         Source::Remote(remote) => remote.request(|req| ClientMsg::DeletePerson { id: req, person: id }).await.map(|_| ()),
         Source::Unconfigured => Err("Nothing configured".into()),
@@ -114,7 +146,7 @@ async fn delete_person(state: State<'_, AppState>, id: i64) -> Result<(), String
 
 #[tauri::command]
 async fn set_setting(state: State<'_, AppState>, key: String, value: String) -> Result<(), String> {
-    match &state.source {
+    match state.source() {
         Source::Local(hub) => hub.set_setting(&key, &value),
         Source::Remote(remote) => remote.request(|id| ClientMsg::SetSetting { id, key, value }).await.map(|_| ()),
         Source::Unconfigured => Err("Nothing configured".into()),
@@ -267,6 +299,76 @@ fn notify_mac(id: String, title: String, body: String, image: Option<String>) {
     let _ = (id, title, body, image);
 }
 
+/// How Lobby connects, as the setup screen shows and edits it.
+#[derive(Serialize, serde::Deserialize, Default)]
+struct Connection {
+    /// "ssh", "url" or "irc".
+    mode: String,
+    ssh: String,
+    ssh_port: Option<u16>,
+    port: Option<u16>,
+    url: String,
+    token: String,
+    nick: String,
+    networks: Vec<lobby_core::Network>,
+    /// What to add to `authorized_keys` on the SSH host. Filled in by Lobby, ignored on save.
+    #[serde(default)]
+    key_line: String,
+}
+
+#[tauri::command]
+fn get_connection() -> Connection {
+    let c = config::read();
+    let link = c.server.clone().unwrap_or_default();
+    let mode = match &c.server {
+        Some(l) if l.ssh.is_some() => "ssh",
+        Some(_) => "url",
+        None if !c.networks.is_empty() => "irc",
+        None => "ssh",
+    };
+    Connection {
+        mode: mode.into(),
+        ssh: link.ssh.clone().unwrap_or_default(),
+        ssh_port: link.ssh_port,
+        port: link.port,
+        url: link.url.clone().unwrap_or_default(),
+        token: link.token(),
+        nick: c.nick,
+        networks: c.networks,
+        key_line: tunnel::authorized_line(&config::ssh_dir(), link.remote_port()).unwrap_or_default(),
+    }
+}
+
+/// Save the setup and reconnect with it.
+#[tauri::command]
+fn save_connection(app: AppHandle, state: State<AppState>, connection: Connection) -> Result<(), String> {
+    let old = config::read();
+    let old_link = old.server.unwrap_or_default();
+    // A token kept in a file stays there when it did not change.
+    let (token, token_file) = if old_link.token_file.is_some() && old_link.token() == connection.token {
+        (None, old_link.token_file)
+    } else {
+        (Some(connection.token.clone()).filter(|t| !t.is_empty()), None)
+    };
+    let server = match connection.mode.as_str() {
+        "ssh" => Some(config::ServerLink { ssh: Some(connection.ssh.trim().to_string()), ssh_port: connection.ssh_port, port: connection.port, token, token_file, ..Default::default() }),
+        "url" => Some(config::ServerLink { url: Some(connection.url.trim().to_string()), token, token_file, ..Default::default() }),
+        _ => None,
+    };
+    config::save(&config::Config { nick: connection.nick.trim().to_string(), server, networks: connection.networks })?;
+
+    let mut source = state.source.lock().unwrap_or_else(|e| e.into_inner());
+    match &*source {
+        Source::Local(hub) => hub.stop(),
+        Source::Remote(remote) => remote.stop(),
+        Source::Unconfigured => {}
+    }
+    let (fresh, error) = start_source(&app, &state.data);
+    *source = fresh;
+    *state.error.lock().unwrap_or_else(|e| e.into_inner()) = error;
+    Ok(())
+}
+
 #[tauri::command]
 fn player() -> String {
     embed::base()
@@ -280,29 +382,13 @@ fn main() {
             let data = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data)?;
 
-            let (source, error) = match config::load() {
-                Ok(c) => match c.server {
-                    Some(link) => (Source::Remote(Remote::new(link)), None),
-                    None => (Source::Local(Hub::new(Store::open(&data.join("history.db"))?, c.networks, c.nick)), None),
-                },
-                Err(e) => (Source::Unconfigured, Some(e)),
-            };
-
-            let handle = app.handle().clone();
-            match &source {
-                Source::Local(hub) => {
-                    let hub = Arc::clone(hub);
-                    tauri::async_runtime::spawn(async move { forward(handle, hub) });
-                }
-                Source::Remote(remote) => remote.start(handle),
-                Source::Unconfigured => {}
-            }
+            let (source, error) = start_source(app.handle(), &data);
 
             let store = Store::open(&data.join("previews.db"))?;
-            app.manage(AppState { source, store, error });
+            app.manage(AppState { source: source.into(), error: error.into(), store, data });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon, set_badge, notify_mac, allow_notifications])
+        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon, set_badge, notify_mac, allow_notifications, get_connection, save_connection])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }

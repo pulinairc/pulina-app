@@ -109,34 +109,34 @@ The installer builds lobby-server, writes a config and a random token, and sets 
 
 ## Configuration
 
-On first start Lobby writes a config template and shows where it is. The gear in the top right shows the path too.
+On first start Lobby opens its connection setup. You can come back to it any time from the gear, Set up the connection. The same three choices are on every device:
+
+| Choice | What you fill in | History |
+|--------|------------------|---------|
+| Through SSH | `you@your-shell-host`, the SSH port if not 22, and the lobby-server token | Everything lobby-server recorded |
+| Server address | `wss://lobby.example.org` and the token | Everything lobby-server recorded |
+| Straight to IRC | Your nick and one row per IRC server or irssiproxy port | Only while Lobby is open |
+
+The token is in `~/.config/lobby-server/token` on the server.
+
+**SSH.** Lobby has SSH built in, so it also works where no `ssh` program exists, like the iPhone. It signs in with a key of its own, and on a computer also with your usual keys in `~/.ssh` and your SSH agent. The setup shows Lobby's key as a line to add to `~/.ssh/authorized_keys` on the shell host:
+
+```
+restrict,port-forwarding,permitopen="127.0.0.1:7667" ssh-ed25519 AAAA… lobby
+```
+
+That key can reach lobby-server and nothing else: no shell, no other ports. The server's host key is checked against `~/.ssh/known_hosts`, or remembered on first connect.
+
+The setup is saved in a plain file you can also edit by hand, and Lobby reconnects as soon as you save:
 
 - Linux: `~/.config/lobby/config.toml`
 - macOS: `~/Library/Application Support/lobby/config.toml`
-
-**Server mode.** Copy `~/.config/lobby-server/token` from the server to `~/.config/lobby/server.token`, then:
 
 ```toml
 [server]
 ssh = "you@your-shell-host"
 token_file = "~/.config/lobby/server.token"
 ```
-
-With a reverse proxy, use `url = "wss://lobby.example.org"` instead of `ssh`.
-
-**Direct mode:**
-
-```toml
-nick = "yournick"
-
-[[network]]
-name = "IRCnet"
-host = "irc.example.org"
-port = 6667
-password_file = "~/.config/lobby/ircnet.pass"
-```
-
-Restart Lobby after changing the config.
 
 ## Using Lobby
 

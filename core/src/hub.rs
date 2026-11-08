@@ -57,6 +57,7 @@ pub struct Hub {
     conn: Mutex<HashMap<String, String>>,
     channels: Mutex<HashMap<(String, String), BufferInfo>>,
     events: broadcast::Sender<Event>,
+    tasks: Mutex<Vec<tokio::task::JoinHandle<()>>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -75,14 +76,23 @@ impl Hub {
             conn: Mutex::default(),
             channels: Mutex::default(),
             events,
+            tasks: Mutex::default(),
         })
+    }
+
+    /// Close every connection, for when the setup changes.
+    pub fn stop(&self) {
+        for task in lock(&self.tasks).drain(..) {
+            task.abort();
+        }
+        lock(&self.writers).clear();
     }
 
     /// Connect every network. Must be called from inside a Tokio runtime.
     pub fn start(self: &Arc<Self>) {
         for net in self.networks.clone() {
             let hub = Arc::clone(self);
-            tokio::spawn(async move {
+            let task = tokio::spawn(async move {
                 loop {
                     hub.set_conn(&net.name, "connecting");
                     let state = match hub.run(&net).await {
@@ -93,6 +103,7 @@ impl Hub {
                     tokio::time::sleep(RECONNECT_DELAY).await;
                 }
             });
+            lock(&self.tasks).push(task);
         }
     }
 

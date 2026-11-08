@@ -26,6 +26,7 @@ pub struct Remote {
     pending: Pending,
     next_id: AtomicU64,
     snapshot: Mutex<Snapshot>,
+    task: Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -34,7 +35,7 @@ fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 impl Remote {
     pub fn new(link: ServerLink) -> Arc<Self> {
-        Arc::new(Self { link, out: Mutex::default(), pending: Mutex::default(), next_id: AtomicU64::new(1), snapshot: Mutex::default() })
+        Arc::new(Self { link, out: Mutex::default(), pending: Mutex::default(), next_id: AtomicU64::new(1), snapshot: Mutex::default(), task: Mutex::default() })
     }
 
     pub fn snapshot(&self) -> Snapshot {
@@ -62,9 +63,17 @@ impl Remote {
         }
     }
 
+    /// Close the link and its tunnel, for when the setup changes.
+    pub fn stop(&self) {
+        if let Some(task) = lock(&self.task).take() {
+            task.abort();
+        }
+        *lock(&self.out) = None;
+    }
+
     pub fn start(self: &Arc<Self>, app: AppHandle) {
         let remote = Arc::clone(self);
-        tauri::async_runtime::spawn(async move {
+        let task = tauri::async_runtime::spawn(async move {
             loop {
                 if let Err(e) = remote.run(&app).await {
                     eprintln!("lobby-server: {e}");
@@ -80,6 +89,7 @@ impl Remote {
                 tokio::time::sleep(RECONNECT_DELAY).await;
             }
         });
+        *lock(&self.task) = Some(task);
     }
 
     async fn run(&self, app: &AppHandle) -> Result<(), String> {
