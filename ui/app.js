@@ -1,6 +1,6 @@
 import {
   CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel,
-  DEFAULT_SHORTCUTS, animalFor, colonQuery, comboLabel, comboMods, comboOf, colorFromRgb, convertEmoticons, emojiSearch, formatWhois, splitNicks, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
+  DEFAULT_SHORTCUTS, animalFor, colonQuery, comboLabel, comboMods, comboOf, colorFromRgb, convertEmoticons, emojiSearch, formatWhois, span, splitNicks, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -770,13 +770,18 @@ function nicksOf(l) {
 function nickRef(net, t) {
   const n = h('span', 'nick-ref', t.value);
   n.style.color = identity(t.nick).color;
-  n.dataset.net = net;
-  n.dataset.nick = t.nick;
-  n.dataset.tip = whois.get(key(net, t.nick))?.text || knownAbout(net, t.nick);
+  personTip(n, net, t.nick);
   return n;
 }
 
-/** What Lobby already knows about a nick, shown at once; WHOIS replaces it when it answers. */
+/** Hovering this shows the person card for the nick. */
+function personTip(node, net, nick) {
+  node.dataset.person = '1';
+  node.dataset.net = net;
+  node.dataset.nick = nick;
+}
+
+/** What Lobby already knows about a nick: shown at once, WHOIS adds to it when it answers. */
 function knownAbout(net, nick) {
   const low = nick.toLowerCase();
   let last = null;
@@ -787,32 +792,59 @@ function knownAbout(net, nick) {
     const l = b.lines.findLast((x) => x.nick?.toLowerCase() === low && CHAT_KINDS.has(x.kind));
     if (l && (!last || l.ts > last.ts)) last = l;
   }
-  const name = identity(nick, last?.mask).name;
-  const lines = [name === nick ? nick : `${nick} (${name})`];
-  if (last?.mask) lines.push(last.mask);
-  if (chans.length) lines.push(`On ${chans.join(' ')}`);
-  if (last) lines.push(`Last spoke ${dayLabel(last.ts).toLowerCase()} ${clock(last.ts).slice(0, 5)}`);
-  return lines.join('\n');
+  return { mask: last?.mask || '', chans, last };
+}
+
+/** The person tooltip: a card in their colour with what is known about them. */
+function personCard(net, nick) {
+  const about = knownAbout(net, nick);
+  const w = whois.get(key(net, nick))?.w;
+  const who = identity(nick, about.mask);
+  const card = h('div', 'pc');
+  card.style.setProperty('--tint', who.color);
+
+  const head = h('div', 'pc-head');
+  const names = h('div', 'pc-names');
+  names.append(h('div', 'pc-name', who.name));
+  const mask = w?.found ? `${w.user}@${w.host}` : about.mask;
+  const sub = [who.name !== nick && nick, mask].filter(Boolean).join(' · ');
+  if (sub) names.append(h('div', 'pc-sub', sub));
+  head.append(avatar(nick, about.mask, 'av pc-av'), names);
+  card.append(head);
+
+  const rows = [];
+  if (w && !w.found) rows.push(['Now', 'not online']);
+  if (w?.realname && w.realname !== nick && w.realname !== who.name) rows.push(['Name', w.realname]);
+  if (w?.account) rows.push(['Account', w.account]);
+  const chans = w?.channels || about.chans.join(' ');
+  if (chans) rows.push(['On', chans]);
+  if (about.last) rows.push(['Spoke', `${dayLabel(about.last.ts).toLowerCase()} ${clock(about.last.ts).slice(0, 5)}`]);
+  if (w?.idle_secs != null) rows.push(['Idle', span(w.idle_secs)]);
+  if (w?.away) rows.push(['Away', w.away]);
+  if (!rows.length) return card;
+  const list = h('dl', 'pc-rows');
+  for (const [label, value] of rows) list.append(h('dt', null, label), h('dd', null, value));
+  card.append(list);
+  return card;
 }
 
 el.log.addEventListener('pointerover', (e) => {
-  const n = e.target.closest?.('.nick-ref');
+  const n = e.target.closest?.('[data-person]');
   if (!n) return;
   const k = key(n.dataset.net, n.dataset.nick);
   const known = whois.get(k);
-  n.dataset.tip = known?.text || knownAbout(n.dataset.net, n.dataset.nick);
   if (known && Date.now() - known.at < (known.pending ? WHOIS_WAIT_MS : WHOIS_FRESH_MS)) return;
-  // Asked quietly: the tooltip keeps what is known until a fuller answer arrives.
-  whois.set(k, { text: known?.text, pending: true, at: Date.now() });
+  // Asked quietly: the card shows what is known until a fuller answer arrives.
+  whois.set(k, { ...known, pending: true, at: Date.now() });
   const b = state.buffers.get(state.current);
   invoke('send', { net: n.dataset.net, buffer: b?.name || '', text: `/whois ${n.dataset.nick}` }).catch(() => whois.delete(k));
 });
 
 function onWhois(w) {
   const text = formatWhois(w);
-  whois.set(key(w.net, w.nick), { text, at: Date.now() });
-  for (const n of el.log.querySelectorAll('.nick-ref')) {
-    if (n.dataset.net === w.net && n.dataset.nick.toLowerCase() === w.nick.toLowerCase()) n.dataset.tip = text;
+  whois.set(key(w.net, w.nick), { w, at: Date.now() });
+  if (tipFor?.dataset.person && tipFor.dataset.net === w.net && tipFor.dataset.nick.toLowerCase() === w.nick.toLowerCase()) {
+    showTip(tipFor, tipX, { fresh: true });
   }
   // A /whois typed by hand shows its answer in the window, as before.
   if (manualWhois === w.nick.toLowerCase() && Date.now() - lastCommandAt < COMMAND_ANSWER_MS) {
@@ -2122,10 +2154,24 @@ tip.hidden = true;
 document.body.append(tip);
 const TIP_GAP_PX = 8;
 
-function showTip(target, x) {
-  const text = target.dataset.tip;
-  if (!text) return hideTip();
-  tip.textContent = text;
+let tipFor = null;
+let tipX = 0;
+
+function showTip(target, x, { fresh = false } = {}) {
+  tipX = x;
+  if (target !== tipFor || fresh) {
+    if (target.dataset.person) {
+      const card = personCard(target.dataset.net, target.dataset.nick);
+      tip.style.setProperty('--tint', card.style.getPropertyValue('--tint'));
+      tip.replaceChildren(card);
+    } else if (target.dataset.tip) {
+      tip.textContent = target.dataset.tip;
+    } else {
+      return hideTip();
+    }
+    tip.classList.toggle('person', Boolean(target.dataset.person));
+    tipFor = target;
+  }
   tip.hidden = false;
   const box = target.getBoundingClientRect();
   const w = tip.offsetWidth;
@@ -2138,11 +2184,12 @@ function showTip(target, x) {
 
 function hideTip() {
   tip.hidden = true;
+  tipFor = null;
 }
 
 document.addEventListener('pointermove', (e) => {
   if (e.pointerType !== 'mouse') return;
-  const target = e.target.closest?.('[data-tip]');
+  const target = e.target.closest?.('[data-tip], [data-person]');
   if (target) showTip(target, e.clientX);
   else if (!tip.hidden) hideTip();
 });

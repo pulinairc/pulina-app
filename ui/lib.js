@@ -376,7 +376,8 @@ const MINUTE_S = 60;
 const HOUR_S = 3600;
 const DAY_S = 86400;
 
-function span(secs) {
+/** A length of time in its largest sensible units: 45 s, 12 min, 3 h 5 min, 4 d. */
+export function span(secs) {
   if (secs < MINUTE_S) return `${secs} s`;
   if (secs < HOUR_S) return `${Math.floor(secs / MINUTE_S)} min`;
   if (secs < DAY_S) return `${Math.floor(secs / HOUR_S)} h ${Math.floor((secs % HOUR_S) / MINUTE_S)} min`;
