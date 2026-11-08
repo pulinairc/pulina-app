@@ -29,8 +29,8 @@ test('splits links and mentions', () => {
 
 test('nick colours ignore trailing underscores and avoid purple', () => {
   assert.equal(nickColor('Kaisla_'), nickColor('kaisla'));
-  assert.notEqual(nickColor('rolle'), nickColor('snowfake'));
-  const nicks = ['rolle', 'snowfake', 'mustikkasoppa', 'kummitus', 'milla', 'jaska', 'tiina', 'mikko', 'anna', 'pekka'];
+  assert.notEqual(nickColor('rolle'), nickColor('frostbyte'));
+  const nicks = ['rolle', 'frostbyte', 'puolukkapuuro', 'haamu', 'milla', 'jaska', 'tiina', 'mikko', 'anna', 'pekka'];
   for (const n of nicks) {
     const h = nickHue(n);
     assert.ok(h < 235 || h >= 320, `${n} got purple hue ${h}`);
@@ -59,11 +59,11 @@ test('shortens links for reading', () => {
 });
 
 test('reads reactions and replies sent as plain IRC text', () => {
-  assert.deepEqual(parseReaction('mustikkasoppa: 😂'), { nick: 'mustikkasoppa', emoji: '😂' });
+  assert.deepEqual(parseReaction('puolukkapuuro: 😂'), { nick: 'puolukkapuuro', emoji: '😂' });
   assert.deepEqual(parseReaction('rolle, 👍🏽'), { nick: 'rolle', emoji: '👍🏽' });
   assert.equal(parseReaction('rolle: haha 😂'), null);
   assert.equal(parseReaction('rolle: 123'), null);
-  assert.deepEqual(parseAddress('snowfake: no niin'), { nick: 'snowfake', rest: 'no niin' });
+  assert.deepEqual(parseAddress('frostbyte: no niin'), { nick: 'frostbyte', rest: 'no niin' });
   assert.equal(parseAddress('https://example.org'), null);
   assert.equal(parseAddress('no niin'), null);
 });
