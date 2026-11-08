@@ -668,8 +668,8 @@ dialog:focus { outline: none; }
 .shortcut-key { flex: none; width: 112px; padding: 5px 10px; border: 0; border-radius: 8px; background: #000; color: var(--strong); font: inherit; font-size: 13px; font-weight: 500; letter-spacing: 0.02em; font-variant-numeric: tabular-nums; cursor: pointer; transition: color 0.15s ease, box-shadow 0.15s ease; }
 .shortcut-key:hover { color: #fff; box-shadow: inset 0 0 0 1px rgb(255 255 255 / 10%); }
 .shortcut-key.recording { color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-.icon-choices { display: flex; flex-wrap: wrap; gap: 10px; }
-.icon-choice { width: 42px; height: 42px; padding: 0; border: 0; border-radius: 11px; background: none; cursor: pointer; outline: 2px solid transparent; outline-offset: 2px; transition: outline-color 0.15s ease; }
+.icon-choices { display: grid; grid-template-columns: repeat(7, minmax(0, 48px)); gap: 8px; }
+.icon-choice { width: 100%; aspect-ratio: 1; padding: 0; border: 0; border-radius: 11px; background: none; cursor: pointer; outline: 2px solid transparent; outline-offset: 2px; transition: outline-color 0.15s ease; }
 .icon-choice img { display: block; width: 100%; height: 100%; }
 .icon-choice:hover { outline-color: var(--line-strong); }
 .icon-choice[aria-checked="true"] { outline-color: var(--accent); }
@@ -1434,7 +1434,7 @@ label.switch-row {
 /* No keyboard to set shortcuts for; icons four to a row, the last three centred. */
 .ios body { font-size: 16px; }
 .ios #shortcut-section { display: none; }
-.ios .icon-choices { gap: 14px; justify-content: center; }
+.ios .icon-choices { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
 .ios .icon-choice { width: calc((100% - 3 * 14px) / 4); height: auto; aspect-ratio: 1; border-radius: 24%; }
 
 .server-nets { display: grid; gap: 2px; margin-bottom: 4px; }
