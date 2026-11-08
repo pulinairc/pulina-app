@@ -1003,7 +1003,13 @@ function hideActions() {
 }
 
 // Leaving the chat, the window or its focus takes the hover menu away.
-el.log.addEventListener('pointerleave', hideActions);
+// A finger always "leaves" when lifted, so on touch only a tap elsewhere closes it.
+el.log.addEventListener('pointerleave', (e) => {
+  if (e.pointerType === 'mouse') hideActions();
+});
+document.addEventListener('pointerdown', (e) => {
+  if (e.pointerType !== 'mouse' && !e.target.closest?.('.text')) hideActions();
+});
 document.documentElement.addEventListener('mouseleave', hideActions);
 window.addEventListener('blur', () => {
   hideActions();
@@ -1469,6 +1475,13 @@ function colonPicker() {
     closePicker();
   }
 }
+
+// iOS keeps the page full height under the keyboard: fit it to what is visible.
+window.visualViewport?.addEventListener('resize', () => {
+  if (!document.documentElement.classList.contains('ios')) return;
+  document.documentElement.style.height = `${visualViewport.height}px`;
+  window.scrollTo(0, 0);
+});
 
 function fitInput() {
   el.input.style.height = 'auto';
@@ -2030,6 +2043,7 @@ function hideTip() {
 }
 
 document.addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse') return;
   const target = e.target.closest?.('[data-tip]');
   if (target) showTip(target, e.clientX);
   else if (!tip.hidden) hideTip();
