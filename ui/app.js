@@ -2678,6 +2678,8 @@ function applyTextSize(percent) {
     root.style.zoom = String(pageScale);
     return;
   }
+  // The macOS header keeps its size so it stays level with the window buttons.
+  root.style.setProperty('--chrome-zoom', String(100 / p));
   window.__TAURI__.webview.getCurrentWebview().setZoom(p / 100).catch(() => {});
 }
 

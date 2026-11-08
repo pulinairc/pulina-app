@@ -704,8 +704,8 @@ dialog:focus { outline: none; }
 }
 
 /* macOS keeps its window buttons, drawn over the left end of the header. */
-/* macOS window buttons sit at the header's middle (trafficLightPosition), the title starts after them. */
-.mac #top { padding-left: 96px; }
+/* macOS window buttons sit at the header's middle: trafficLightPosition y is 2 × 28 (the header's centre) less the 17 pt button frame. */
+.mac #top { padding-left: 96px; zoom: var(--chrome-zoom, 1); }
 
 /* Tooltips */
 
