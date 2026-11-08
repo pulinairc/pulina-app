@@ -1566,6 +1566,8 @@ function fitKeyboard() {
     // The page's own zoom scales this length too, so it is given unzoomed.
     if (up) root.style.setProperty('--app-h', `${Math.round(vv.height / pageScale)}px`);
     else root.style.removeProperty('--app-h');
+    const field = document.activeElement;
+    if (up && field?.closest('dialog')) requestAnimationFrame(() => field.scrollIntoView({ block: 'nearest' }));
   }, KEYBOARD_SETTLE_MS);
 }
 

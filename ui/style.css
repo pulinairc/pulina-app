@@ -1460,6 +1460,8 @@ label.switch-row {
 .ios body { height: var(--app-h, 100%); }
 .ios #composer { padding-bottom: calc(env(safe-area-inset-bottom) + 10px); }
 .ios.keyboard #composer { padding-bottom: 8px; }
+/* Dialogs sit above the keyboard rather than centred behind it. */
+.ios.keyboard dialog[open], .ios.keyboard #switcher[open] { margin-top: calc(env(safe-area-inset-top) + 8px); max-height: calc(var(--app-h) - env(safe-area-inset-top) - 16px); }
 /* No keyboard to set shortcuts for; icons four to a row from the left. */
 .ios body { font-size: 16px; }
 .ios #shortcut-section { display: none; }

@@ -1,3 +1,7 @@
+### 0.5.8: 2026-11-09
+
+* Fix dialogs hidden behind the iPhone keyboard
+
 ### 0.5.7: 2026-11-08
 
 * Add a jump to the first unread, also with Alt+U
