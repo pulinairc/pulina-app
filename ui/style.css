@@ -665,6 +665,7 @@ dialog:focus { outline: none; }
 #settings section { padding: 0 18px; margin-top: 20px; }
 #settings section:last-child { margin-bottom: 20px; }
 #settings h3 { margin: 0 0 12px; font-size: 14px; font-weight: 600; color: var(--dim); }
+#open-connection { margin-top: 12px; }
 #settings .switch-row + .switch-row { margin-top: 12px; }
 .shortcut-list { display: grid; gap: 6px; margin-bottom: 8px; }
 .shortcut-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 15px; color: var(--text); }
