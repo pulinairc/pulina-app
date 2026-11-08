@@ -23,7 +23,7 @@ const ROUND_SAMPLE_PX = 32;
 // The largest square inside a circle is 1/√2 of its width; a little less avoids the rim.
 const ROUND_INNER = 0.7;
 // Colours offered for people, purple left out.
-const SWATCHES = ['#f7768e', '#ff9e64', '#e0af68', '#9ece6a', '#73daca', '#7dcfff', '#d6d6da'];
+const SWATCHES = ['#f7768e', '#ff9e64', '#e0af68', '#9ece6a', '#73daca', '#7dcfff', '#bb9af7', '#d6d6da'];
 const PERSON_ICON = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
 const CAMERA_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.

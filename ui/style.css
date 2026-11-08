@@ -959,7 +959,7 @@ dialog:focus { outline: none; }
 .av.photo { background: var(--raised); }
 .animal { font-size: calc(var(--avatar) * 0.68); line-height: 1; }
 #top .chan-icon.animal { font-size: 24px; }
-.photo-btn.animal { font-size: 38px; }
+.photo-btn.animal { font-size: 46px; }
 .group .av, .group .nm { cursor: pointer; }
 
 #people[open] { display: flex; flex-direction: column; }
@@ -1063,8 +1063,8 @@ dialog:focus { outline: none; }
 
 .photo-btn {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 72px;
+  height: 72px;
   padding: 0;
   flex-shrink: 0;
   border: 0;
@@ -1097,11 +1097,12 @@ dialog:focus { outline: none; }
 
 .photo-btn:hover .photo-badge { color: var(--strong); background: var(--hover); }
 
-.swatches { display: flex; flex-wrap: nowrap; gap: 6px; }
+/* Ten swatches (automatic, eight colours, any colour) in even rows, first and last on the edges. */
+.swatches { --swatch: 26px; display: grid; grid-template-columns: repeat(10, minmax(0, var(--swatch))); justify-content: space-between; gap: 12px 6px; }
 
 .swatch {
-  width: 22px;
-  height: 22px;
+  width: 100%;
+  aspect-ratio: 1;
   padding: 0;
   flex-shrink: 0;
   border: 0;
@@ -1481,9 +1482,10 @@ label.switch-row {
 /* Touch screens: every control gets a thumb-sized target (Apple's 44 pt). */
 @media (pointer: coarse) {
   .icon-btn { width: 44px; height: 44px; margin: -6px; }
-  .swatches { flex-wrap: wrap; gap: 10px; }
-  .swatch { width: 34px; height: 34px; }
-  .swatch-mark { font-size: 14px; }
+  .swatches { --swatch: 44px; grid-template-columns: repeat(5, minmax(0, var(--swatch))); gap: 14px 8px; }
+  .swatch-mark { font-size: 16px; }
+  .photo-btn { width: 96px; height: 96px; }
+  .photo-btn.animal { font-size: 60px; }
   .chip { padding: 2px 2px 2px 11px; }
   .chip button { width: 34px; height: 34px; }
   .link-btn { padding-block: 10px; }
