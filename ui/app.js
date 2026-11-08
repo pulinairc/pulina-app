@@ -2657,8 +2657,8 @@ const TEXT_SIZE_KEY = 'lobby.textSize';
 const TEXT_SIZE_DEFAULT = 100;
 const TEXT_SIZE_MIN = 70;
 const TEXT_SIZE_MAX = 200;
-/** 100 % is a fifth larger than the page's own pixel sizes. */
-const TEXT_SIZE_BASE = 1.2;
+/** On iPhone 100 % is a fifth larger than the page's own pixel sizes. */
+const IOS_TEXT_BASE = 1.2;
 
 function textSize() {
   try { return Number(localStorage.getItem(TEXT_SIZE_KEY)) || TEXT_SIZE_DEFAULT; } catch { return TEXT_SIZE_DEFAULT; }
@@ -2671,14 +2671,14 @@ function applyTextSize(percent) {
   try { localStorage.setItem(TEXT_SIZE_KEY, String(p)); } catch { /* lasts this run */ }
   el.textSize.value = p;
   el.textSizeNumber.value = p;
-  const scale = (p / 100) * TEXT_SIZE_BASE;
+  const root = document.documentElement;
   // iPhone ignores the webview's zoom, so there the page zooms itself.
-  if (document.documentElement.classList.contains('ios')) {
-    pageScale = scale;
-    document.documentElement.style.zoom = String(scale);
+  if (root.classList.contains('ios')) {
+    pageScale = (p / 100) * IOS_TEXT_BASE;
+    root.style.zoom = String(pageScale);
     return;
   }
-  window.__TAURI__.webview.getCurrentWebview().setZoom(scale).catch(() => {});
+  window.__TAURI__.webview.getCurrentWebview().setZoom(p / 100).catch(() => {});
 }
 
 el.textSize.addEventListener('input', () => applyTextSize(el.textSize.value));
