@@ -118,7 +118,18 @@ async fn youtube(client: &reqwest::Client, raw: &str) -> Option<Preview> {
     Some(Preview { kind: "page".into(), url: raw.into(), title: o.title, image: o.thumbnail_url, site: "youtube.com".into(), ..Default::default() })
 }
 
-fn decode_entities(s: &str) -> String {
+/// Named entities that turn up in page titles and descriptions.
+const NAMED: [(&str, &str); 30] = [
+    ("quot", "\""), ("apos", "'"), ("lt", "<"), ("gt", ">"), ("nbsp", " "), ("amp", "&"),
+    ("auml", "ä"), ("ouml", "ö"), ("aring", "å"), ("Auml", "Ä"), ("Ouml", "Ö"), ("Aring", "Å"),
+    ("uuml", "ü"), ("Uuml", "Ü"), ("eacute", "é"), ("Eacute", "É"), ("egrave", "è"), ("aacute", "á"),
+    ("szlig", "ß"), ("ntilde", "ñ"), ("deg", "°"), ("copy", "©"), ("reg", "®"), ("hellip", "…"),
+    ("ndash", "–"), ("mdash", "—"), ("lsquo", "‘"), ("rsquo", "’"), ("ldquo", "“"), ("rdquo", "”"),
+];
+
+static NAMED_ENTITY: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"&([A-Za-z]+);").unwrap());
+
+fn decode_once(s: &str) -> String {
     let numeric = NUMERIC_ENTITY.replace_all(s, |c: &regex::Captures| {
         let code = match (c.get(1), c.get(2)) {
             (Some(hex), _) => u32::from_str_radix(hex.as_str(), 16).ok(),
@@ -127,16 +138,16 @@ fn decode_entities(s: &str) -> String {
         };
         code.and_then(char::from_u32).map(String::from).unwrap_or_else(|| c[0].to_string())
     });
-    numeric
-        .replace("&quot;", "\"")
-        .replace("&#39;", "'")
-        .replace("&#x27;", "'")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&nbsp;", " ")
-        .replace("&amp;", "&")
-        .trim()
-        .to_string()
+    NAMED_ENTITY
+        .replace_all(&numeric, |c: &regex::Captures| {
+            NAMED.iter().find(|(name, _)| *name == &c[1]).map(|(_, ch)| ch.to_string()).unwrap_or_else(|| c[0].to_string())
+        })
+        .into_owned()
+}
+
+/// Some sites encode twice (`&amp;auml;`), so a second pass finishes the job.
+fn decode_entities(s: &str) -> String {
+    decode_once(&decode_once(s)).trim().to_string()
 }
 
 pub fn parse(html: &str, base: &Url) -> Preview {
@@ -219,5 +230,11 @@ mod tests {
         assert!(!is_public("192.168.1.10".parse().unwrap()));
         assert!(!is_public("fe80::1".parse().unwrap()));
         assert!(is_public("93.184.216.34".parse().unwrap()));
+    }
+
+    #[test]
+    fn decodes_named_and_double_encoded_entities() {
+        assert_eq!(decode_entities("n&amp;auml;ytt&amp;ouml; 178&amp;deg;"), "näyttö 178°");
+        assert_eq!(decode_entities("Tom &amp; Jerry &quot;x&quot;"), "Tom & Jerry \"x\"");
     }
 }
