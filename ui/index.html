@@ -90,10 +90,19 @@
       <button id="notify-test" class="link-btn" type="button">Send a test notification</button>
     </section>
     <section>
+      <h3><label for="text-size">Text size</label></h3>
+      <div class="size-row">
+        <input id="text-size" type="range" min="80" max="160" step="5">
+        <input id="text-size-number" class="field size-number" type="number" min="80" max="160" step="5" aria-label="Text size in percent">
+        <span class="size-unit">%</span>
+      </div>
+      <button id="text-size-reset" class="link-btn" type="button">Reset</button>
+    </section>
+    <section id="icon-section">
       <h3>App icon</h3>
       <div id="icon-choices" class="icon-choices" role="radiogroup" aria-label="App icon"></div>
     </section>
-    <section>
+    <section id="shortcut-section">
       <h3>Keyboard shortcuts</h3>
       <div id="shortcut-list" class="shortcut-list"></div>
       <button id="shortcut-reset" class="link-btn" type="button">Reset to defaults</button>

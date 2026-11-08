@@ -41,7 +41,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), statusText: $('status-text'), statusAction: $('status-action'), toast: $('toast'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
+  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), textSize: $('text-size'), textSizeNumber: $('text-size-number'), textSizeReset: $('text-size-reset'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -2593,6 +2593,29 @@ let notifyAllowed = null;
 function settingOn(key) {
   return state.settings[key] !== 'off';
 }
+
+// Text size, per device: the whole window zooms, so everything keeps its proportions.
+const TEXT_SIZE_KEY = 'lobby.textSize';
+const TEXT_SIZE_DEFAULT = 100;
+const TEXT_SIZE_MIN = 80;
+const TEXT_SIZE_MAX = 160;
+
+function textSize() {
+  try { return Number(localStorage.getItem(TEXT_SIZE_KEY)) || TEXT_SIZE_DEFAULT; } catch { return TEXT_SIZE_DEFAULT; }
+}
+
+function applyTextSize(percent) {
+  const p = Math.min(TEXT_SIZE_MAX, Math.max(TEXT_SIZE_MIN, Math.round(Number(percent) || TEXT_SIZE_DEFAULT)));
+  try { localStorage.setItem(TEXT_SIZE_KEY, String(p)); } catch { /* lasts this run */ }
+  el.textSize.value = p;
+  el.textSizeNumber.value = p;
+  window.__TAURI__.webview.getCurrentWebview().setZoom(p / 100).catch(() => {});
+}
+
+el.textSize.addEventListener('input', () => applyTextSize(el.textSize.value));
+el.textSizeNumber.addEventListener('change', () => applyTextSize(el.textSizeNumber.value));
+el.textSizeReset.addEventListener('click', () => applyTextSize(TEXT_SIZE_DEFAULT));
+applyTextSize(textSize());
 
 // The app icon, chosen per device: Dock on macOS, window icon elsewhere.
 const ICONS_KEY = 'lobby.icon';

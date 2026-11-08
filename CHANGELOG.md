@@ -18,6 +18,7 @@
 * Fix the violet focus ring on buttons
 * Fix the Linux icon looking larger than others
 * Fix muted channels filling the unread count
+* Add a text size setting
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
