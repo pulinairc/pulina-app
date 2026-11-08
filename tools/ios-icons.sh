@@ -4,6 +4,13 @@
 set -eu
 cd "$(dirname "$0")/../src-tauri/gen/apple"
 
+# Icon sets for icons Lobby no longer has go first.
+for dir in Assets.xcassets/AppIcon-*.appiconset; do
+  [ -e "$dir" ] || continue
+  name=${dir#Assets.xcassets/AppIcon-}
+  [ -f "../../icons/ios/${name%.appiconset}.png" ] || find "$dir" -delete
+done
+
 for png in ../../icons/ios/*.png; do
   name=$(basename "$png" .png)
   dir="Assets.xcassets/AppIcon-$name.appiconset"

@@ -2796,12 +2796,15 @@ applyTextSize(textSize());
 const ICONS_KEY = 'lobby.icon';
 const APP_ICONS = [
   ['teal-night', 'Teal night'], ['neon-night', 'Neon night'], ['sunset', 'Sunset'], ['mint-glass', 'Mint glass'],
-  ['porcelain', 'Porcelain'], ['neon-glow', 'Neon glow'], ['neon-sign', 'Neon sign'],
+  ['porcelain', 'Porcelain'], ['neon-glow', 'Neon glow'],
 ];
 const DEFAULT_ICON = APP_ICONS[0][0];
 
 function chosenIcon() {
-  try { return localStorage.getItem(ICONS_KEY) || DEFAULT_ICON; } catch { return DEFAULT_ICON; }
+  // An icon that has since been removed falls back to the default.
+  let saved = null;
+  try { saved = localStorage.getItem(ICONS_KEY); } catch { /* storage may be unavailable */ }
+  return APP_ICONS.some(([name]) => name === saved) ? saved : DEFAULT_ICON;
 }
 
 function useIcon(name) {
