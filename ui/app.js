@@ -367,7 +367,29 @@ function photoInto(node, src) {
   return node;
 }
 
+// The Dock badge counts unread highlights: messages that name you, and private messages.
+let shownBadge = -1;
+
+function highlightCount() {
+  let n = 0;
+  for (const b of state.buffers.values()) {
+    if (!b.mention) continue;
+    const seen = readMap[b.key] ?? Infinity;
+    const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own);
+    n += isPrivate(b) ? fresh.length : fresh.filter((l) => mentions(l.text, state.me[l.net])).length;
+  }
+  return n;
+}
+
+function updateBadge() {
+  const n = highlightCount();
+  if (n === shownBadge) return;
+  shownBadge = n;
+  invoke('set_badge', { count: n }).catch(() => {});
+}
+
 function renderHeader() {
+  updateBadge();
   const b = state.buffers.get(state.current);
   if (b) {
     icon(b, el.chanIcon);
