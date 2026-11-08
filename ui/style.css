@@ -1193,18 +1193,25 @@ dialog:focus { outline: none; }
 
 
 /* Floating at the top of the chat, staying put while it scrolls. */
+/* A band across the top, fading into the chat, so no message text shows beside the pills. */
 #unread-bar {
   position: absolute;
-  top: 10px;
-  left: 50%;
+  top: 0;
+  left: 0;
+  right: 0;
   z-index: 6;
   display: flex;
-  gap: 6px;
-  transform: translateX(-50%);
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 12px 22px;
+  background: linear-gradient(var(--bg) 62%, transparent);
+  pointer-events: none;
 }
+#unread-bar:not(:has(.jump:not([hidden]))) { display: none; }
+#unread-bar .jump { pointer-events: auto; }
 
 #unread-bar .jump { position: static; transform: none; white-space: nowrap; }
-#mark-read { color: var(--text); }
+#mark-read { color: var(--strong); }
 #mark-read svg { color: var(--ok); }
 
 .jump {
@@ -1217,13 +1224,13 @@ dialog:focus { outline: none; }
   height: 28px;
   padding: 0 12px 0 10px;
   line-height: 1;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
-  background: var(--panel);
-  color: var(--text);
+  background: var(--raised);
+  color: var(--strong);
   font-size: 13px;
   transform: translateX(-50%);
-  box-shadow: 0 6px 18px rgb(0 0 0 / 35%);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 45%);
 }
 
 .jump:hover { border-color: var(--line-strong); color: var(--strong); }
