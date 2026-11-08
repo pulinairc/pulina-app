@@ -384,6 +384,12 @@ export function span(secs) {
   return `${Math.floor(secs / DAY_S)} d`;
 }
 
+/** How long ago a time was, in words. */
+export function ago(ts, now = Date.now()) {
+  const secs = Math.floor((now - ts) / 1000);
+  return secs < MINUTE_S ? 'just now' : `${span(secs)} ago`;
+}
+
 /** WHOIS as tooltip lines. */
 export function formatWhois(w) {
   if (!w.found) return `${w.nick} is not online`;

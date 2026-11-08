@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor, convertEmoticons, colonQuery, emojiSearch, splitNicks, formatWhois, comboOf, comboMods, comboLabel } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor, convertEmoticons, colonQuery, emojiSearch, splitNicks, formatWhois, comboOf, comboMods, comboLabel, ago } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -164,4 +164,12 @@ test('reads key presses as shortcut combos', () => {
   assert.equal(comboMods('Alt+3'), 'Alt');
   assert.equal(comboLabel('Mod+Enter', true), 'Cmd+Enter');
   assert.equal(comboLabel('Alt+ArrowLeft', false), 'Alt+←');
+});
+
+test('ago says how long since', () => {
+  const now = at(30);
+  assert.equal(ago(now - 20_000, now), 'just now');
+  assert.equal(ago(at(25), now), '5 min ago');
+  assert.equal(ago(now - 90 * 60_000, now), '1 h 30 min ago');
+  assert.equal(ago(now - 3 * 86_400_000, now), '3 d ago');
 });

@@ -1,6 +1,7 @@
 ### 0.5.8: 2026-11-09
 
 * Fix dialogs hidden behind the iPhone keyboard
+* Change person card spoke time to relative
 
 ### 0.5.7: 2026-11-08
 

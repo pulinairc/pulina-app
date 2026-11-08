@@ -1,6 +1,6 @@
 import {
   CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel,
-  DEFAULT_SHORTCUTS, animalFor, colonQuery, comboLabel, comboMods, comboOf, colorFromRgb, convertEmoticons, emojiSearch, formatWhois, span, splitNicks, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
+  DEFAULT_SHORTCUTS, animalFor, colonQuery, comboLabel, comboMods, comboOf, colorFromRgb, convertEmoticons, emojiSearch, formatWhois, span, ago, splitNicks, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -836,7 +836,7 @@ function personCard(net, nick) {
   if (w?.account) rows.push(['Account', w.account]);
   const chans = w?.channels || about.chans.join(' ');
   if (chans) rows.push(['On', chans]);
-  if (about.last) rows.push(['Spoke', `${dayLabel(about.last.ts).toLowerCase()} ${clock(about.last.ts).slice(0, 5)}`]);
+  if (about.last) rows.push(['Spoke', ago(about.last.ts)]);
   if (w?.idle_secs != null) rows.push(['Idle', span(w.idle_secs)]);
   if (w?.away) rows.push(['Away', w.away]);
   if (!rows.length) return card;
