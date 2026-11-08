@@ -63,7 +63,8 @@ let completion = null;
 let lastSent = '';
 let picked = 0;
 
-if (navigator.userAgent.includes('Mac')) document.documentElement.classList.add('mac');
+// The system comes from the app itself: an iPhone's web view also calls itself Mac OS X.
+const PLATFORM = { value: 'linux' };
 
 const key = (net, name) => `${net}\u0000${name.toLowerCase()}`;
 const label = (b) => b.name || b.net;
@@ -1467,7 +1468,7 @@ el.input.addEventListener('keydown', (e) => {
 });
 
 // Keyboard shortcuts, each one changeable in Settings. Checked before the message box sees the key.
-const IS_MAC = navigator.userAgent.includes('Mac');
+let IS_MAC = false;
 const SHORTCUT_SETTING = 'shortcuts';
 const SHORTCUT_ACTIONS = [
   ['switcher', 'Find a channel'],
@@ -1682,6 +1683,13 @@ el.log.addEventListener('scroll', () => {
 // Start
 
 function applyStatus(st) {
+  if (st.platform !== PLATFORM.value) {
+    PLATFORM.value = st.platform;
+    IS_MAC = st.platform === 'macos';
+    document.documentElement.classList.toggle('mac', IS_MAC);
+    document.documentElement.classList.toggle('ios', st.platform === 'ios');
+    if (IS_MAC) invoke('allow_notifications').catch(() => {});
+  }
   state.networks = st.networks.map((n) => n.name);
   state.configPath = st.config_path;
   for (const n of st.networks) {
@@ -2510,7 +2518,6 @@ function showNotification(title, body, icon) {
   }
 }
 
-if (navigator.userAgent.includes('Mac')) invoke('allow_notifications').catch(() => {});
 
 el.notifyTest.addEventListener('click', () => showNotification('Lobby', 'Notifications work.', null));
 

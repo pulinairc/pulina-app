@@ -1374,3 +1374,7 @@ label.switch-row {
 .net-row .field { padding: 6px 8px; font-size: 13px; }
 .net-row .pass { grid-column: 1 / 4; }
 .hint.error { color: var(--new); }
+
+/* iPhone: keep clear of the notch and the home bar. */
+.ios #top { padding-top: max(8px, env(safe-area-inset-top)); }
+.ios #composer { padding-bottom: max(14px, env(safe-area-inset-bottom)); }

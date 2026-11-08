@@ -5,6 +5,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 
+[lib]
+name = "lobby_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
 [build-dependencies]
 tauri-build = { version = "2.7.4", features = [] }
 
@@ -30,3 +34,6 @@ block2 = "0.6.2"
 objc2-app-kit = { version = "0.3.2", features = ["NSApplication", "NSImage", "NSResponder", "NSDockTile"] }
 objc2-foundation = { version = "0.3.2", features = ["NSData", "NSString", "NSURL", "NSArray", "NSError"] }
 objc2-user-notifications = { version = "0.3.2", features = ["block2", "UNUserNotificationCenter", "UNNotificationContent", "UNNotificationRequest", "UNNotificationTrigger", "UNNotificationSound", "UNNotificationAttachment"] }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+objc2-user-notifications = { version = "0.3.2", features = ["block2", "UNUserNotificationCenter"] }

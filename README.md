@@ -92,6 +92,21 @@ To update: `git pull` and build again.
 
 </details>
 
+### iPhone
+
+There is no App Store build yet. On a Mac with Xcode and an Apple developer account, with the iPhone connected over USB:
+
+```sh
+rustup target add aarch64-apple-ios
+npm install
+export APPLE_DEVELOPMENT_TEAM=YOUR_TEAM_ID
+npm run tauri ios init
+npm run tauri ios build -- --export-method debugging
+xcrun devicectl device install app --device YOUR_IPHONE_UDID src-tauri/gen/apple/build/arm64/Lobby.ipa
+```
+
+`xcrun devicectl list devices` shows the UDID. On first start Lobby opens its connection setup; use Through SSH and add the key line it shows on your shell host. Notifications and the badge work while Lobby is open or recently in the background; the iPhone has no background connection yet.
+
 ### lobby-server
 
 On the machine where irssi runs:
