@@ -1511,4 +1511,6 @@ label.switch-row {
   .act.emoji { font-size: 24px; }
   .emoji-row, .action-row { padding: 4px; gap: 4px; }
   .menu-item { padding: 12px 14px; font-size: 16px; }
+  /* iPhone only sends taps on to the page for things that look clickable. */
+  [data-tip], [data-person] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
 }

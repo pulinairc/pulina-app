@@ -2215,6 +2215,24 @@ document.addEventListener('pointermove', (e) => {
   else if (!tip.hidden) hideTip();
 });
 document.addEventListener('pointerdown', hideTip);
+
+// Touch screens have no hover: a tap on a name, a nick or a message shows its tooltip for a while.
+const TOUCH_TIP_MS = 4000;
+let lastPointer = 'mouse';
+let touchTipTimer = 0;
+document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType; }, true);
+document.addEventListener('click', (e) => {
+  if (lastPointer === 'mouse') return;
+  const target = e.target.closest?.('[data-person], [data-tip]');
+  if (!target) return;
+  // Buttons and links do their own thing; their tooltips only name them.
+  if (!target.dataset.person && e.target.closest('a, button, input, textarea')) return;
+  // A name shows its card instead of opening the editor; the photo still opens it.
+  if (target.dataset.person) e.stopPropagation();
+  showTip(target, e.clientX);
+  clearTimeout(touchTipTimer);
+  touchTipTimer = setTimeout(hideTip, TOUCH_TIP_MS);
+}, true);
 el.log.addEventListener('scroll', hideTip, { passive: true });
 document.addEventListener('pointerleave', hideTip);
 
