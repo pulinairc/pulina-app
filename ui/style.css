@@ -746,7 +746,7 @@ dialog:focus { outline: none; }
 .pc-names { min-width: 0; }
 .pc-name { color: var(--tint); font-size: 14px; font-weight: 700; line-height: 1.2; }
 .pc-sub { color: var(--faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pc-rows { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0; }
+.pc-rows { display: grid; grid-template-columns: auto 1fr; gap: 1px 10px; margin: 0 0 0 calc(30px + 9px); }
 .pc-rows dt { color: var(--faint); }
 .pc-rows dd { margin: 0; color: var(--text); min-width: 0; overflow-wrap: anywhere; }
 
