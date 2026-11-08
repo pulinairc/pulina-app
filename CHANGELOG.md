@@ -5,6 +5,7 @@
 * Add nick highlights with WHOIS on hover
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
+* Change the app icon to Teal night
 * Fix macOS window buttons sitting above the header
 
 ### 0.5.6: 2026-11-08
