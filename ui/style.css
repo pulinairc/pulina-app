@@ -1420,7 +1420,10 @@ label.switch-row {
 
 /* iPhone: keep clear of the notch and the home bar. */
 .ios #top { padding-top: max(8px, env(safe-area-inset-top)); }
-.ios #composer { padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+/* Clear of the home bar; with the keyboard up the page ends at the keyboard instead. */
+.ios body { height: var(--app-h, 100%); }
+.ios #composer { padding-bottom: calc(env(safe-area-inset-bottom) + 10px); }
+.ios.keyboard #composer { padding-bottom: 8px; }
 /* No keyboard to set shortcuts for; icons four to a row, the last three centred. */
 .ios body { font-size: 16px; }
 .ios #shortcut-section { display: none; }

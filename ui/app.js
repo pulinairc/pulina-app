@@ -1495,12 +1495,30 @@ function colonPicker() {
   }
 }
 
-// iOS keeps the page full height under the keyboard: fit it to what is visible.
-window.visualViewport?.addEventListener('resize', () => {
-  if (!document.documentElement.classList.contains('ios')) return;
-  document.documentElement.style.height = `${visualViewport.height}px`;
-  window.scrollTo(0, 0);
-});
+// iPhone keyboard, as the NeAI app does it: WebKit pans the whole window up when the
+// keyboard opens, so hold the window at 0 and cap the page to the visible height instead.
+// iOS reports passing sizes while the keyboard slides; only one that lasts reaches the layout.
+const KEYBOARD_SETTLE_MS = 90;
+const KEYBOARD_MIN_PX = 40;
+let keyboardTimer = 0;
+
+function fitKeyboard() {
+  const vv = window.visualViewport;
+  const root = document.documentElement;
+  if (!vv || !root.classList.contains('ios') || vv.scale > 1.01) return;
+  if (vv.offsetTop > 0.5) window.scrollTo(0, 0);
+  clearTimeout(keyboardTimer);
+  keyboardTimer = setTimeout(() => {
+    const full = root.clientHeight;
+    const up = vv.height < full - KEYBOARD_MIN_PX;
+    root.classList.toggle('keyboard', up);
+    if (up) root.style.setProperty('--app-h', `${Math.round(vv.height)}px`);
+    else root.style.removeProperty('--app-h');
+  }, KEYBOARD_SETTLE_MS);
+}
+
+window.visualViewport?.addEventListener('resize', fitKeyboard);
+window.visualViewport?.addEventListener('scroll', fitKeyboard);
 
 function fitInput() {
   el.input.style.height = 'auto';
