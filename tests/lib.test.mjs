@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor, convertEmoticons, colonQuery, emojiSearch } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor, convertEmoticons, colonQuery, emojiSearch, splitNicks, formatWhois } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -136,4 +136,19 @@ test('ranks exact shortcodes first, then usage', () => {
   assert.deepEqual(emojiSearch('joy', data, { '😹': 3 }).map((h) => h.id), ['joy', 'joy_cat']);
   assert.deepEqual(emojiSearch('jo', data, { '😹': 3 }).map((h) => h.id), ['joy_cat', 'joy']);
   assert.deepEqual(emojiSearch('nauru', data).map((h) => h.id), ['joy']);
+});
+
+test('picks channel nicks out of text', () => {
+  const members = new Map([['kaisla', 'Kaisla'], ['mikko', 'mikko']]);
+  assert.deepEqual(splitNicks('ask kaisla, or Mikko', members), [
+    { type: 'text', value: 'ask ' }, { type: 'nick', value: 'kaisla', nick: 'Kaisla' },
+    { type: 'text', value: ', or ' }, { type: 'nick', value: 'Mikko', nick: 'mikko' },
+  ]);
+  assert.deepEqual(splitNicks('kaislat', members), [{ type: 'text', value: 'kaislat' }]);
+});
+
+test('formats whois for a tooltip', () => {
+  const w = { nick: 'kaisla', found: true, user: 'ka', host: 'example.net', realname: 'Kaisla Example', channels: '#rust', idle_secs: 300, server: 'irc.example.net', server_info: '', account: '', away: '', secure: false, oper: false };
+  assert.equal(formatWhois(w), 'kaisla (Kaisla Example)\nka@example.net\nOn #rust\nVia irc.example.net\nIdle 5 min');
+  assert.equal(formatWhois({ nick: 'x', found: false }), 'x is not online');
 });

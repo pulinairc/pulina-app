@@ -354,3 +354,48 @@ export function emojiSearch(query, data, freq = {}) {
     .sort((a, b) => a.tier - b.tier || used(b) - used(a) || a.start - b.start || a.id.length - b.id.length)
     .slice(0, SHORTCODE_HITS);
 }
+
+const NICK_WORD = /[A-Za-z_[\]\\`^{}|][A-Za-z0-9_\-[\]\\`^{}|]+/g;
+
+/** Text with the channel's nicks picked out. `members` maps lower-case nicks to their spelling. */
+export function splitNicks(text, members) {
+  const out = [];
+  let at = 0;
+  for (const m of text.matchAll(NICK_WORD)) {
+    const nick = members.get(m[0].toLowerCase());
+    if (!nick) continue;
+    if (m.index > at) out.push({ type: 'text', value: text.slice(at, m.index) });
+    out.push({ type: 'nick', value: m[0], nick });
+    at = m.index + m[0].length;
+  }
+  if (at < text.length) out.push({ type: 'text', value: text.slice(at) });
+  return out;
+}
+
+const MINUTE_S = 60;
+const HOUR_S = 3600;
+const DAY_S = 86400;
+
+function span(secs) {
+  if (secs < MINUTE_S) return `${secs} s`;
+  if (secs < HOUR_S) return `${Math.floor(secs / MINUTE_S)} min`;
+  if (secs < DAY_S) return `${Math.floor(secs / HOUR_S)} h ${Math.floor((secs % HOUR_S) / MINUTE_S)} min`;
+  return `${Math.floor(secs / DAY_S)} d`;
+}
+
+/** WHOIS as tooltip lines. */
+export function formatWhois(w) {
+  if (!w.found) return `${w.nick} is not online`;
+  const lines = [w.realname && w.realname !== w.nick ? `${w.nick} (${w.realname})` : w.nick, `${w.user}@${w.host}`];
+  if (w.account) lines.push(`Logged in as ${w.account}`);
+  if (w.channels) lines.push(`On ${w.channels}`);
+  if (w.server) lines.push(`Via ${w.server}${w.server_info ? `, ${w.server_info}` : ''}`);
+  if (w.idle_secs != null) {
+    const since = w.signon ? `, online since ${new Date(w.signon * 1000).toLocaleDateString('fi-FI')}` : '';
+    lines.push(`Idle ${span(w.idle_secs)}${since}`);
+  }
+  if (w.away) lines.push(`Away: ${w.away}`);
+  const extra = [w.secure && 'secure connection', w.oper && 'IRC operator'].filter(Boolean);
+  if (extra.length) lines.push(extra.join(', '));
+  return lines.join('\n');
+}

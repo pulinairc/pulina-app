@@ -1,6 +1,6 @@
 import {
   CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel,
-  animalFor, colonQuery, colorFromRgb, convertEmoticons, emojiSearch, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
+  animalFor, colonQuery, colorFromRgb, convertEmoticons, emojiSearch, formatWhois, splitNicks, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -641,7 +641,8 @@ function row(l) {
   replyHints.delete(l.text);
 
   let firstUrl = null;
-  const tokens = tokenize(text, state.me[l.net]);
+  const members = nicksOf(l);
+  const tokens = tokenize(text, state.me[l.net]).flatMap((t) => (t.type === 'text' ? splitNicks(t.value, members) : [t]));
   for (const t of tokens) {
     if (t.type === 'url') {
       const a = h('a', 'link', shortUrl(t.value));
@@ -651,6 +652,8 @@ function row(l) {
       firstUrl ??= t.value;
     } else if (t.type === 'mention') {
       r.append(h('span', 'mention', t.value));
+    } else if (t.type === 'nick') {
+      r.append(nickRef(l.net, t));
     } else {
       r.append(t.value);
     }
@@ -661,6 +664,58 @@ function row(l) {
   view.lastByNick.set(l.nick.toLowerCase(), { line: l, row: r });
   return r;
 }
+
+// Nicks named in a message: their own colour, and WHOIS on hover.
+
+const WHOIS_FRESH_MS = 120000;
+const WHOIS_WAIT_MS = 10000;
+const whois = new Map();
+
+/** The channel's other members, lower-case to spelling. */
+function nicksOf(l) {
+  const b = state.buffers.get(key(l.net, l.buffer));
+  const me = (state.me[l.net] || '').toLowerCase();
+  const out = new Map();
+  for (const n of b?.members || []) if (n.toLowerCase() !== me) out.set(n.toLowerCase(), n);
+  return out;
+}
+
+function nickRef(net, t) {
+  const n = h('span', 'nick-ref', t.value);
+  n.style.color = identity(t.nick).color;
+  n.dataset.net = net;
+  n.dataset.nick = t.nick;
+  n.dataset.tip = whois.get(key(net, t.nick))?.text || t.nick;
+  return n;
+}
+
+el.log.addEventListener('pointerover', (e) => {
+  const n = e.target.closest?.('.nick-ref');
+  if (!n) return;
+  const k = key(n.dataset.net, n.dataset.nick);
+  const known = whois.get(k);
+  if (known) n.dataset.tip = known.text;
+  if (known && Date.now() - known.at < (known.pending ? WHOIS_WAIT_MS : WHOIS_FRESH_MS)) return;
+  whois.set(k, { text: known?.text || `${n.dataset.nick}\nLooking up…`, pending: true, at: Date.now() });
+  n.dataset.tip = whois.get(k).text;
+  const b = state.buffers.get(state.current);
+  invoke('send', { net: n.dataset.net, buffer: b?.name || '', text: `/whois ${n.dataset.nick}` }).catch(() => whois.delete(k));
+});
+
+function onWhois(w) {
+  const text = formatWhois(w);
+  whois.set(key(w.net, w.nick), { text, at: Date.now() });
+  for (const n of el.log.querySelectorAll('.nick-ref')) {
+    if (n.dataset.net === w.net && n.dataset.nick.toLowerCase() === w.nick.toLowerCase()) n.dataset.tip = text;
+  }
+  // A /whois typed by hand shows its answer in the window, as before.
+  if (manualWhois === w.nick.toLowerCase() && Date.now() - lastCommandAt < COMMAND_ANSWER_MS) {
+    manualWhois = null;
+    localNote(text.replaceAll('\n', ' · '));
+  }
+}
+
+let manualWhois = null;
 
 function quoteNode(target) {
   const q = h('button', 'quote');
@@ -1161,6 +1216,7 @@ async function send() {
   try {
     if (text.startsWith('/') && !text.startsWith('//')) {
       lastCommandAt = Date.now();
+      manualWhois = /^\/(?:whois|wi)\s+(\S+)/i.exec(text)?.[1].toLowerCase() ?? null;
       if (await runLocal(b, text)) {
         lastSent = text;
         el.input.value = '';
@@ -1553,6 +1609,7 @@ async function start() {
     renderLog();
     if (el.people.open && !el.peopleList.hidden) renderPeople();
   });
+  await listen('whois', (e) => onWhois(e.payload));
   await listen('setting', (e) => {
     state.settings[e.payload.key] = e.payload.value;
     if (e.payload.key === READ_SETTING) applyReadSetting(e.payload.value);

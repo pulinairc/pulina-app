@@ -16,13 +16,37 @@ pub struct BufferInfo {
     pub joined: bool,
 }
 
+/// What WHOIS told about a nick, sent as one piece once the server says it is done.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct Whois {
+    pub net: String,
+    pub nick: String,
+    pub found: bool,
+    pub user: String,
+    pub host: String,
+    pub realname: String,
+    pub server: String,
+    pub server_info: String,
+    pub channels: String,
+    pub account: String,
+    pub away: String,
+    pub idle_secs: Option<u64>,
+    pub signon: Option<i64>,
+    pub secure: bool,
+    pub oper: bool,
+}
+
 #[derive(Debug, PartialEq)]
 pub enum Out {
     Line(Line),
     Buffer(BufferInfo),
     Me(String),
     Send(String),
+    Whois(Whois),
 }
+
+/// WHOIS replies, gathered into a `Whois` instead of shown as text.
+const WHOIS_NUMERICS: [&str; 11] = ["301", "311", "312", "313", "317", "318", "319", "330", "338", "378", "671"];
 
 #[derive(Default)]
 struct Chan {
@@ -43,6 +67,7 @@ pub struct Session {
     net: String,
     me: String,
     chans: HashMap<String, Chan>,
+    whois: HashMap<String, Whois>,
 }
 
 fn same(a: &str, b: &str) -> bool {
@@ -51,7 +76,7 @@ fn same(a: &str, b: &str) -> bool {
 
 impl Session {
     pub fn new(net: &str, me: &str) -> Self {
-        Self { net: net.to_string(), me: me.to_string(), chans: HashMap::new() }
+        Self { net: net.to_string(), me: me.to_string(), chans: HashMap::new(), whois: HashMap::new() }
     }
 
     fn line(&self, buffer: &str, kind: &str, msg: &Msg, text: &str, now: i64) -> Line {
@@ -192,6 +217,16 @@ impl Session {
                 vec![self.info(&self.chans[&key], true)]
             }
             "ERROR" => vec![Out::Line(self.line("", "status", msg, msg.param(0), now))],
+            // 301 also answers a message to someone away; only a WHOIS in progress takes it.
+            cmd if WHOIS_NUMERICS.contains(&cmd) && (cmd != "301" || self.whois.contains_key(&msg.param(1).to_lowercase())) => {
+                self.on_whois(msg)
+            }
+            "401" if self.whois.contains_key(&msg.param(1).to_lowercase()) => {
+                self.whois.remove(&msg.param(1).to_lowercase());
+                let text = msg.params.iter().skip(1).cloned().collect::<Vec<_>>().join(" ");
+                let gone = Whois { net: self.net.clone(), nick: msg.param(1).to_string(), ..Default::default() };
+                vec![Out::Whois(gone), Out::Line(self.line("", "info", msg, &text, now))]
+            }
             // Answers to commands (WHOIS, errors like "no such nick") as readable text.
             cmd if is_reply_numeric(cmd) => {
                 let text = msg.params.iter().skip(1).cloned().collect::<Vec<_>>().join(" ");
@@ -199,6 +234,38 @@ impl Session {
             }
             _ => vec![],
         }
+    }
+
+    fn on_whois(&mut self, msg: &Msg) -> Vec<Out> {
+        let nick = msg.param(1);
+        let key = nick.to_lowercase();
+        if msg.command == "318" {
+            return self.whois.remove(&key).map(Out::Whois).into_iter().collect();
+        }
+        let w = self.whois.entry(key).or_insert_with(|| Whois { net: self.net.clone(), nick: nick.to_string(), found: true, ..Default::default() });
+        let last = msg.params.last().map(String::as_str).unwrap_or("");
+        match msg.command.as_str() {
+            "311" => {
+                w.user = msg.param(2).to_string();
+                w.host = msg.param(3).to_string();
+                w.realname = last.to_string();
+            }
+            "312" => {
+                w.server = msg.param(2).to_string();
+                w.server_info = last.to_string();
+            }
+            "313" => w.oper = true,
+            "317" => {
+                w.idle_secs = msg.param(2).parse().ok();
+                w.signon = msg.param(3).parse().ok();
+            }
+            "319" => w.channels = last.trim().to_string(),
+            "330" => w.account = msg.param(2).to_string(),
+            "301" => w.away = last.to_string(),
+            "671" => w.secure = true,
+            _ => {}
+        }
+        vec![]
     }
 
     fn on_message(&mut self, msg: &Msg, now: i64) -> Vec<Out> {
@@ -298,5 +365,18 @@ mod tests {
     fn answers_ping() {
         let mut s = Session::new("net", "rolle");
         assert_eq!(feed(&mut s, "PING :abc"), vec![Out::Send("PONG :abc".into())]);
+    }
+
+    #[test]
+    fn gathers_whois_into_one_event() {
+        let mut s = Session::new("Net", "me");
+        assert!(feed(&mut s, ":srv 311 me kaisla ka example.net * :Kaisla Example").is_empty());
+        assert!(feed(&mut s, ":srv 319 me kaisla :@#rust #tea ").is_empty());
+        assert!(feed(&mut s, ":srv 317 me kaisla 300 1700000000 :seconds idle, signon time").is_empty());
+        let out = feed(&mut s, ":srv 318 me kaisla :End of /WHOIS list.");
+        let Out::Whois(w) = &out[0] else { panic!("no whois") };
+        assert_eq!((w.user.as_str(), w.host.as_str(), w.realname.as_str()), ("ka", "example.net", "Kaisla Example"));
+        assert_eq!((w.channels.as_str(), w.idle_secs, w.found), ("@#rust #tea", Some(300), true));
+        assert!(feed(&mut s, ":srv 301 me kaisla :away from a message").iter().all(|o| matches!(o, Out::Line(_))));
     }
 }

@@ -47,6 +47,7 @@ pub fn emit_event(app: &AppHandle, event: Event) {
         Event::Conn { net, state } => app.emit("conn", serde_json::json!({ "net": net, "state": state })),
         Event::People { people } => app.emit("people", people),
         Event::Setting { key, value } => app.emit("setting", serde_json::json!({ "key": key, "value": value })),
+        Event::Whois(whois) => app.emit("whois", whois),
     };
 }
 

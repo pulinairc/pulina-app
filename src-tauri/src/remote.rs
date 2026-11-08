@@ -165,7 +165,7 @@ impl Remote {
             Event::Setting { key, value } => {
                 snap.settings.insert(key.clone(), value.clone());
             }
-            Event::Line(_) => {}
+            Event::Line(_) | Event::Whois(_) => {}
         }
     }
 }

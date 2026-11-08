@@ -1,7 +1,7 @@
 //! The hub keeps every IRC connection running, stores what arrives and hands it on as events.
 //! The app uses it directly, lobby-server serves it to apps over WebSocket.
 
-use crate::net::{BufferInfo, Out, Session};
+use crate::net::{BufferInfo, Out, Session, Whois};
 use crate::store::{BufferRef, Line, Person, Store};
 use crate::{Network, irc, now_ms};
 use serde::{Deserialize, Serialize};
@@ -28,6 +28,7 @@ pub enum Event {
     Conn { net: String, state: String },
     People { people: Vec<Person> },
     Setting { key: String, value: String },
+    Whois(Whois),
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -275,6 +276,7 @@ impl Hub {
             Out::Send(line) => {
                 let _ = tx.send(line);
             }
+            Out::Whois(whois) => self.emit(Event::Whois(whois)),
         }
     }
 }

@@ -128,7 +128,9 @@ button:focus:not(:focus-visible) { outline: none; }
   white-space: nowrap;
 }
 
-#unread.mention { background: var(--mention-bg); color: var(--mention); }
+#unread.nick-ref { font-weight: 500; }
+
+.mention { background: var(--mention-bg); color: var(--mention); }
 
 #gear, #bell {
   width: 36px;
@@ -666,7 +668,7 @@ dialog:focus { outline: none; }
   color: #fff;
   font-size: 12px;
   line-height: 1.4;
-  white-space: nowrap;
+  white-space: pre;
   overflow: hidden;
   text-overflow: ellipsis;
   pointer-events: none;
