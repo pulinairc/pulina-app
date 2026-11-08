@@ -3,7 +3,7 @@
 * Add a jump to the first unread, also with Alt+U
 * Add emoticons to emoji and :shortcode suggestions
 * Add nick highlights with WHOIS on hover
-* Add a choice of seven app icons in Settings
+* Add a choice of six app icons in Settings
 * Add shortcut settings, Mark read on Ctrl+Enter
 * Fix oversized icons in the macOS Dock
 * Change shortcut keys to even black pills
@@ -28,16 +28,14 @@
 * Fix nick tooltips stuck on Looking up
 * Fix the iPhone composer around the keyboard
 * Change jump buttons to thumb size on touch
-* Change the default text size a fifth larger
+* Change the iPhone default text size a fifth larger
 * Fix app icons wrapping onto a second row
 * Fix unread pills running off narrow screens
 * Fix the text size setting on iPhone
-* Fix the desktop default text size being too large
 * Fix macOS window buttons sitting off the header
 * Add a count of newer messages to Latest
 * Add project links to the connection setup
 * Add a connected status to the connection setup
-* Change the Neon sign frame to the icon edge
 * Fix dark app icons looking smaller in the Dock
 * Change tooltips to readable cards, people in their colour
 * Add the person card to names above messages
@@ -45,11 +43,9 @@
 * Change :D to turn into 😁
 * Fix controls too small to tap on iPhone
 * Add opening the message from a macOS notification
-* Fix the unread band gap and its repeated count
 * Change the notification highlight to reach past the text
 * Fix sending not scrolling to your message
 * Change the photo and colour picker to even rows
-* Remove the Neon sign icon
 * Change the iPhone icon picker to start from the left
 * Change the New line checkmark to thumb size on touch
 * Change field labels to larger, clearer and roomier
@@ -59,7 +55,6 @@
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
-* Fix macOS window buttons sitting above the header
 
 ### 0.5.6: 2026-11-08
 
