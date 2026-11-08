@@ -40,7 +40,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), statusText: $('status-text'), statusAction: $('status-action'), toast: $('toast'), log: $('log'), col: $('col'),
-  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'),
+  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'), jumpLatestLabel: $('jump-latest-label'),
   markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), textSize: $('text-size'), textSizeNumber: $('text-size-number'), textSizeReset: $('text-size-reset'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
@@ -1737,6 +1737,14 @@ function jumpToUnreadChannel() {
   if (next) select(next.key);
 }
 
+/** Messages wholly under the bottom edge, counted from the end until one is in sight. */
+function messagesBelow(bottom) {
+  const rows = el.col.querySelectorAll('.text');
+  let n = 0;
+  for (let i = rows.length - 1; i >= 0 && rows[i].getBoundingClientRect().top >= bottom; i -= 1) n += 1;
+  return n;
+}
+
 const NARROW = matchMedia('(max-width: 520px)');
 
 function updateJumps() {
@@ -1754,6 +1762,10 @@ function updateJumps() {
   const narrow = NARROW.matches;
   el.jumpUnreadLabel.textContent = narrow ? `${count} new` : `${count} new ${messages} ${below ? 'below' : 'above'}`;
   el.jumpLatest.hidden = atBottom();
+  if (!el.jumpLatest.hidden) {
+    const more = messagesBelow(log.bottom);
+    el.jumpLatestLabel.textContent = more ? `${more} more` : 'Latest';
+  }
   el.markRead.hidden = count === 0;
   el.markReadLabel.textContent = narrow ? 'Mark read' : `Mark ${count} ${messages} read`;
 }
