@@ -9,6 +9,7 @@
 * Change shortcut keys to even black pills
 * Fix notifications on macOS, add a test button
 * Add a highlight count badge on the macOS Dock
+* Change SSH to a client built into Lobby
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night

@@ -1,7 +1,7 @@
 //! A link to lobby-server: history and live events come from there instead of local connections.
 
 use crate::config::ServerLink;
-use crate::tunnel::Tunnel;
+use crate::tunnel::{Target, Tunnel};
 use futures_util::{SinkExt, StreamExt};
 use lobby_core::hub::{Event, Snapshot};
 use lobby_core::protocol::{ClientMsg, ServerMsg};
@@ -87,7 +87,8 @@ impl Remote {
         let mut _tunnel = None;
         let url = match &self.link.ssh {
             Some(host) => {
-                let tunnel = Tunnel::open(host, self.link.remote_port()).await?;
+                let target = Target::parse(host, self.link.ssh_port)?;
+                let tunnel = Tunnel::open(&target, self.link.remote_port(), &crate::config::ssh_dir()).await?;
                 let url = format!("ws://127.0.0.1:{}", tunnel.port);
                 _tunnel = Some(tunnel);
                 url

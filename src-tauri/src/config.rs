@@ -42,6 +42,8 @@ pub struct ServerLink {
     pub url: Option<String>,
     /// SSH destination like `you@shell.example.org`: Lobby opens a tunnel itself.
     pub ssh: Option<String>,
+    /// SSH port when it is not 22.
+    pub ssh_port: Option<u16>,
     /// The server's port on that host, for the tunnel.
     pub port: Option<u16>,
     pub token: Option<String>,
@@ -60,6 +62,11 @@ impl ServerLink {
 
 pub fn dir() -> PathBuf {
     dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("lobby")
+}
+
+/// Lobby's SSH key and the hosts it has learned.
+pub fn ssh_dir() -> PathBuf {
+    dir().join("ssh")
 }
 
 pub fn path() -> PathBuf {
