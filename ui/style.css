@@ -1472,3 +1472,16 @@ label.switch-row {
 #text-size { flex: 1; min-width: 0; accent-color: var(--accent); }
 .size-number { flex: none; width: 64px; padding: 5px 8px; text-align: right; }
 .size-unit { color: var(--dim); font-size: 14px; }
+
+/* Touch screens: every control gets a thumb-sized target (Apple's 44 pt). */
+@media (pointer: coarse) {
+  .icon-btn { width: 44px; height: 44px; margin: -6px; }
+  .swatches { flex-wrap: wrap; gap: 10px; }
+  .swatch { width: 34px; height: 34px; }
+  .swatch-mark { font-size: 14px; }
+  .chip { padding: 2px 2px 2px 11px; }
+  .chip button { width: 34px; height: 34px; }
+  .link-btn { padding-block: 10px; }
+  .primary-btn { padding: 10px 20px; }
+  .photo-badge { width: 32px; height: 32px; }
+}

@@ -43,6 +43,7 @@
 * Add the person card to names above messages
 * Update the demo to the current look
 * Change :D to turn into 😁
+* Fix controls too small to tap on iPhone
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
