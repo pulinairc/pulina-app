@@ -600,6 +600,7 @@ el.settings.addEventListener('click', (e) => {
 });
 el.settings.addEventListener('close', () => el.input.focus());
 el.switcher.addEventListener('close', () => el.input.focus());
+el.connection.addEventListener('close', () => el.input.focus());
 
 // Log
 
