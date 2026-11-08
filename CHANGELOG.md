@@ -38,6 +38,7 @@
 * Add project links to the connection setup
 * Add a connected status to the connection setup
 * Change the Neon sign frame to the icon edge
+* Fix dark app icons looking smaller in the Dock
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
