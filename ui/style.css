@@ -768,24 +768,29 @@ dialog:focus { outline: none; }
 .react:hover { border-color: var(--line-strong); }
 .react.mine { border-color: var(--accent); color: var(--strong); }
 
+/* The message a reply answers: a hollow bubble with its tail corner at the bottom left. */
 .quote {
   display: flex;
   gap: 6px;
   align-items: baseline;
+  width: fit-content;
   max-width: 100%;
-  margin: 1px 0 3px;
-  padding: 0 0 0 8px;
-  border: 0;
-  border-left: 2px solid var(--line);
+  margin: 3px 0 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px 10px 10px 3px;
   background: transparent;
   font-size: 12.5px;
   color: var(--faint);
   text-align: left;
   white-space: nowrap;
   overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
 }
 
-.quote.mine { border-left-color: var(--mention); }
+.quote:hover { border-color: var(--dim); }
+.quote.mine { border-color: color-mix(in srgb, var(--mention) 45%, transparent); }
 .quote-nick { font-weight: 600; flex-shrink: 0; }
 .quote-text { overflow: hidden; text-overflow: ellipsis; }
 
