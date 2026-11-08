@@ -25,6 +25,7 @@
 * Change all text a size larger
 * Change the unread jump to say where they are
 * Fix unread pills blending into messages
+* Fix nick tooltips stuck on Looking up
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night

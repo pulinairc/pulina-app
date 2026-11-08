@@ -771,8 +771,27 @@ function nickRef(net, t) {
   n.style.color = identity(t.nick).color;
   n.dataset.net = net;
   n.dataset.nick = t.nick;
-  n.dataset.tip = whois.get(key(net, t.nick))?.text || t.nick;
+  n.dataset.tip = whois.get(key(net, t.nick))?.text || knownAbout(net, t.nick);
   return n;
+}
+
+/** What Lobby already knows about a nick, shown at once; WHOIS replaces it when it answers. */
+function knownAbout(net, nick) {
+  const low = nick.toLowerCase();
+  let last = null;
+  const chans = [];
+  for (const b of state.buffers.values()) {
+    if (b.net !== net) continue;
+    if ([...b.members].some((m) => m.toLowerCase() === low)) chans.push(b.name);
+    const l = b.lines.findLast((x) => x.nick?.toLowerCase() === low && CHAT_KINDS.has(x.kind));
+    if (l && (!last || l.ts > last.ts)) last = l;
+  }
+  const name = identity(nick, last?.mask).name;
+  const lines = [name === nick ? nick : `${nick} (${name})`];
+  if (last?.mask) lines.push(last.mask);
+  if (chans.length) lines.push(`On ${chans.join(' ')}`);
+  if (last) lines.push(`Last spoke ${dayLabel(last.ts).toLowerCase()} ${clock(last.ts).slice(0, 5)}`);
+  return lines.join('\n');
 }
 
 el.log.addEventListener('pointerover', (e) => {
@@ -780,10 +799,10 @@ el.log.addEventListener('pointerover', (e) => {
   if (!n) return;
   const k = key(n.dataset.net, n.dataset.nick);
   const known = whois.get(k);
-  if (known) n.dataset.tip = known.text;
+  n.dataset.tip = known?.text || knownAbout(n.dataset.net, n.dataset.nick);
   if (known && Date.now() - known.at < (known.pending ? WHOIS_WAIT_MS : WHOIS_FRESH_MS)) return;
-  whois.set(k, { text: known?.text || `${n.dataset.nick}\nLooking up…`, pending: true, at: Date.now() });
-  n.dataset.tip = whois.get(k).text;
+  // Asked quietly: the tooltip keeps what is known until a fuller answer arrives.
+  whois.set(k, { text: known?.text, pending: true, at: Date.now() });
   const b = state.buffers.get(state.current);
   invoke('send', { net: n.dataset.net, buffer: b?.name || '', text: `/whois ${n.dataset.nick}` }).catch(() => whois.delete(k));
 });
