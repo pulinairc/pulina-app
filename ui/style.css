@@ -1414,6 +1414,10 @@ label.switch-row {
 /* iPhone: keep clear of the notch and the home bar. */
 .ios #top { padding-top: max(8px, env(safe-area-inset-top)); }
 .ios #composer { padding-bottom: max(14px, env(safe-area-inset-bottom)); }
+/* No keyboard to set shortcuts for; icons four to a row, the last three centred. */
+.ios #shortcut-section { display: none; }
+.ios .icon-choices { gap: 14px; justify-content: center; }
+.ios .icon-choice { width: calc((100% - 3 * 14px) / 4); height: auto; aspect-ratio: 1; border-radius: 24%; }
 
 .server-nets { display: grid; gap: 2px; margin-bottom: 4px; }
 .server-net { display: flex; align-items: baseline; gap: 10px; padding: 5px 0; font-size: 14px; border-bottom: 1px solid var(--line); }

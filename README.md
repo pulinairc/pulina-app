@@ -101,6 +101,7 @@ rustup target add aarch64-apple-ios
 npm install
 export APPLE_DEVELOPMENT_TEAM=YOUR_TEAM_ID
 npm run tauri ios init
+sh tools/ios-icons.sh
 npm run tauri ios build -- --export-method debugging
 xcrun devicectl device install app --device YOUR_IPHONE_UDID src-tauri/gen/apple/build/arm64/Lobby.ipa
 ```

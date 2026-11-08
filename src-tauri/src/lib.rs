@@ -248,7 +248,7 @@ fn notify_icon(app: tauri::AppHandle, request: tauri::ipc::Request<'_>) -> Resul
     Ok(path.to_string_lossy().into_owned())
 }
 
-/// Swap the app icon for one of the icons in `ui/icons`: the Dock icon on macOS, the window icon elsewhere.
+/// Swap the app icon for one of the icons in `ui/icons`: the Dock icon on macOS, the home screen icon on iPhone, the window icon elsewhere.
 #[tauri::command]
 fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> Result<(), String> {
     if name.is_empty() || !name.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
@@ -262,7 +262,13 @@ fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> R
         let png = asset.bytes.clone();
         app.run_on_main_thread(move || macos::dock_icon(&png)).map_err(|e| e.to_string())?;
     }
-    #[cfg(mobile)]
+    #[cfg(target_os = "ios")]
+    {
+        let _ = &window;
+        let wanted = (name != DEFAULT_ICON).then(|| format!("AppIcon-{name}"));
+        app.run_on_main_thread(move || ios_icon(wanted.as_deref())).map_err(|e| e.to_string())?;
+    }
+    #[cfg(target_os = "android")]
     let _ = (&app, &window);
     #[cfg(all(desktop, not(target_os = "macos")))]
     {
@@ -271,6 +277,23 @@ fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> R
         window.set_icon(image).map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+/// Teal night is the bundle's own icon on iPhone; the others are alternates in its asset catalog.
+#[cfg(target_os = "ios")]
+const DEFAULT_ICON: &str = "teal-night";
+
+#[cfg(target_os = "ios")]
+fn ios_icon(wanted: Option<&str>) {
+    use objc2_foundation::NSString;
+    let Some(mtm) = objc2::MainThreadMarker::new() else { return };
+    let ui = objc2_ui_kit::UIApplication::sharedApplication(mtm);
+    // iPhone confirms every change with an alert, so only ask when it differs.
+    if ui.alternateIconName().map(|n| n.to_string()).as_deref() == wanted {
+        return;
+    }
+    let name = wanted.map(NSString::from_str);
+    ui.setAlternateIconName_completionHandler(name.as_deref(), None);
 }
 
 /// The highlight count on the app icon: the Dock on macOS, the home screen on iPhone.
