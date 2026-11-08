@@ -1355,3 +1355,4 @@ label.switch-row {
 
 .item.muted .name { color: var(--faint); }
 .item .muted-icon { color: var(--faint); flex-shrink: 0; }
+#notify-test { margin-top: 10px; }

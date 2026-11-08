@@ -2,6 +2,8 @@
 
 mod config;
 mod embed;
+#[cfg(target_os = "macos")]
+mod macos;
 mod preview;
 mod remote;
 mod tunnel;
@@ -225,7 +227,7 @@ fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> R
         let _ = &window;
         let asset = app.asset_resolver().get(format!("icons/mac/{name}.png")).ok_or("Unknown icon")?;
         let png = asset.bytes.clone();
-        app.run_on_main_thread(move || dock_icon(&png)).map_err(|e| e.to_string())?;
+        app.run_on_main_thread(move || macos::dock_icon(&png)).map_err(|e| e.to_string())?;
     }
     #[cfg(not(target_os = "macos"))]
     {
@@ -236,15 +238,33 @@ fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> R
     Ok(())
 }
 
-#[cfg(target_os = "macos")]
-fn dock_icon(png: &[u8]) {
-    use objc2::{AllocAnyThread, MainThreadMarker};
-    use objc2_app_kit::{NSApplication, NSImage};
-    use objc2_foundation::NSData;
-    let Some(mtm) = MainThreadMarker::new() else { return };
-    let data = NSData::with_bytes(png);
-    let Some(image) = NSImage::initWithData(NSImage::alloc(), &data) else { return };
-    unsafe { NSApplication::sharedApplication(mtm).setApplicationIconImage(Some(&image)) };
+/// The highlight count on the Dock icon. Only macOS has one; elsewhere this does nothing.
+#[tauri::command]
+fn set_badge(app: AppHandle, count: u32) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    app.run_on_main_thread(move || macos::dock_badge(count)).map_err(|e| e.to_string())?;
+    #[cfg(not(target_os = "macos"))]
+    let _ = (app, count);
+    Ok(())
+}
+
+/// Ask macOS for permission to notify, once at start, so the first mention is not lost to the prompt.
+#[tauri::command]
+fn allow_notifications() {
+    #[cfg(target_os = "macos")]
+    macos::authorize();
+}
+
+/// macOS notifications go through the system notification centre; the plugin's older route stays silent there.
+#[tauri::command]
+fn notify_mac(id: String, title: String, body: String, image: Option<String>) {
+    #[cfg(target_os = "macos")]
+    {
+        macos::authorize();
+        macos::notify(&id, &title, &body, image.as_deref());
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = (id, title, body, image);
 }
 
 #[tauri::command]
@@ -282,7 +302,7 @@ fn main() {
             app.manage(AppState { source, store, error });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon])
+        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon, set_badge, notify_mac, allow_notifications])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }

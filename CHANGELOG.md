@@ -7,6 +7,7 @@
 * Add shortcut settings, Mark read on Ctrl+Enter
 * Fix oversized icons in the macOS Dock
 * Change shortcut keys to even black pills
+* Fix notifications on macOS, add a test button
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night

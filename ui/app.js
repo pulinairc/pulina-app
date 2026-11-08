@@ -41,7 +41,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
+  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -2368,8 +2368,21 @@ async function notify(b, l) {
   const who = identity(l.nick, l.mask);
   const title = isPrivate(b) ? l.nick : `${who.name} in ${label(b)}`;
   const icon = await notifyIcon(who.photo);
-  notifier.sendNotification({ title, body: stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS), icon });
+  showNotification(title, stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS), icon);
 }
+
+// macOS gets its notifications from the system notification centre, the rest through the plugin.
+function showNotification(title, body, icon) {
+  if (IS_MAC) {
+    invoke('notify_mac', { id: `${Date.now()}`, title, body, image: icon || null }).catch((e) => renderStatus(`Notification: ${e}`));
+  } else {
+    notifier.sendNotification({ title, body, icon });
+  }
+}
+
+if (navigator.userAgent.includes('Mac')) invoke('allow_notifications').catch(() => {});
+
+el.notifyTest.addEventListener('click', () => showNotification('Lobby', 'Notifications work.', null));
 
 // A photo as a file the notification can show, written once per photo.
 const notifyIcons = new Map();
