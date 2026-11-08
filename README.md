@@ -134,6 +134,8 @@ On first start Lobby opens its connection setup. You can come back to it any tim
 
 The token is in `~/.config/lobby-server/token` on the server.
 
+With lobby-server, the setup also lists the server's networks. Adding or removing one there changes lobby-server's own config and takes effect right away, without restarting anything.
+
 **SSH.** Lobby has SSH built in, so it also works where no `ssh` program exists, like the iPhone. It signs in with a key of its own, and on a computer also with your usual keys in `~/.ssh` and your SSH agent. The setup shows Lobby's key as a line to add to `~/.ssh/authorized_keys` on the shell host:
 
 ```

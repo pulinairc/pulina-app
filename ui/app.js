@@ -54,6 +54,7 @@ const el = {
   connection: $('connection'), connectionForm: $('connection-form'), connectionClose: $('connection-close'), connectionAbout: $('connection-about'), connectionError: $('connection-error'),
   connSsh: $('conn-ssh'), connSshPort: $('conn-ssh-port'), connPort: $('conn-port'), connKey: $('conn-key'), connCopy: $('conn-copy'), connUrl: $('conn-url'),
   connToken: $('conn-token'), connNick: $('conn-nick'), connNetworks: $('conn-networks'), connAddNet: $('conn-add-net'),
+  serverNets: $('server-nets'), serverNetsHint: $('server-nets-hint'), serverNetNew: $('server-net-new'), serverNetAdd: $('server-net-add'),
 };
 
 const state = { networks: [], buffers: new Map(), current: null, me: {}, conn: {}, configPath: '', people: [], settings: {} };
@@ -443,6 +444,7 @@ function hideToast() {
 
 function connectionText() {
   if (state.setupError) return { level: 'error', text: 'Lobby is not connected to anything yet.' };
+  if (state.serverDown) return { level: 'warn', text: `Can't reach lobby-server (${state.serverDown}). Trying again every few seconds.` };
   const down = state.networks.filter((n) => state.conn[n] && state.conn[n] !== 'connected');
   if (!down.length) return null;
   if (down.every((n) => state.conn[n] === UNREACHABLE)) {
@@ -1729,6 +1731,15 @@ el.log.addEventListener('scroll', () => {
 // Start
 
 function applyStatus(st) {
+  // A network removed from the server takes its windows with it.
+  const nets = new Set(st.networks.map((n) => n.name));
+  if (nets.size) {
+    for (const [k, b] of state.buffers) if (!nets.has(b.net)) state.buffers.delete(k);
+    if (state.current && !state.buffers.has(state.current)) {
+      state.current = null;
+      pickFirst();
+    }
+  }
   if (st.platform !== PLATFORM.value) {
     PLATFORM.value = st.platform;
     IS_MAC = st.platform === 'macos';
@@ -1776,9 +1787,74 @@ async function openConnection() {
   el.connNetworks.replaceChildren(...(c.networks.length ? c.networks : [{}]).map(networkRow));
   el.connectionError.hidden = true;
   setConnectionMode(c.mode);
+  el.serverNetNew.hidden = true;
+  el.serverNetAdd.hidden = false;
+  renderServerNetworks();
   if (el.settings.open) el.settings.close();
   el.connection.showModal();
 }
+
+// lobby-server's own networks: one per irssiproxy port. Changes apply on the server at once.
+async function renderServerNetworks() {
+  let nets;
+  try {
+    nets = await invoke('server_networks');
+  } catch {
+    el.serverNets.replaceChildren();
+    el.serverNetsHint.textContent = 'Connect to lobby-server first, then its networks can be changed here.';
+    el.serverNetAdd.hidden = true;
+    return;
+  }
+  el.serverNetsHint.textContent = 'Removing a network disconnects it on the server. Its history stays.';
+  el.serverNets.replaceChildren(...nets.map((n) => {
+    const row = h('div', 'server-net');
+    row.append(h('span', 'server-net-name', n.name), h('span', 'server-net-where', `${n.host}:${n.port}`));
+    const remove = h('button', 'link-btn danger', 'Remove');
+    remove.type = 'button';
+    remove.addEventListener('click', async () => {
+      if (!remove.dataset.sure) {
+        remove.dataset.sure = '1';
+        remove.textContent = `Remove ${n.name}?`;
+        return;
+      }
+      try {
+        await invoke('delete_server_network', { name: n.name });
+        renderServerNetworks();
+      } catch (e) {
+        el.serverNetsHint.textContent = String(e);
+      }
+    });
+    row.append(remove);
+    return row;
+  }));
+}
+
+el.serverNetAdd.addEventListener('click', () => {
+  const row = networkRow({ port: 45000 });
+  row.querySelector('.icon-btn').remove();
+  const add = h('button', 'primary-btn', 'Add');
+  add.type = 'button';
+  add.addEventListener('click', async () => {
+    const network = {
+      name: row.querySelector('.name').value.trim(),
+      host: row.querySelector('.host').value.trim(),
+      port: Number(row.querySelector('.port').value) || 6667,
+      password: row.querySelector('.pass').value || null,
+    };
+    try {
+      await invoke('save_server_network', { network });
+      el.serverNetNew.hidden = true;
+      el.serverNetAdd.hidden = false;
+      renderServerNetworks();
+    } catch (e) {
+      el.serverNetsHint.textContent = String(e);
+    }
+  });
+  row.append(add);
+  el.serverNetNew.replaceChildren(...row.children);
+  el.serverNetNew.hidden = false;
+  el.serverNetAdd.hidden = true;
+});
 
 function setConnectionMode(mode) {
   connectionMode = mode;
@@ -1882,6 +1958,10 @@ async function start() {
     if (e.payload.key === UPLOAD_SETTING) renderAttach();
   });
   // A lobby-server connection came back: fetch what was missed.
+  await listen('server', (e) => {
+    state.serverDown = e.payload.down && e.payload.down.replace(/\s*\(os error \d+\)/, '').replace(/^IO error:\s*/i, '').toLowerCase();
+    renderConnection();
+  });
   await listen('resync', async () => {
     applyStatus(await invoke('status'));
     for (const r of await invoke('recent_buffers').catch(() => [])) buffer(r.net, r.buffer);

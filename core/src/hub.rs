@@ -29,6 +29,17 @@ pub enum Event {
     People { people: Vec<Person> },
     Setting { key: String, value: String },
     Whois(Whois),
+    /// The list of networks changed; clients fetch a fresh snapshot.
+    Networks,
+}
+
+/// A network as the setup screen shows it: no password, only whether there is one.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkView {
+    pub name: String,
+    pub host: String,
+    pub port: u16,
+    pub has_password: bool,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -50,14 +61,14 @@ pub struct Snapshot {
 
 pub struct Hub {
     store: Store,
-    networks: Vec<Network>,
+    networks: Mutex<Vec<Network>>,
     nick: String,
     writers: Mutex<HashMap<String, mpsc::UnboundedSender<String>>>,
     me: Mutex<HashMap<String, String>>,
     conn: Mutex<HashMap<String, String>>,
     channels: Mutex<HashMap<(String, String), BufferInfo>>,
     events: broadcast::Sender<Event>,
-    tasks: Mutex<Vec<tokio::task::JoinHandle<()>>>,
+    tasks: Mutex<HashMap<String, tokio::task::JoinHandle<()>>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -69,7 +80,7 @@ impl Hub {
         let (events, _) = broadcast::channel(EVENT_BUFFER);
         Arc::new(Self {
             store,
-            networks,
+            networks: Mutex::new(networks),
             nick,
             writers: Mutex::default(),
             me: Mutex::default(),
@@ -82,29 +93,84 @@ impl Hub {
 
     /// Close every connection, for when the setup changes.
     pub fn stop(&self) {
-        for task in lock(&self.tasks).drain(..) {
+        for (_, task) in lock(&self.tasks).drain() {
             task.abort();
         }
         lock(&self.writers).clear();
     }
 
+    pub fn networks(&self) -> Vec<Network> {
+        lock(&self.networks).clone()
+    }
+
+    pub fn network_views(&self) -> Vec<NetworkView> {
+        lock(&self.networks)
+            .iter()
+            .map(|n| NetworkView { name: n.name.clone(), host: n.host.clone(), port: n.port, has_password: n.password.is_some() || n.password_file.is_some() })
+            .collect()
+    }
+
+    /// Add a network, or change one with the same name. Without a new password the old one stays.
+    pub fn save_network(self: &Arc<Self>, mut net: Network) -> Result<(), String> {
+        if net.name.trim().is_empty() || net.host.trim().is_empty() {
+            return Err("A network needs a name and a host".into());
+        }
+        if let Some(old) = lock(&self.networks).iter().find(|n| n.name == net.name) {
+            if net.password.is_none() && net.password_file.is_none() {
+                net.password = old.password.clone();
+                net.password_file = old.password_file.clone();
+            }
+        }
+        self.drop_network(&net.name);
+        lock(&self.networks).push(net.clone());
+        self.spawn_network(net);
+        self.emit(Event::Networks);
+        Ok(())
+    }
+
+    /// Disconnect a network and forget it. Its history stays.
+    pub fn delete_network(&self, name: &str) -> Result<(), String> {
+        if !lock(&self.networks).iter().any(|n| n.name == name) {
+            return Err(format!("No network called {name}"));
+        }
+        self.drop_network(name);
+        self.emit(Event::Networks);
+        Ok(())
+    }
+
+    fn drop_network(&self, name: &str) {
+        if let Some(task) = lock(&self.tasks).remove(name) {
+            task.abort();
+        }
+        lock(&self.networks).retain(|n| n.name != name);
+        lock(&self.writers).remove(name);
+        lock(&self.conn).remove(name);
+        lock(&self.me).remove(name);
+        lock(&self.channels).retain(|(net, _), _| net != name);
+    }
+
     /// Connect every network. Must be called from inside a Tokio runtime.
     pub fn start(self: &Arc<Self>) {
-        for net in self.networks.clone() {
-            let hub = Arc::clone(self);
-            let task = tokio::spawn(async move {
-                loop {
-                    hub.set_conn(&net.name, "connecting");
-                    let state = match hub.run(&net).await {
-                        Ok(()) => "disconnected".to_string(),
-                        Err(e) => format!("disconnected: {e}"),
-                    };
-                    hub.set_conn(&net.name, &state);
-                    tokio::time::sleep(RECONNECT_DELAY).await;
-                }
-            });
-            lock(&self.tasks).push(task);
+        for net in self.networks() {
+            self.spawn_network(net);
         }
+    }
+
+    fn spawn_network(self: &Arc<Self>, net: Network) {
+        let hub = Arc::clone(self);
+        let name = net.name.clone();
+        let task = tokio::spawn(async move {
+            loop {
+                hub.set_conn(&net.name, "connecting");
+                let state = match hub.run(&net).await {
+                    Ok(()) => "disconnected".to_string(),
+                    Err(e) => format!("disconnected: {e}"),
+                };
+                hub.set_conn(&net.name, &state);
+                tokio::time::sleep(RECONNECT_DELAY).await;
+            }
+        });
+        lock(&self.tasks).insert(name, task);
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<Event> {
@@ -114,8 +180,7 @@ impl Hub {
     pub fn snapshot(&self) -> Snapshot {
         let conn = lock(&self.conn);
         let me = lock(&self.me);
-        let networks = self
-            .networks
+        let networks = lock(&self.networks)
             .iter()
             .map(|n| NetStatus {
                 name: n.name.clone(),

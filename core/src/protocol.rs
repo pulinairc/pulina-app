@@ -17,6 +17,9 @@ pub enum ClientMsg {
     SavePerson { id: u64, person: Person },
     DeletePerson { id: u64, person: i64 },
     SetSetting { id: u64, key: String, value: String },
+    Networks { id: u64 },
+    SaveNetwork { id: u64, network: crate::Network },
+    DeleteNetwork { id: u64, name: String },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

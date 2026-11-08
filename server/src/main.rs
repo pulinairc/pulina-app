@@ -2,13 +2,13 @@
 //! client, keeps every line in SQLite, and serves history and live chat to Lobby apps.
 
 use futures_util::{SinkExt, StreamExt};
-use lobby_core::hub::Hub;
+use lobby_core::hub::{Event, Hub};
 use lobby_core::protocol::{ClientMsg, ServerMsg};
 use lobby_core::store::Store;
 use lobby_core::{Network, expand, read_secret};
 use serde::Deserialize;
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::{TcpListener, TcpStream};
@@ -49,6 +49,15 @@ fn config_path() -> PathBuf {
 fn load(path: &PathBuf) -> Result<Config, String> {
     let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
     toml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// Write the networks back to the config, keeping its other settings.
+fn save_networks(path: &Path, networks: &[Network]) -> Result<(), String> {
+    let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let mut table: toml::Table = text.parse().map_err(|e: toml::de::Error| e.to_string())?;
+    table.insert("network".into(), toml::Value::try_from(networks).map_err(|e| e.to_string())?);
+    let body = toml::to_string(&table).map_err(|e| e.to_string())?;
+    std::fs::write(path, format!("# lobby-server config. Networks can also be changed from Lobby's connection setup.\n{body}")).map_err(|e| e.to_string())
 }
 
 /// Compare without stopping at the first difference, so timing says nothing about the token.
@@ -99,12 +108,14 @@ async fn run() -> Result<(), String> {
     eprintln!("lobby-server listening on {addr}, networks: {}", names.join(", "));
 
     let token = Arc::new(token);
+    let path = Arc::new(path);
     loop {
         let (stream, peer) = listener.accept().await.map_err(|e| e.to_string())?;
         let hub = Arc::clone(&hub);
         let token = Arc::clone(&token);
+        let path = Arc::clone(&path);
         tokio::spawn(async move {
-            if let Err(e) = serve(stream, hub, &token).await {
+            if let Err(e) = serve(stream, hub, &token, &path).await {
                 eprintln!("{peer}: {e}");
             }
         });
@@ -122,7 +133,7 @@ fn to_json<T: serde::Serialize>(r: Result<T, String>) -> Result<serde_json::Valu
     r.and_then(|v| serde_json::to_value(v).map_err(|e| e.to_string()))
 }
 
-fn answer(hub: &Hub, msg: ClientMsg) -> Option<ServerMsg> {
+fn answer(hub: &Arc<Hub>, path: &Path, msg: ClientMsg) -> Option<ServerMsg> {
     Some(match msg {
         ClientMsg::Hello { .. } => return None,
         ClientMsg::History { id, net, buffer, before } => reply(id, to_json(hub.history(&net, &buffer, before))),
@@ -131,10 +142,17 @@ fn answer(hub: &Hub, msg: ClientMsg) -> Option<ServerMsg> {
         ClientMsg::SavePerson { id, person } => reply(id, to_json(hub.save_person(&person))),
         ClientMsg::DeletePerson { id, person } => reply(id, to_json(hub.delete_person(person))),
         ClientMsg::SetSetting { id, key, value } => reply(id, to_json(hub.set_setting(&key, &value))),
+        ClientMsg::Networks { id } => reply(id, to_json(Ok(hub.network_views()))),
+        ClientMsg::SaveNetwork { id, network } => {
+            reply(id, to_json(hub.save_network(network).and_then(|_| save_networks(path, &hub.networks()))))
+        }
+        ClientMsg::DeleteNetwork { id, name } => {
+            reply(id, to_json(hub.delete_network(&name).and_then(|_| save_networks(path, &hub.networks()))))
+        }
     })
 }
 
-async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str) -> Result<(), String> {
+async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str, path: &Path) -> Result<(), String> {
     let ws = tokio_tungstenite::accept_async(stream).await.map_err(|e| e.to_string())?;
     let (mut sink, mut incoming) = ws.split();
     let send = |msg: ServerMsg| Message::text(serde_json::to_string(&msg).unwrap_or_default());
@@ -158,6 +176,8 @@ async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str) -> Result<(), Stri
     loop {
         tokio::select! {
             event = events.recv() => match event {
+                // A changed network list goes out as a fresh snapshot, which the app takes in whole.
+                Ok(Event::Networks) => sink.send(send(ServerMsg::Welcome { snapshot: hub.snapshot() })).await.map_err(|e| e.to_string())?,
                 Ok(event) => sink.send(send(ServerMsg::Event { event })).await.map_err(|e| e.to_string())?,
                 Err(RecvError::Lagged(_)) => return Err("client fell behind, it will reconnect".into()),
                 Err(RecvError::Closed) => return Ok(()),
@@ -167,7 +187,7 @@ async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str) -> Result<(), Stri
                 Some(Err(e)) => return Err(e.to_string()),
                 Some(Ok(Message::Text(text))) => {
                     let Ok(msg) = serde_json::from_str::<ClientMsg>(text.as_str()) else { continue };
-                    if let Some(out) = answer(&hub, msg) {
+                    if let Some(out) = answer(&hub, path, msg) {
                         sink.send(send(out)).await.map_err(|e| e.to_string())?;
                     }
                 }

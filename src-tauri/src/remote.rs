@@ -75,9 +75,10 @@ impl Remote {
         let remote = Arc::clone(self);
         let task = tauri::async_runtime::spawn(async move {
             loop {
-                if let Err(e) = remote.run(&app).await {
-                    eprintln!("lobby-server: {e}");
-                }
+                // The reason goes to the window too: before the first snapshot there are no networks to mark.
+                let reason = remote.run(&app).await.err().unwrap_or_else(|| "connection closed".into());
+                eprintln!("lobby-server: {reason}");
+                let _ = app.emit("server", serde_json::json!({ "down": reason }));
                 *lock(&remote.out) = None;
                 for (_, tx) in lock(&remote.pending).drain() {
                     let _ = tx.send(Err(UNREACHABLE.into()));
@@ -136,6 +137,7 @@ impl Remote {
         match msg {
             ServerMsg::Welcome { snapshot } => {
                 *lock(&self.snapshot) = snapshot;
+                let _ = app.emit("server", serde_json::json!({ "down": null }));
                 let _ = app.emit("resync", ());
             }
             ServerMsg::Event { event } => {
@@ -176,7 +178,7 @@ impl Remote {
             Event::Setting { key, value } => {
                 snap.settings.insert(key.clone(), value.clone());
             }
-            Event::Line(_) | Event::Whois(_) => {}
+            Event::Line(_) | Event::Whois(_) | Event::Networks => {}
         }
     }
 }

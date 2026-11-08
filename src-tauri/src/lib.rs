@@ -82,6 +82,7 @@ pub fn emit_event(app: &AppHandle, event: Event) {
         Event::People { people } => app.emit("people", people),
         Event::Setting { key, value } => app.emit("setting", serde_json::json!({ "key": key, "value": value })),
         Event::Whois(whois) => app.emit("whois", whois),
+        Event::Networks => app.emit("resync", ()),
     };
 }
 
@@ -376,6 +377,33 @@ fn save_connection(app: AppHandle, state: State<AppState>, connection: Connectio
     Ok(())
 }
 
+/// lobby-server's networks, for the setup screen. Only a server keeps its own list.
+#[tauri::command]
+async fn server_networks(state: State<'_, AppState>) -> Result<Vec<lobby_core::hub::NetworkView>, String> {
+    match state.source() {
+        Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::Networks { id }).await?),
+        _ => Err(NOT_A_SERVER.into()),
+    }
+}
+
+#[tauri::command]
+async fn save_server_network(state: State<'_, AppState>, network: lobby_core::Network) -> Result<(), String> {
+    match state.source() {
+        Source::Remote(remote) => remote.request(|id| ClientMsg::SaveNetwork { id, network }).await.map(|_| ()),
+        _ => Err(NOT_A_SERVER.into()),
+    }
+}
+
+#[tauri::command]
+async fn delete_server_network(state: State<'_, AppState>, name: String) -> Result<(), String> {
+    match state.source() {
+        Source::Remote(remote) => remote.request(|id| ClientMsg::DeleteNetwork { id, name }).await.map(|_| ()),
+        _ => Err(NOT_A_SERVER.into()),
+    }
+}
+
+const NOT_A_SERVER: &str = "Not connected to lobby-server";
+
 #[tauri::command]
 fn player() -> String {
     embed::base()
@@ -396,7 +424,7 @@ pub fn run() {
             app.manage(AppState { source: source.into(), error: error.into(), store, data });
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon, set_badge, notify_mac, allow_notifications, get_connection, save_connection])
+        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon, set_badge, notify_mac, allow_notifications, get_connection, save_connection, server_networks, save_server_network, delete_server_network])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }

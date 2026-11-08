@@ -207,6 +207,11 @@
         <label for="conn-token" class="field-label">lobby-server token</label>
         <input id="conn-token" class="field" type="password" autocomplete="off" spellcheck="false">
         <p class="hint">Found in <span class="mono">~/.config/lobby-server/token</span> on the server.</p>
+        <span class="field-label">Networks on lobby-server</span>
+        <div id="server-nets" class="server-nets"></div>
+        <p id="server-nets-hint" class="hint"></p>
+        <div id="server-net-new" class="net-row" hidden></div>
+        <button id="server-net-add" class="link-btn" type="button">Add a network</button>
       </div>
 
       <div data-modes="irc">
