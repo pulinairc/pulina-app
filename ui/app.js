@@ -2650,6 +2650,8 @@ const TEXT_SIZE_KEY = 'lobby.textSize';
 const TEXT_SIZE_DEFAULT = 100;
 const TEXT_SIZE_MIN = 80;
 const TEXT_SIZE_MAX = 160;
+/** 100 % is a fifth larger than the page's own pixel sizes. */
+const TEXT_SIZE_BASE = 1.2;
 
 function textSize() {
   try { return Number(localStorage.getItem(TEXT_SIZE_KEY)) || TEXT_SIZE_DEFAULT; } catch { return TEXT_SIZE_DEFAULT; }
@@ -2660,7 +2662,7 @@ function applyTextSize(percent) {
   try { localStorage.setItem(TEXT_SIZE_KEY, String(p)); } catch { /* lasts this run */ }
   el.textSize.value = p;
   el.textSizeNumber.value = p;
-  window.__TAURI__.webview.getCurrentWebview().setZoom(p / 100).catch(() => {});
+  window.__TAURI__.webview.getCurrentWebview().setZoom((p / 100) * TEXT_SIZE_BASE).catch(() => {});
 }
 
 el.textSize.addEventListener('input', () => applyTextSize(el.textSize.value));

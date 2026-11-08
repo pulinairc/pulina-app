@@ -31,6 +31,9 @@ html, body {
   margin: 0;
 }
 
+/* iPhone enlarges some text blocks on its own, which the text size setting then misses. */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
 body {
   display: flex;
   flex-direction: column;
