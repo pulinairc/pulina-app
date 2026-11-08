@@ -292,7 +292,7 @@ export function animalFor(nick) {
 
 /** Only standalone tokens convert, so "https://" and mid-word colons never match. Longer tokens first. */
 const EMOTICONS = [
-  [":'(", '😢'], [':D', '😀'], [';)', '😉'], [':)', '🙂'], [':(', '🙁'], [':P', '😛'], [':p', '😛'],
+  [":'(", '😢'], [':D', '😁'], [';)', '😉'], [':)', '🙂'], [':(', '🙁'], [':P', '😛'], [':p', '😛'],
   [':S', '😖'], [':s', '😖'], ['xD', '😆'], ['XD', '😆'], [':O', '😮'], [':o', '😮'], ['<3', '❤️'],
   [':*', '😘'], [':/', '😕'],
 ];

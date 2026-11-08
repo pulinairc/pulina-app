@@ -42,6 +42,7 @@
 * Change tooltips to readable cards, people in their colour
 * Add the person card to names above messages
 * Update the demo to the current look
+* Change :D to turn into 😁
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night

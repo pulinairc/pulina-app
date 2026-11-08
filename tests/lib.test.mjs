@@ -119,7 +119,7 @@ test('gives a nick the same animal every time', () => {
 });
 
 test('turns standalone emoticons into emoji', () => {
-  assert.equal(convertEmoticons('nice :D see you :)'), 'nice 😀 see you 🙂');
+  assert.equal(convertEmoticons('nice :D see you :)'), 'nice 😁 see you 🙂');
   assert.equal(convertEmoticons('https://example.org:D'), 'https://example.org:D');
   assert.equal(convertEmoticons('<3 xD'), '❤️ 😆');
 });
