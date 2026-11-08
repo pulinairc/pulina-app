@@ -62,6 +62,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: 8px 10px 8px 12px;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
+  /* Above the unread band, which tucks one pixel under this border. */
+  position: relative;
+  z-index: 7;
+  background: var(--bg);
 }
 
 #title {
@@ -1220,14 +1224,15 @@ dialog:focus { outline: none; }
 /* A band across the top, fading into the chat, so no message text shows beside the pills. */
 #unread-bar {
   position: absolute;
-  top: 0;
+  /* One pixel up, so no message line shows through above it at fractional scales. */
+  top: -1px;
   left: 0;
   right: 0;
   z-index: 6;
   display: flex;
   justify-content: center;
   gap: 8px;
-  padding: 10px 12px 22px;
+  padding: 11px 12px 22px;
   background: linear-gradient(var(--bg) 62%, transparent);
   pointer-events: none;
 }

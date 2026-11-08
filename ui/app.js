@@ -1793,7 +1793,8 @@ function updateJumps() {
   const messages = count === 1 ? 'message' : 'messages';
   // A phone has room for the count and the arrow only.
   const narrow = NARROW.matches;
-  el.jumpUnreadLabel.textContent = narrow ? `${count} new` : `${count} new ${messages} ${below ? 'below' : 'above'}`;
+  // The count is on Mark read already; this one only says where it goes.
+  el.jumpUnreadLabel.textContent = narrow ? 'First unread' : 'Jump to first unread';
   el.jumpLatest.hidden = atBottom();
   if (!el.jumpLatest.hidden) {
     const more = messagesBelow(log.bottom);
