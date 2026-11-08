@@ -1512,7 +1512,8 @@ function fitKeyboard() {
     const full = root.clientHeight;
     const up = vv.height < full - KEYBOARD_MIN_PX;
     root.classList.toggle('keyboard', up);
-    if (up) root.style.setProperty('--app-h', `${Math.round(vv.height)}px`);
+    // The page's own zoom scales this length too, so it is given unzoomed.
+    if (up) root.style.setProperty('--app-h', `${Math.round(vv.height / pageScale)}px`);
     else root.style.removeProperty('--app-h');
   }, KEYBOARD_SETTLE_MS);
 }
@@ -1810,6 +1811,7 @@ function applyStatus(st) {
     IS_MAC = st.platform === 'macos';
     document.documentElement.classList.toggle('mac', IS_MAC);
     document.documentElement.classList.toggle('ios', st.platform === 'ios');
+    applyTextSize(textSize());
     if (IS_MAC) invoke('allow_notifications').catch(() => {});
   }
   state.networks = st.networks.map((n) => n.name);
@@ -2653,8 +2655,8 @@ function settingOn(key) {
 // Text size, per device: the whole window zooms, so everything keeps its proportions.
 const TEXT_SIZE_KEY = 'lobby.textSize';
 const TEXT_SIZE_DEFAULT = 100;
-const TEXT_SIZE_MIN = 80;
-const TEXT_SIZE_MAX = 160;
+const TEXT_SIZE_MIN = 70;
+const TEXT_SIZE_MAX = 200;
 /** 100 % is a fifth larger than the page's own pixel sizes. */
 const TEXT_SIZE_BASE = 1.2;
 
@@ -2662,12 +2664,21 @@ function textSize() {
   try { return Number(localStorage.getItem(TEXT_SIZE_KEY)) || TEXT_SIZE_DEFAULT; } catch { return TEXT_SIZE_DEFAULT; }
 }
 
+let pageScale = 1;
+
 function applyTextSize(percent) {
   const p = Math.min(TEXT_SIZE_MAX, Math.max(TEXT_SIZE_MIN, Math.round(Number(percent) || TEXT_SIZE_DEFAULT)));
   try { localStorage.setItem(TEXT_SIZE_KEY, String(p)); } catch { /* lasts this run */ }
   el.textSize.value = p;
   el.textSizeNumber.value = p;
-  window.__TAURI__.webview.getCurrentWebview().setZoom((p / 100) * TEXT_SIZE_BASE).catch(() => {});
+  const scale = (p / 100) * TEXT_SIZE_BASE;
+  // iPhone ignores the webview's zoom, so there the page zooms itself.
+  if (document.documentElement.classList.contains('ios')) {
+    pageScale = scale;
+    document.documentElement.style.zoom = String(scale);
+    return;
+  }
+  window.__TAURI__.webview.getCurrentWebview().setZoom(scale).catch(() => {});
 }
 
 el.textSize.addEventListener('input', () => applyTextSize(el.textSize.value));

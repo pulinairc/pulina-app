@@ -31,6 +31,7 @@
 * Change the default text size a fifth larger
 * Fix app icons wrapping onto a second row
 * Fix unread pills running off narrow screens
+* Fix the text size setting on iPhone
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
