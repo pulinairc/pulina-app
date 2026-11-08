@@ -702,7 +702,7 @@ function newGroup(l) {
   const head = h('div', 'hd');
   const name = h('span', 'nm', who.name);
   name.style.color = who.color;
-  name.dataset.tip = who.name === l.nick ? l.nick : `${l.nick} · ${l.mask || 'IRC'}`;
+  personTip(name, l.net, l.nick);
   name.addEventListener('click', () => openPerson(l.nick, l.mask));
   head.append(name);
   body.append(head);
