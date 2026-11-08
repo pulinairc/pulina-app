@@ -688,7 +688,8 @@ function appendLine(l, live) {
   }
 
   view.lastLine = l;
-  if (live && pinned) toBottom();
+  // Your own message always brings the view down to it; a reaction stays put.
+  if (live && (pinned || l.own || l.nick === state.me[l.net])) toBottom();
 }
 
 function newGroup(l) {

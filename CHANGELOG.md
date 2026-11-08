@@ -47,6 +47,7 @@
 * Add opening the message from a macOS notification
 * Fix the unread band gap and its repeated count
 * Change the notification highlight to reach past the text
+* Fix sending not scrolling to your message
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
