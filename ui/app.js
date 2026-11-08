@@ -1,6 +1,6 @@
 import {
   CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel,
-  animalFor, colorFromRgb, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
+  animalFor, colonQuery, colorFromRgb, convertEmoticons, emojiSearch, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -13,6 +13,9 @@ const LAST_BUFFER_KEY = 'lobby.current';
 const FIRST_PICK_DELAY_MS = 400;
 const QUICK_REACTIONS = ['👍', '😂', '❤️', '🔥', '😮'];
 const REACTION_SETTING = 'reactions';
+// Emoji helpers in the message box, on unless turned off.
+const EMOTICON_SETTING = 'emoticons';
+const SHORTCODE_SETTING = 'shortcodes';
 const PHOTO_PX = 160;
 const PHOTO_QUALITY = 0.85;
 const COLOR_SAMPLE_PX = 24;
@@ -38,7 +41,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
+  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -496,6 +499,8 @@ el.switcher.addEventListener('click', (e) => {
 
 function renderSettings() {
   el.notifyToggle.checked = notifyOn();
+  el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
+  el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
   el.uploadUrl.value = uploadHost();
   const rows = state.networks.map((n) => {
     const row = h('div', 'conn');
@@ -1152,7 +1157,7 @@ async function runLocal(b, text) {
 }
 
 async function send() {
-  const text = el.input.value;
+  const text = settingOn(EMOTICON_SETTING) ? convertEmoticons(el.input.value) : el.input.value;
   const b = state.buffers.get(state.current);
   if (!text.trim() || !b) return;
   hideSlash();
@@ -1218,24 +1223,62 @@ function hideSlash() {
 }
 
 function renderSlash() {
-  const items = commandMatches(el.input.value);
-  if (!items || !items.length) return hideSlash();
+  const items = menuEntries();
+  if (!items.length) return hideSlash();
   slashItems = items;
   slashPick = Math.min(slashPick, items.length - 1);
-  el.slash.replaceChildren(...items.map((c, i) => {
+  el.slash.replaceChildren(...items.map((entry, i) => {
     const item = h('button', 'slash-item');
     item.type = 'button';
     item.setAttribute('role', 'option');
     item.setAttribute('aria-selected', String(i === slashPick));
-    item.append(h('span', 'slash-name', `/${c.name}`), h('span', 'slash-args', c.args), h('span', 'slash-desc', c.desc));
+    item.append(...entry.parts);
     item.addEventListener('mousedown', (e) => {
       e.preventDefault();
-      applySlash(c);
+      entry.apply();
     });
     return item;
   }));
   el.slash.hidden = false;
   el.slash.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
+}
+
+/** The / commands, or emoji for a ":word" before the caret. */
+function menuEntries() {
+  const commands = commandMatches(el.input.value);
+  if (commands?.length) {
+    return commands.map((c) => ({
+      parts: [h('span', 'slash-name', `/${c.name}`), h('span', 'slash-args', c.args), h('span', 'slash-desc', c.desc)],
+      apply: () => applySlash(c),
+    }));
+  }
+  if (!settingOn(SHORTCODE_SETTING)) return [];
+  const caret = el.input.selectionStart ?? el.input.value.length;
+  const q = colonQuery(el.input.value.slice(0, caret));
+  if (!q) return [];
+  if (!pickerState.data) {
+    emojiData().then(renderSlash);
+    return [];
+  }
+  return emojiSearch(q, pickerState.data, reactionCounts()).map((hit) => {
+    const code = h('span', 'slash-desc emoji-code');
+    code.append(`:${hit.id.slice(0, hit.start)}`, h('b', null, hit.id.slice(hit.start, hit.end)), `${hit.id.slice(hit.end)}:`);
+    return {
+      parts: [h('span', 'slash-emoji', hit.native), code],
+      apply: () => insertEmoji(hit.native, caret - q.length - 1, caret),
+    };
+  });
+}
+
+/** Put an emoji where the colon or shortcode was, with a space after it. */
+function insertEmoji(native, start, end) {
+  countReaction(native);
+  const value = el.input.value;
+  el.input.value = `${value.slice(0, start)}${native} ${value.slice(end)}`;
+  const caret = start + native.length + 1;
+  el.input.focus();
+  el.input.setSelectionRange(caret, caret);
+  hideSlash();
 }
 
 function applySlash(c) {
@@ -1246,10 +1289,43 @@ function applySlash(c) {
 }
 
 el.input.addEventListener('input', () => {
+  emoticonsAsTyped();
+  colonPicker();
   slashPick = 0;
   renderSlash();
   fitInput();
 });
+
+// ":D " becomes 😀 the moment a space lands after it; sending converts a last one too.
+function emoticonsAsTyped() {
+  if (!settingOn(EMOTICON_SETTING)) return;
+  const caret = el.input.selectionStart ?? 0;
+  if (caret === 0 || !/\s/.test(el.input.value[caret - 1])) return;
+  const next = convertEmoticons(el.input.value);
+  if (next === el.input.value) return;
+  const moved = caret + next.length - el.input.value.length;
+  el.input.value = next;
+  el.input.setSelectionRange(moved, moved);
+}
+
+// A colon at the start of a word opens the emoji picker; typing on closes it again.
+let colonAt = null;
+
+function colonPicker() {
+  const caret = el.input.selectionStart ?? 0;
+  const value = el.input.value;
+  const fresh = caret > 0 && value[caret - 1] === ':' && (caret === 1 || /\s/.test(value[caret - 2]));
+  if (fresh && settingOn(SHORTCODE_SETTING)) {
+    colonAt = caret - 1;
+    openPicker(el.form, (native) => {
+      if (el.input.value[colonAt] === ':') insertEmoji(native, colonAt, colonAt + 1);
+      colonAt = null;
+    }, { focus: false });
+  } else if (colonAt !== null) {
+    colonAt = null;
+    closePicker();
+  }
+}
 
 function fitInput() {
   el.input.style.height = 'auto';
@@ -1274,7 +1350,7 @@ el.input.addEventListener('keydown', (e) => {
     }
     if (e.key === 'Tab' || e.key === 'Enter') {
       e.preventDefault();
-      applySlash(slashItems[slashPick]);
+      slashItems[slashPick].apply();
       return;
     }
     if (e.key === 'Escape') {
@@ -2057,7 +2133,7 @@ async function buildPicker() {
 }
 
 /** Open the picker next to `anchor`; `onPick` gets the chosen emoji. */
-async function openPicker(anchor, onPick) {
+async function openPicker(anchor, onPick, { focus = true } = {}) {
   if (!pickerState.el) await buildPicker();
   const p = pickerState;
   p.onPick = onPick;
@@ -2075,7 +2151,7 @@ async function openPicker(anchor, onPick) {
   p.el.style.top = `${Math.max(top, PICKER_GAP)}px`;
   document.body.append(p.el);
   closePanel();
-  p.input.focus();
+  if (focus) p.input.focus();
 }
 
 function closePicker() {
@@ -2100,6 +2176,10 @@ const NOTIFY_SETTING = 'notify';
 const NOTIFY_TEXT_CHARS = 160;
 const notifier = window.__TAURI__.notification;
 let notifyAllowed = null;
+
+function settingOn(key) {
+  return state.settings[key] !== 'off';
+}
 
 function notifyOn() {
   return state.settings[NOTIFY_SETTING] !== 'off';
@@ -2140,6 +2220,9 @@ function hashHex(text) {
 el.notifyToggle.addEventListener('change', () => {
   saveSetting(NOTIFY_SETTING, el.notifyToggle.checked ? 'on' : 'off');
 });
+
+el.emoticonToggle.addEventListener('change', () => saveSetting(EMOTICON_SETTING, el.emoticonToggle.checked ? 'on' : 'off'));
+el.shortcodeToggle.addEventListener('change', () => saveSetting(SHORTCODE_SETTING, el.shortcodeToggle.checked ? 'on' : 'off'));
 
 
 // Attachments: files go to the file host set in Settings, and their address into the message.

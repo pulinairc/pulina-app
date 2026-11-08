@@ -1,6 +1,7 @@
 ### 0.5.7: 2026-11-08
 
 * Add a jump to the first unread, also with Alt+U
+* Add emoticons to emoji and :shortcode suggestions
 
 ### 0.5.6: 2026-11-08
 

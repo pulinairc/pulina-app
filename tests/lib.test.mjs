@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor } from '../ui/lib.js';
+import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor, convertEmoticons, colonQuery, emojiSearch } from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -116,4 +116,24 @@ test('formats durations', () => {
 test('gives a nick the same animal every time', () => {
   assert.equal(animalFor('Kaisla'), animalFor('kaisla_'));
   assert.ok(animalFor('mikko').length > 0);
+});
+
+test('turns standalone emoticons into emoji', () => {
+  assert.equal(convertEmoticons('nice :D see you :)'), 'nice 😀 see you 🙂');
+  assert.equal(convertEmoticons('https://example.org:D'), 'https://example.org:D');
+  assert.equal(convertEmoticons('<3 xD'), '❤️ 😆');
+});
+
+test('finds the colon word before the caret', () => {
+  assert.equal(colonQuery('hello :joy'), 'joy');
+  assert.equal(colonQuery('hello :j'), null);
+  assert.equal(colonQuery('10:30'), null);
+});
+
+test('ranks exact shortcodes first, then usage', () => {
+  const data = [{ emojis: [['😂', 'face with tears of joy nauru', 'joy'], ['😹', 'cat face with tears of joy', 'joy_cat'], ['🙂', 'slightly smiling face hymy', 'slightly_smiling_face']] }];
+  assert.deepEqual(emojiSearch('joy', data).map((h) => h.id), ['joy', 'joy_cat']);
+  assert.deepEqual(emojiSearch('joy', data, { '😹': 3 }).map((h) => h.id), ['joy', 'joy_cat']);
+  assert.deepEqual(emojiSearch('jo', data, { '😹': 3 }).map((h) => h.id), ['joy_cat', 'joy']);
+  assert.deepEqual(emojiSearch('nauru', data).map((h) => h.id), ['joy']);
 });

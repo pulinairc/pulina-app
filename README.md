@@ -159,6 +159,8 @@ Restart Lobby after changing the config.
 
 **Commands.** Type `/` for the menu. `/me`, `/msg`, `/query`, `/join`, `/part`, `/wc`, `/topic`, `/names`, `/whois`, `/nick`, `/away`, `/notice`, `/invite`, `/kick`, `/op`, `/deop`, `/voice`, `/devoice`, `/clear`, `/say` and `/quote` work as in irssi. Anything else is sent as is. `/quit` is off, because through irssiproxy it would disconnect irssi from the network.
 
+**Emoji.** `:D`, `:)`, `<3` and friends turn into emoji as you type. A colon at the start of a word opens the emoji picker, and `:joy` or a Finnish word like `:nauru` lists matching emoji, most used first. Both can be turned off in Settings.
+
 **Attachments.** Paste an image into the message box, drop files on the window, or use the paperclip. The file goes to your file host and its address is put into your message, so everyone on IRC can open it. Set the host's address under Settings, File host for attachments.
 
 <details>

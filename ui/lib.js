@@ -287,3 +287,70 @@ const ANIMALS = [...'🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🐔🐧🐦🐤�
 export function animalFor(nick) {
   return ANIMALS[nickHash(nick) % ANIMALS.length];
 }
+
+// Emoticons and emoji shortcodes, the same rules as the NeAI web app.
+
+/** Only standalone tokens convert, so "https://" and mid-word colons never match. Longer tokens first. */
+const EMOTICONS = [
+  [":'(", '😢'], [':D', '😀'], [';)', '😉'], [':)', '🙂'], [':(', '🙁'], [':P', '😛'], [':p', '😛'],
+  [':S', '😖'], [':s', '😖'], ['xD', '😆'], ['XD', '😆'], [':O', '😮'], [':o', '😮'], ['<3', '❤️'],
+  [':*', '😘'], [':/', '😕'],
+];
+const EMOTICON_RE = new RegExp(
+  `(^|\\s)(${EMOTICONS.map(([t]) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?=\\s|$)`,
+  'g',
+);
+const EMOTICON_MAP = Object.fromEntries(EMOTICONS);
+
+export function convertEmoticons(text) {
+  return text.replace(EMOTICON_RE, (_m, pre, tok) => pre + (EMOTICON_MAP[tok] ?? tok));
+}
+
+/** The ":word" right before the caret, two characters or more, or null. */
+export function colonQuery(beforeCaret) {
+  return /(?:^|\s):([a-z0-9_+-]{2,})$/i.exec(beforeCaret)?.[1].toLowerCase() ?? null;
+}
+
+/** Shortest shared opening that counts as the same Finnish word. */
+const STEM = 5;
+/** Shorter fragments reach too many keywords to mean any of them. */
+const KEYWORD_MIN = 3;
+const SHORTCODE_HITS = 8;
+const Tier = { Exact: 0, Shortcode: 1, Keyword: 2 };
+
+/** A prefix, or a shared five-letter stem, since Finnish inflects the end of a word. */
+function matchesWord(q, word) {
+  if (word.startsWith(q)) return true;
+  if (q.length < STEM) return false;
+  let i = 0;
+  while (i < q.length && i < word.length && q[i] === word[i]) i++;
+  return i >= STEM;
+}
+
+/**
+ * Emoji for a typed shortcode: exact shortcode, then shortcodes containing it, then keywords.
+ * Inside a tier the most used wins, then where the match sits, then the shorter name.
+ * `data` is the picker's categories of [emoji, words, shortcode]; `freq` counts use per emoji.
+ */
+export function emojiSearch(query, data, freq = {}) {
+  const q = query.toLowerCase();
+  const out = [];
+  for (const cat of data) {
+    for (const [native, words, id] of cat.emojis) {
+      const at = id.indexOf(q);
+      if (at !== -1) {
+        out.push({ id, native, start: at, end: at + q.length, tier: id === q ? Tier.Exact : Tier.Shortcode });
+        continue;
+      }
+      if (q.length < KEYWORD_MIN) continue;
+      if (!words.split(' ').some((w) => matchesWord(q, w))) continue;
+      out.push({ id, native, start: id.length, end: id.length + q.length, tier: Tier.Keyword });
+    }
+  }
+  const strip = (e) => e.replace(/️/g, '');
+  const counts = new Map(Object.entries(freq).map(([e, n]) => [strip(e), n]));
+  const used = (h) => counts.get(strip(h.native)) ?? 0;
+  return out
+    .sort((a, b) => a.tier - b.tier || used(b) - used(a) || a.start - b.start || a.id.length - b.id.length)
+    .slice(0, SHORTCODE_HITS);
+}

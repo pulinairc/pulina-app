@@ -864,6 +864,9 @@ dialog:focus { outline: none; }
 .slash-name { color: var(--strong); font-weight: 600; }
 .slash-args { color: var(--faint); }
 .slash-desc { margin-left: auto; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slash-emoji { font-size: 18px; line-height: 1; }
+.emoji-code { margin-left: 0; }
+.emoji-code b { color: var(--strong); font-weight: 600; }
 .events.info { color: var(--dim); padding-left: 0; }
 
 /* People */
