@@ -1486,6 +1486,9 @@ label.switch-row {
   .swatch-mark { font-size: 16px; }
   .photo-btn { width: 96px; height: 96px; }
   .photo-btn.animal { font-size: 60px; }
+  .unread-sep { height: 40px; }
+  .sep-mark { width: 36px; height: 36px; border-radius: 9px; }
+  .sep-mark svg { width: 18px; height: 18px; }
   .chip { padding: 2px 2px 2px 11px; }
   .chip button { width: 34px; height: 34px; }
   .link-btn { padding-block: 10px; }

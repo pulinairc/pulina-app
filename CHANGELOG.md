@@ -51,6 +51,7 @@
 * Change the photo and colour picker to even rows
 * Remove the Neon sign icon
 * Change the iPhone icon picker to start from the left
+* Change the New line checkmark to thumb size on touch
 * Change reply quotes to a hollow bubble
 * Change replies to hide the nick in the message box
 * Change the app icon to Teal night
