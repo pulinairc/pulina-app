@@ -2636,7 +2636,6 @@ body.docked #status {
     padding-left: 4px;
     font-size: 11px;
   }
-  .nicklist.docked .crown,
   .nicklist.docked .voiced {
     width: 11px;
   }
@@ -2738,10 +2737,6 @@ body.docked #status {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.nl-row .crown {
-  fill: var(--crown);
-  flex-shrink: 0;
 }
 .nl-row .voiced {
   color: var(--mention);

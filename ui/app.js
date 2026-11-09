@@ -1651,8 +1651,6 @@ window.addEventListener('blur', () => {
 
 const PILL_FACES = 5;
 const DOCK_KEY = 'lobby.nicklist';
-const CROWN =
-  '<svg class="crown" width="13" height="10" viewBox="0 0 24 18" role="img" aria-label="op"><path d="M2 5l5.5 4L12 1l4.5 8L22 5l-2.5 12h-15z"/></svg>';
 const VOICE =
   '<svg class="voiced" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" role="img" aria-label="voice"><path d="M5 9v6M9 6v12M13 9v6M17 4v16"/></svg>';
 const CAN_OP = /[~&@]/;
@@ -1855,9 +1853,7 @@ function personRow(p, now) {
   if (who.name !== p.nick) {
     row.dataset.tip = p.nick;
   }
-  if (p.role === 'op') {
-    row.append(svg(CROWN));
-  } else if (p.role === 'voice') {
+  if (p.role === 'voice') {
     row.append(svg(VOICE));
   }
   const quiet = quietFor(p.ts, now);
