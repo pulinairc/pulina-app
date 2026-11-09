@@ -2,6 +2,7 @@
 
 * Remove the sweeping light from highlights
 * Add a soft glimmer to your name in highlights
+* Change names of others in messages to bold on a tint of their colour
 
 ### 0.7.0: 2026-11-09
 

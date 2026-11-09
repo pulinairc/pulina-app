@@ -1156,7 +1156,9 @@ function nicksOf(l) {
 
 function nickRef(net, t) {
   const n = h('span', 'nick-ref', t.value);
-  n.style.color = identity(t.nick).color;
+  const color = identity(t.nick).color;
+  n.style.color = color;
+  n.style.setProperty('--tint', color);
   personTip(n, net, t.nick);
   return n;
 }
