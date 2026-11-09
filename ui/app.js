@@ -3672,12 +3672,12 @@ function openNotified(id) {
 }
 
 // macOS gets its notifications from the system notification centre, the rest through the plugin.
-// Resolves with the notification's id once the system has it; rejects with the reason it refused.
+// Resolves once the system has the notification; rejects with the reason it refused.
 async function showNotification(title, body, icon, target = null) {
   const id = `${Date.now()}`;
   if (!IS_MAC) {
     notifier.sendNotification({ title, body, icon });
-    return id;
+    return;
   }
   if (target) {
     notified.set(id, target);
@@ -3686,33 +3686,18 @@ async function showNotification(title, body, icon, target = null) {
     }
   }
   await invoke('notify_mac', { id, title, body, image: icon || null });
-  return id;
 }
 
-// macOS can take a notification and still not show it, so the test also asks whether it arrived.
-const DELIVERY_WAIT_MS = 1500;
-
-async function testNotification() {
-  const id = await showNotification('Lobby', 'Notifications work.', null);
-  if (!IS_MAC) {
-    return 'Sent';
-  }
-  await new Promise((done) => setTimeout(done, DELIVERY_WAIT_MS));
-  if (!(await invoke('notify_delivered', { id }))) {
-    throw new Error('macOS accepted it but did not show it');
-  }
-  return 'Shown in Notification Center';
-}
-
-// The answer shows under the button, green or red, so a refusal is never silent.
+// Green when the system took it, red with its reason when it refused. A Focus mode can still
+// hide a notification the system took, so the green line says where to look.
 el.notifyTest.addEventListener('click', async () => {
   let ok = true;
-  let text;
+  let text = IS_MAC ? 'Sent. Not seeing it? A Focus mode may be hiding Lobby.' : 'Sent';
   try {
-    text = await testNotification();
+    await showNotification('Lobby', 'Notifications work.', null);
   } catch (e) {
     ok = false;
-    text = `Not shown: ${e.message ?? e}`;
+    text = `Not sent: ${e}`;
   }
   el.notifyResult.textContent = text;
   el.notifyResult.classList.toggle('ok', ok);
