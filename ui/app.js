@@ -2833,7 +2833,7 @@ applyTextSize(textSize());
 // The app icon, chosen per device: Dock on macOS, window icon elsewhere.
 const ICONS_KEY = 'lobby.icon';
 const APP_ICONS = [
-  ['pendant-lamp', 'Pendant lamp'], ['teal-night', 'Teal night'], ['neon-night', 'Neon night'],
+  ['pendant-lamp', 'Pendant lamp'], ['coffee-chat', 'Coffee chat'], ['teal-night', 'Teal night'], ['neon-night', 'Neon night'],
   ['sunset', 'Sunset'], ['mint-glass', 'Mint glass'], ['porcelain', 'Porcelain'], ['neon-glow', 'Neon glow'],
 ];
 const DEFAULT_ICON = APP_ICONS[0][0];

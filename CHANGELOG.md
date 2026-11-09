@@ -5,6 +5,7 @@
 * Change person card rows to align with names
 * Fix spacing above the connection button
 * Change the app icon to Pendant lamp
+* Add the Coffee chat icon
 
 ### 0.5.7: 2026-11-08
 
