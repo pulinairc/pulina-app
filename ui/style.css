@@ -2434,23 +2434,28 @@ label.switch-row {
   overflow-wrap: anywhere;
   user-select: all;
 }
+/* One spacing for the whole form: fields the size of the Nick field, 10px between fields,
+   a little more between networks, and the same step down to the link and the note. */
 .net-rows {
   display: grid;
-  gap: 8px;
-  margin-bottom: 6px;
+  gap: 16px;
 }
 .net-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 64px 26px;
-  gap: 6px;
+  grid-template-columns: 1fr 1fr 72px 32px;
+  gap: 10px;
   align-items: center;
-}
-.net-row .field {
-  padding: 6px 8px;
-  font-size: 14px;
 }
 .net-row .pass {
   grid-column: 1 / 4;
+}
+#conn-add-net,
+#server-net-add {
+  align-self: flex-start;
+  margin-top: 12px;
+}
+#conn-add-net + .hint {
+  margin: 16px 0 0;
 }
 .hint.error {
   color: var(--new);

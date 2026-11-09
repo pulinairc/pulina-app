@@ -3,6 +3,7 @@
 * Change quick reactions to your top three emojis
 * Fix long press still selecting text on iPhone
 * Change the jump buttons on touch screens to a smaller size
+* Fix uneven spacing in the connection setup
 
 ### 0.8.2: 2026-11-09
 
