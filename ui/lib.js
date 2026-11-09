@@ -762,3 +762,18 @@ export function modeAction(picked, modes, symbol) {
   const lacking = picked.filter((n) => !(modes.get(n) || '').includes(symbol));
   return lacking.length ? { give: true, nicks: lacking } : { give: false, nicks: [...picked] };
 }
+
+/** "!seen milla" or ".w helsinki": a line that asks a bot for something. */
+export function isCommand(text) {
+  return /^[!.][\p{L}\p{N}_-]+(\s|$)/u.test(text);
+}
+
+/** Bot nicks from the setting, any mix of spaces and commas, lower-case. */
+export function botNicks(value = '') {
+  return new Set(
+    value
+      .split(/[\s,]+/)
+      .filter(Boolean)
+      .map((n) => n.toLowerCase()),
+  );
+}

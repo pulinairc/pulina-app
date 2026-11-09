@@ -16,6 +16,10 @@
         <span id="chan-meta"></span>
       </span>
     </button>
+    <button id="topic" type="button" aria-haspopup="dialog" hidden>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h10M4 17h13"/></svg>
+      <span id="topic-text"></span>
+    </button>
     <button id="unread" type="button" hidden></button>
     <button id="pill" type="button" aria-haspopup="dialog" aria-controls="nicklist" hidden></button>
   </header>
@@ -121,6 +125,11 @@
         <span>Suggest emoji after a colon</span>
         <input id="shortcode-toggle" class="switch" type="checkbox" role="switch">
       </label>
+    </section>
+    <section>
+      <h3><label for="bots-field">Bots</label></h3>
+      <input id="bots-field" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="seenbot, infobot">
+      <p class="hint">What these nicks say right after a command like <span class="mono">!seen</span> is shown inside it, as its answer.</p>
     </section>
     <section>
       <h3><label for="upload-url">Attachments</label></h3>

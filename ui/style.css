@@ -407,6 +407,41 @@ a:focus-visible {
   border-radius: 4px;
   padding: 0 3px;
 }
+/* A bot command and the bot's answers, in one card. */
+.cmd-card {
+  margin-top: 2px;
+  max-width: 560px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.cmd {
+  padding: 5px 10px;
+  background: var(--panel);
+  color: var(--strong);
+  font:
+    13px / 1.5 ui-monospace,
+    "JetBrains Mono",
+    monospace;
+}
+.cmd-answers:empty {
+  display: none;
+}
+.cmd-answer {
+  --avatar: 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 15px;
+}
+.cmd-answer + .cmd-answer {
+  padding-top: 0;
+}
+.cmd-answer .av {
+  margin-top: 3px;
+}
+
 /* Someone else named in a message: bold in their colour on a dim wash of it, like your own name. */
 .text .nick-ref {
   font-weight: 600;
@@ -3060,4 +3095,56 @@ body.docked #status {
   .sheet-pill > * {
     animation: none;
   }
+}
+
+/* The topic chip: in the free space of the header, gone when the window is narrow. */
+#topic {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 1 520px;
+  min-width: 0;
+  height: 30px;
+  margin: 0 auto;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 13px;
+}
+#topic svg {
+  flex-shrink: 0;
+  color: var(--faint);
+}
+#topic:hover,
+#topic[aria-expanded="true"] {
+  border-color: var(--line-strong);
+  color: var(--strong);
+}
+#topic-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#topic[hidden] {
+  display: none;
+}
+@media (max-width: 720px) {
+  #topic {
+    display: none;
+  }
+}
+.topic-pop {
+  position: fixed;
+  z-index: 45;
+  max-width: min(520px, calc(100% - 16px));
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgb(22 22 26 / 96%);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }

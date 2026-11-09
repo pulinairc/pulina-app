@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
 import {
   APP_ICONS,
+  botNicks,
+  isCommand,
   describeMode,
   byActivity,
   fadeFor,
@@ -380,4 +382,16 @@ test('mode changes read as words', () => {
   assert.equal(describeMode('irc.example', '+nt'), 'irc.example set +n +t');
   assert.equal(describeMode('kaisla', '+bl *!*@x 10'), 'kaisla set +b *!*@x +l 10');
   assert.equal(describeMode('kaisla', '-l+v lumi'), 'kaisla gave voice to lumi, set -l');
+});
+
+test('bot commands and bot nicks', () => {
+  assert.ok(isCommand('!seen milla'));
+  assert.ok(isCommand('.w helsinki'));
+  assert.ok(isCommand('!top'));
+  assert.ok(!isCommand('...'));
+  assert.ok(!isCommand('. ok'));
+  assert.ok(!isCommand('! wow'));
+  assert.ok(!isCommand('hello !seen'));
+  assert.deepEqual([...botNicks('SeenBot, infobot  ')], ['seenbot', 'infobot']);
+  assert.equal(botNicks('').size, 0);
 });

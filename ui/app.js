@@ -29,6 +29,8 @@ import {
   modeAction,
   peopleGroups,
   quietFor,
+  botNicks,
+  isCommand,
   splitNicks,
   duration,
   isChannel,
@@ -57,6 +59,9 @@ const QUICK_REACTIONS = ['👍', '😂', '❤️', '🔥', '😮'];
 const REACTION_SETTING = 'reactions';
 // Emoji helpers in the message box, on unless turned off.
 const EMOTICON_SETTING = 'emoticons';
+const BOTS_SETTING = 'bots';
+/** A bot's answer joins the command it follows only this soon after it. */
+const BOT_ANSWER_MS = 60 * 1000;
 const SHORTCODE_SETTING = 'shortcodes';
 const PHOTO_PX = 160;
 const PHOTO_QUALITY = 0.85;
@@ -89,6 +94,8 @@ const el = {
   unread: $('unread'),
   gear: $('gear'),
   pill: $('pill'),
+  topic: $('topic'),
+  topicText: $('topic-text'),
   status: $('status'),
   statusText: $('status-text'),
   statusAction: $('status-action'),
@@ -113,6 +120,7 @@ const el = {
   notifyGuideGo: $('notify-guide-go'),
   notifyGuideLater: $('notify-guide-later'),
   emoticonToggle: $('emoticon-toggle'),
+  botsField: $('bots-field'),
   shortcodeToggle: $('shortcode-toggle'),
   iconChoices: $('icon-choices'),
   textSize: $('text-size'),
@@ -661,6 +669,12 @@ function renderHeader() {
     const who = isPrivate(b) ? ' · private' : b.name === '' ? ' · server messages' : '';
     el.chanMeta.textContent = `${b.net}${who}${isMuted(b) ? ' · muted' : ''}`;
     el.title.dataset.tip = b.topic || '';
+    const topic = b.name !== '' && !isPrivate(b) ? stripFormatting(b.topic || '') : '';
+    el.topic.hidden = !topic;
+    el.topicText.textContent = topic;
+    if (topicPop && topicPop.dataset.topic !== topic) {
+      closeTopic();
+    }
   }
   schedulePeople();
 
@@ -837,6 +851,44 @@ function pick(k) {
   select(k);
 }
 
+// The topic, in a chip in the header when there is room; clicking it shows all of it.
+let topicPop = null;
+
+function openTopic() {
+  const topic = el.topicText.textContent;
+  topicPop = h('div', 'glass topic-pop');
+  topicPop.dataset.topic = topic;
+  for (const t of tokenize(topic, '')) {
+    if (t.type === 'url') {
+      const a = h('a', 'link', shortUrl(t.value));
+      a.href = t.value;
+      topicPop.append(a);
+    } else {
+      topicPop.append(t.value);
+    }
+  }
+  topicPop.addEventListener('pointerdown', (e) => e.stopPropagation());
+  document.body.append(topicPop);
+  const k = topicPop.getBoundingClientRect().width / topicPop.offsetWidth || 1;
+  const chip = el.topic.getBoundingClientRect();
+  const page = document.body.getBoundingClientRect();
+  const left = Math.min(chip.left, page.right - topicPop.offsetWidth * k - PICKER_GAP * k);
+  topicPop.style.left = `${Math.max(left, PICKER_GAP * k) / k}px`;
+  topicPop.style.top = `${(chip.bottom + PICKER_GAP * k) / k}px`;
+  el.topic.setAttribute('aria-expanded', 'true');
+}
+
+function closeTopic() {
+  topicPop?.remove();
+  topicPop = null;
+  el.topic.setAttribute('aria-expanded', 'false');
+}
+
+el.topic.addEventListener('click', () => (topicPop ? closeTopic() : openTopic()));
+el.topic.addEventListener('pointerdown', (e) => e.stopPropagation());
+document.addEventListener('pointerdown', () => topicPop && closeTopic());
+document.addEventListener('keydown', (e) => e.key === 'Escape' && topicPop && closeTopic());
+
 el.title.addEventListener('click', openSwitcher);
 el.chanIcon.addEventListener('click', (e) => {
   e.stopPropagation();
@@ -883,6 +935,7 @@ function renderSettings() {
   el.notifyToggle.checked = notifyOn();
   renderNotifyState();
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
+  el.botsField.value = state.settings[BOTS_SETTING] || '';
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
   renderIconChoices();
   renderShortcuts();
@@ -953,7 +1006,7 @@ function following() {
 
 function renderLog() {
   el.col.replaceChildren();
-  view = { lastLine: null, group: null, events: null, lastByNick: new Map(), separator: null, separatorAfter: null };
+  view = { lastLine: null, group: null, events: null, command: null, lastByNick: new Map(), separator: null, separatorAfter: null };
   const b = state.buffers.get(state.current);
   if (!b) {
     return updateJumps();
@@ -1013,8 +1066,13 @@ function appendLine(l, live) {
     view.events.node.textContent = summarize(view.events.list);
     view.events.node.dataset.tip = clock(l.ts);
     view.group = null;
+  } else if (CHAT_KINDS.has(l.kind) && answersCommand(l, prev)) {
+    // A bot answering the command just asked: inside that command's card.
+    view.command.answers.append(answerRow(l));
+    view.command.last = l;
   } else if (CHAT_KINDS.has(l.kind)) {
     view.events = null;
+    view.command = null;
     const same = view.group && continues(view.group.last, l);
     if (l.kind === 'action' && !same) {
       // A /me on its own: a line of narration with the person's face, outside any group.
@@ -1030,6 +1088,9 @@ function appendLine(l, live) {
         r.classList.add('spark');
         r.style.setProperty('--tint', identity(l.nick, l.mask).color);
       }
+      if (l.kind === 'msg' && isCommand(l.text)) {
+        view.command = commandCard(r, l);
+      }
       view.group.body.append(r);
       view.group.last = l;
     }
@@ -1044,6 +1105,38 @@ function appendLine(l, live) {
   if (live && (pinned || l.own || l.nick === state.me[l.net])) {
     toBottom();
   }
+}
+
+// Bot commands, asked and answered: "!seen milla" becomes a card, and the lines a known bot
+// sends straight after it go inside, under the command.
+function answersCommand(l, prev) {
+  const c = view.command;
+  return Boolean(
+    c &&
+      prev === c.last &&
+      l.kind !== 'action' &&
+      l.ts - c.asked.ts < BOT_ANSWER_MS &&
+      botNicks(state.settings[BOTS_SETTING]).has(l.nick.toLowerCase()),
+  );
+}
+
+function commandCard(r, l) {
+  const card = h('div', 'cmd-card');
+  const command = h('div', 'cmd');
+  command.append(...r.childNodes);
+  const answers = h('div', 'cmd-answers');
+  card.append(command, answers);
+  r.classList.add('command');
+  r.append(card);
+  return { answers, asked: l, last: l };
+}
+
+function answerRow(l) {
+  const wrap = h('div', 'cmd-answer');
+  const av = avatar(l.nick, l.mask);
+  av.dataset.tip = identity(l.nick, l.mask).name;
+  wrap.append(av, row(l));
+  return wrap;
 }
 
 function newGroup(l) {
@@ -1900,12 +1993,12 @@ function personRow(p, now) {
   if (quiet) {
     row.append(h('span', 'nl-ago', quiet));
   }
-  // The voice mark has a column of its own at the right edge, so the times line up.
-  const mark = h('span', 'nl-mark');
+  // The voice mark sits at the right edge, after the time.
   if (p.role === 'voice') {
+    const mark = h('span', 'nl-mark');
     mark.append(svg(VOICE));
+    row.append(mark);
   }
-  row.append(mark);
   row.addEventListener('click', () => {
     if (picked) {
       nicklist.picked.delete(p.nick);
@@ -4595,6 +4688,10 @@ document.addEventListener('drop', (e) => {
   }
   e.preventDefault();
   uploadFiles(files);
+});
+el.botsField.addEventListener('change', () => {
+  saveSetting(BOTS_SETTING, el.botsField.value.trim());
+  renderLog();
 });
 el.uploadUrl.addEventListener('change', () => {
   saveSetting(UPLOAD_SETTING, el.uploadUrl.value.trim());

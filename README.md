@@ -181,6 +181,10 @@ Every shortcut can be changed under Settings, Keyboard shortcuts.
 
 **Who is here.** The faces at the right of the header are the people talking now, in the last hour. Click them for everyone in the channel: ops first, then who is talking now, earlier today and away, fading the longer they stay quiet. Voiced people have a small mint mark. The button at the top of the list keeps it beside the chat instead, and the faces then show or hide it. Click anywhere on a row to pick it, the photo turns into a checkbox. With people picked, Give voice and Give op go out as one `MODE +vvv` line, or a few when the server takes fewer per line. Right-click a row for the same and to message or edit the person; with one person picked, the bar under the list has Message and Edit too. Mode changes show in the chat like joins and quits.
 
+**Bot commands.** A line like `!seen milla` shows as a small card. Name your channel bots in Settings, Bots, and what they say right after a command shows inside its card as the answer.
+
+**Topic.** In a wide window the channel topic sits in the header; click it to read all of it.
+
 **Commands.** Type `/` for the menu. `/me`, `/msg`, `/query`, `/join`, `/part`, `/wc`, `/topic`, `/names`, `/whois`, `/nick`, `/away`, `/notice`, `/invite`, `/kick`, `/op`, `/deop`, `/voice`, `/devoice`, `/clear`, `/say` and `/quote` work as in irssi. Anything else is sent as is. `/quit` is off, because through irssiproxy it would disconnect irssi from the network.
 
 **Emoji.** `:D`, `:)`, `<3` and friends turn into emoji as you type. A colon at the start of a word opens the emoji picker, and `:joy` or a Finnish word like `:nauru` lists matching emoji, most used first. Both can be turned off in Settings.
