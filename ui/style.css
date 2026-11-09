@@ -421,20 +421,23 @@ a:focus-visible {
   border-radius: 4px;
   padding: 0 3px;
 }
-/* A bot command and the bot's answers, in one card. */
+/* A bot command and the bot's answers, in one card the size of a reply quote and only as
+   wide as what it holds. */
 .cmd-card {
-  margin-top: 2px;
-  max-width: 560px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 3px 0 4px;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   overflow: hidden;
+  font-size: 13px;
 }
 .cmd {
-  padding: 5px 10px;
+  padding: 3px 10px;
   background: var(--panel);
   color: var(--strong);
   font:
-    13px / 1.5 ui-monospace,
+    12.5px / 1.5 ui-monospace,
     "JetBrains Mono",
     monospace;
 }
@@ -442,18 +445,21 @@ a:focus-visible {
   display: none;
 }
 .cmd-answer {
-  --avatar: 18px;
+  --avatar: 16px;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 6px 10px;
-  font-size: 15px;
+  gap: 7px;
+  padding: 4px 10px;
 }
 .cmd-answer + .cmd-answer {
   padding-top: 0;
 }
 .cmd-answer .av {
-  margin-top: 3px;
+  margin-top: 2px;
+}
+.cmd-answer .text {
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 /* Someone else named in a message: bold in their colour on a dim wash of it, like your own name. */

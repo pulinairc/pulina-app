@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Change command cards to the size of reply quotes
+
 ### 0.8.0: 2026-11-09
 
 * Remove the sweeping light from highlights
