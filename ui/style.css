@@ -90,6 +90,7 @@ button {
   gap: 10px;
   min-width: 0;
   flex: 0 1 auto;
+  overflow: hidden;
   padding: 2px;
   border: 0;
   border-radius: 8px;
@@ -3395,17 +3396,28 @@ body.docked #status {
   color: var(--strong);
   font-weight: 600;
 }
+/* On a phone the switch is the people pill's twin: same height, border and round ends. */
 @media (max-width: 600px) {
+  .views {
+    box-sizing: border-box;
+    height: 34px;
+    align-items: center;
+    padding: 0 3px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: transparent;
+  }
   .views span {
     display: none;
   }
   .views button {
-    height: 32px;
-    padding: 0 10px;
+    height: 26px;
+    padding: 0 9px;
+    border-radius: 999px;
   }
   .views svg {
-    width: 17px;
-    height: 17px;
+    width: 16px;
+    height: 16px;
   }
 }
 

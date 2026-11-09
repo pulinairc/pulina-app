@@ -1,7 +1,7 @@
 ### 1.0.2: 2026-11-10
 
 * Add page pictures to shelf links
-* Change the Chat and Shelf buttons to a bit larger on phones
+* Change the Chat and Shelf switch to match the people pill on phones
 
 ### 1.0.1: 2026-11-10
 
