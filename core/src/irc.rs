@@ -102,7 +102,8 @@ pub struct Echo {
 }
 
 /// Turn what was typed into raw IRC lines, plus what to show locally.
-pub fn outgoing(buffer: &str, input: &str) -> Result<Vec<(String, Option<Echo>)>, String> {
+/// `modes_per_line` is how many mode changes the server takes in one MODE line.
+pub fn outgoing(buffer: &str, input: &str, modes_per_line: usize) -> Result<Vec<(String, Option<Echo>)>, String> {
     let say = |target: &str, text: &str| {
         split_text(text)
             .into_iter()
@@ -154,7 +155,11 @@ pub fn outgoing(buffer: &str, input: &str) -> Result<Vec<(String, Option<Echo>)>
                 _ => "-v",
             };
             let nicks: Vec<&str> = rest.split_whitespace().collect();
-            format!("MODE {buffer} {}{} {}", &mode[..1], mode[1..].repeat(nicks.len().max(1)), nicks.join(" "))
+            // As many as the server takes in one line, like irssi's +vvvv: never one line per nick.
+            return Ok(nicks
+                .chunks(modes_per_line.max(1))
+                .map(|part| (format!("MODE {buffer} {}{} {}", &mode[..1], mode[1..].repeat(part.len()), part.join(" ")), None))
+                .collect());
         }
         "quit" | "exit" => return Err("Quit is disabled, it would disconnect irssi from the network".into()),
         "raw" | "quote" => rest.to_string(),
@@ -208,28 +213,34 @@ mod tests {
         assert_eq!(split_text("one\ntwo"), vec!["one", "two"]);
     }
 
+    fn typed(buffer: &str, input: &str) -> Result<Vec<(String, Option<Echo>)>, String> {
+        outgoing(buffer, input, crate::net::DEFAULT_MODES_PER_LINE)
+    }
+
     #[test]
     fn builds_outgoing_lines() {
-        let out = outgoing("#a", "hello").unwrap();
+        let out = typed("#a", "hello").unwrap();
         assert_eq!(out[0].0, "PRIVMSG #a :hello");
 
-        let out = outgoing("#a", "/me waves").unwrap();
+        let out = typed("#a", "/me waves").unwrap();
         assert_eq!(out[0].0, "PRIVMSG #a :\u{1}ACTION waves\u{1}");
         assert_eq!(out[0].1.as_ref().unwrap().kind, "action");
 
-        let out = outgoing("#a", "/msg mikko moi").unwrap();
+        let out = typed("#a", "/msg mikko moi").unwrap();
         assert_eq!(out[0].1.as_ref().unwrap().buffer, "mikko");
 
-        assert_eq!(outgoing("#a", "//not a command").unwrap()[0].0, "PRIVMSG #a :/not a command");
-        assert_eq!(outgoing("#a", "/whois kaisla").unwrap()[0].0, "WHOIS kaisla");
-        assert!(outgoing("#a", "/quit").is_err());
-        assert_eq!(outgoing("#a", "/wc").unwrap()[0].0, "PART #a :");
-        assert_eq!(outgoing("#a", "/op kaisla jaska").unwrap()[0].0, "MODE #a +oo kaisla jaska");
-        assert_eq!(outgoing("#a", "/kick jaska bye now").unwrap()[0].0, "KICK #a jaska :bye now");
-        assert_eq!(outgoing("#a", "/away").unwrap()[0].0, "AWAY");
-        assert_eq!(outgoing("#a", "/say /me is literal").unwrap()[0].0, "PRIVMSG #a :/me is literal");
-        assert_eq!(outgoing("#a", "/wi kaisla").unwrap()[0].0, "WHOIS kaisla");
-        assert!(outgoing("", "hello").is_err());
+        assert_eq!(typed("#a", "//not a command").unwrap()[0].0, "PRIVMSG #a :/not a command");
+        assert_eq!(typed("#a", "/whois kaisla").unwrap()[0].0, "WHOIS kaisla");
+        assert!(typed("#a", "/quit").is_err());
+        assert_eq!(typed("#a", "/wc").unwrap()[0].0, "PART #a :");
+        assert_eq!(typed("#a", "/op kaisla jaska").unwrap()[0].0, "MODE #a +oo kaisla jaska");
+        let lines: Vec<String> = outgoing("#a", "/voice a b c d e", 2).unwrap().into_iter().map(|(raw, _)| raw).collect();
+        assert_eq!(lines, ["MODE #a +vv a b", "MODE #a +vv c d", "MODE #a +v e"]);
+        assert_eq!(typed("#a", "/kick jaska bye now").unwrap()[0].0, "KICK #a jaska :bye now");
+        assert_eq!(typed("#a", "/away").unwrap()[0].0, "AWAY");
+        assert_eq!(typed("#a", "/say /me is literal").unwrap()[0].0, "PRIVMSG #a :/me is literal");
+        assert_eq!(typed("#a", "/wi kaisla").unwrap()[0].0, "WHOIS kaisla");
+        assert!(typed("", "hello").is_err());
     }
 
     #[test]

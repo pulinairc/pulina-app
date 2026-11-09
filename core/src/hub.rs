@@ -1,7 +1,7 @@
 //! The hub keeps every IRC connection running, stores what arrives and hands it on as events.
 //! The app uses it directly, lobby-server serves it to apps over WebSocket.
 
-use crate::net::{BufferInfo, Out, Session, Whois};
+use crate::net::{BufferInfo, DEFAULT_MODES_PER_LINE, Out, Session, Whois};
 use crate::store::{BufferRef, Line, Person, Store};
 use crate::{Network, irc, now_ms};
 use serde::{Deserialize, Serialize};
@@ -78,6 +78,7 @@ pub struct Hub {
     me: Mutex<HashMap<String, String>>,
     conn: Mutex<HashMap<String, String>>,
     channels: Mutex<HashMap<(String, String), BufferInfo>>,
+    modes_per_line: Mutex<HashMap<String, usize>>,
     events: broadcast::Sender<Event>,
     tasks: Mutex<HashMap<String, tokio::task::JoinHandle<()>>>,
 }
@@ -97,6 +98,7 @@ impl Hub {
             me: Mutex::default(),
             conn: Mutex::default(),
             channels: Mutex::default(),
+            modes_per_line: Mutex::default(),
             events,
             tasks: Mutex::default(),
         })
@@ -248,8 +250,9 @@ impl Hub {
     pub fn send(&self, net: &str, buffer: &str, text: &str) -> Result<(), String> {
         let tx = lock(&self.writers).get(net).cloned().ok_or("Not connected")?;
         let me = lock(&self.me).get(net).cloned().unwrap_or_else(|| self.nick.clone());
+        let per_line = lock(&self.modes_per_line).get(net).copied().unwrap_or(DEFAULT_MODES_PER_LINE);
 
-        for (raw, echo) in irc::outgoing(buffer, text)? {
+        for (raw, echo) in irc::outgoing(buffer, text, per_line)? {
             tx.send(raw).map_err(|_| "Not connected")?;
             let Some(echo) = echo else { continue };
             self.deliver(Line {
@@ -336,10 +339,17 @@ impl Hub {
         let members = &mut chan.members;
         match line.kind.as_str() {
             "join" => members.push(line.nick.clone()),
-            "part" | "quit" | "kick" => members.retain(|m| !m.eq_ignore_ascii_case(&line.nick)),
+            "part" | "quit" | "kick" => {
+                members.retain(|m| !m.eq_ignore_ascii_case(&line.nick));
+                chan.modes.retain(|m, _| !m.eq_ignore_ascii_case(&line.nick));
+            }
             "nick" => {
                 members.retain(|m| !m.eq_ignore_ascii_case(&line.nick));
                 members.push(line.text.clone());
+                let old = chan.modes.keys().find(|m| m.eq_ignore_ascii_case(&line.nick)).cloned();
+                if let Some(held) = old.and_then(|m| chan.modes.remove(&m)) {
+                    chan.modes.insert(line.text.clone(), held);
+                }
             }
             _ => {}
         }
@@ -368,6 +378,9 @@ impl Hub {
                 let _ = tx.send(line);
             }
             Out::Whois(whois) => self.emit(Event::Whois(whois)),
+            Out::ModesPerLine(n) => {
+                lock(&self.modes_per_line).insert(net.into(), n);
+            }
         }
     }
 }

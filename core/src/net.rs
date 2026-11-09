@@ -3,9 +3,17 @@
 use crate::irc::{self, Msg};
 use crate::store::Line;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 
-const NAME_PREFIXES: [char; 5] = ['~', '&', '@', '%', '+'];
+/// Mode letters and their name prefixes, highest first, until the server says otherwise.
+const DEFAULT_PREFIX: [(char, char); 5] = [('q', '~'), ('a', '&'), ('o', '@'), ('h', '%'), ('v', '+')];
+/// Channel modes that always take a parameter, and those that take one only when set.
+const DEFAULT_PARAM_MODES: &str = "beIk";
+const DEFAULT_SET_PARAM_MODES: &str = "l";
+/// RFC 1459's limit for mode changes in one line, used until ISUPPORT names the server's own.
+pub const DEFAULT_MODES_PER_LINE: usize = 3;
+/// "MODES" with no number means no limit; one line still has to fit 512 bytes.
+const UNLIMITED_MODES_PER_LINE: usize = 12;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BufferInfo {
@@ -14,6 +22,9 @@ pub struct BufferInfo {
     pub topic: String,
     pub members: Vec<String>,
     pub joined: bool,
+    /// Name prefixes by nick, highest first ("@", "@+", "+"); nicks without any are left out.
+    #[serde(default)]
+    pub modes: BTreeMap<String, String>,
 }
 
 /// What WHOIS told about a nick, sent as one piece once the server says it is done.
@@ -43,6 +54,7 @@ pub enum Out {
     Me(String),
     Send(String),
     Whois(Whois),
+    ModesPerLine(usize),
 }
 
 /// WHOIS replies, gathered into a `Whois` instead of shown as text.
@@ -53,7 +65,50 @@ struct Chan {
     name: String,
     topic: String,
     members: HashMap<String, String>,
-    pending_names: Vec<String>,
+    /// Name prefixes by lower-case nick, only for nicks that have one.
+    modes: HashMap<String, String>,
+    pending_names: Vec<(String, String)>,
+}
+
+/// What ISUPPORT (005) says about the server's channel modes.
+struct Support {
+    prefix: Vec<(char, char)>,
+    param_modes: String,
+    set_param_modes: String,
+}
+
+impl Default for Support {
+    fn default() -> Self {
+        Self { prefix: DEFAULT_PREFIX.to_vec(), param_modes: DEFAULT_PARAM_MODES.into(), set_param_modes: DEFAULT_SET_PARAM_MODES.into() }
+    }
+}
+
+impl Support {
+    fn symbol(&self, mode: char) -> Option<char> {
+        self.prefix.iter().find(|(m, _)| *m == mode).map(|(_, s)| *s)
+    }
+
+    fn is_symbol(&self, c: char) -> bool {
+        self.prefix.iter().any(|(_, s)| *s == c)
+    }
+
+    /// The symbols in `held`, in the server's order, highest first.
+    fn ranked(&self, held: impl Fn(char) -> bool) -> String {
+        self.prefix.iter().map(|(_, s)| *s).filter(|s| held(*s)).collect()
+    }
+
+    /// "(qaohv)~&@%+" into letter and symbol pairs.
+    fn parse_prefix(value: &str) -> Option<Vec<(char, char)>> {
+        let (letters, symbols) = value.strip_prefix('(')?.split_once(')')?;
+        (letters.chars().count() == symbols.chars().count()).then(|| letters.chars().zip(symbols.chars()).collect())
+    }
+}
+
+/// Split a NAMES entry like "@+kaisla" into its prefixes and the nick.
+fn split_name<'a>(support: &Support, name: &'a str) -> (String, &'a str) {
+    let nick = name.trim_start_matches(|c| support.is_symbol(c));
+    let held = &name[..name.len() - nick.len()];
+    (support.ranked(|s| held.contains(s)), nick)
 }
 
 /// Numerics worth showing: everything except the connection burst and the ones handled above.
@@ -68,6 +123,7 @@ pub struct Session {
     me: String,
     chans: HashMap<String, Chan>,
     whois: HashMap<String, Whois>,
+    support: Support,
 }
 
 fn same(a: &str, b: &str) -> bool {
@@ -76,7 +132,7 @@ fn same(a: &str, b: &str) -> bool {
 
 impl Session {
     pub fn new(net: &str, me: &str) -> Self {
-        Self { net: net.to_string(), me: me.to_string(), chans: HashMap::new(), whois: HashMap::new() }
+        Self { net: net.to_string(), me: me.to_string(), chans: HashMap::new(), whois: HashMap::new(), support: Support::default() }
     }
 
     fn line(&self, buffer: &str, kind: &str, msg: &Msg, text: &str, now: i64) -> Line {
@@ -96,7 +152,64 @@ impl Session {
     fn info(&self, chan: &Chan, joined: bool) -> Out {
         let mut members: Vec<String> = chan.members.values().cloned().collect();
         members.sort_by_key(|m| m.to_lowercase());
-        Out::Buffer(BufferInfo { net: self.net.clone(), name: chan.name.clone(), topic: chan.topic.clone(), members, joined })
+        let modes = chan.modes.iter().filter_map(|(key, held)| Some((chan.members.get(key)?.clone(), held.clone()))).collect();
+        Out::Buffer(BufferInfo { net: self.net.clone(), name: chan.name.clone(), topic: chan.topic.clone(), members, joined, modes })
+    }
+
+    /// ISUPPORT: the name prefixes, which modes take a parameter, and how many fit one line.
+    fn on_support(&mut self, msg: &Msg) -> Vec<Out> {
+        let mut out = Vec::new();
+        let tokens = msg.params.iter().skip(1).take(msg.params.len().saturating_sub(2));
+        for token in tokens {
+            let (name, value) = token.split_once('=').unwrap_or((token, ""));
+            match name {
+                "PREFIX" => {
+                    if let Some(prefix) = Support::parse_prefix(value) {
+                        self.support.prefix = prefix;
+                    }
+                }
+                "CHANMODES" => {
+                    let kinds: Vec<&str> = value.split(',').collect();
+                    if kinds.len() >= 3 {
+                        self.support.param_modes = format!("{}{}", kinds[0], kinds[1]);
+                        self.support.set_param_modes = kinds[2].to_string();
+                    }
+                }
+                "MODES" => out.push(Out::ModesPerLine(value.parse().unwrap_or(UNLIMITED_MODES_PER_LINE))),
+                _ => {}
+            }
+        }
+        out
+    }
+
+    /// Apply a channel MODE line to the name prefixes. True when any prefix changed.
+    fn apply_modes(&mut self, key: &str, params: &[String]) -> bool {
+        let Some(chan) = self.chans.get_mut(key) else { return false };
+        let Some((changes, args)) = params.split_first() else { return false };
+        let mut args = args.iter();
+        let mut adding = true;
+        let mut changed = false;
+        for mode in changes.chars() {
+            match mode {
+                '+' => adding = true,
+                '-' => adding = false,
+                _ => {
+                    if let Some(symbol) = self.support.symbol(mode) {
+                        let Some(nick) = args.next() else { continue };
+                        let nick = nick.to_lowercase();
+                        let held = chan.modes.remove(&nick).unwrap_or_default();
+                        let next = self.support.ranked(|s| if s == symbol { adding } else { held.contains(s) });
+                        if !next.is_empty() {
+                            chan.modes.insert(nick, next);
+                        }
+                        changed = true;
+                    } else if self.support.param_modes.contains(mode) || (adding && self.support.set_param_modes.contains(mode)) {
+                        args.next();
+                    }
+                }
+            }
+        }
+        changed
     }
 
     /// Channels a nick is on, as display names.
@@ -116,6 +229,14 @@ impl Session {
                 vec![Out::Me(self.me.clone())]
             }
             "PRIVMSG" | "NOTICE" => self.on_message(msg, now),
+            "005" => self.on_support(msg),
+            "MODE" => {
+                let key = msg.param(0).to_lowercase();
+                if !self.apply_modes(&key, &msg.params[1..]) {
+                    return vec![];
+                }
+                vec![self.info(&self.chans[&key], true)]
+            }
             "JOIN" => {
                 let name = msg.param(0).to_string();
                 let key = name.to_lowercase();
@@ -138,6 +259,7 @@ impl Session {
                 }
                 let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
                 chan.members.remove(&nick.to_lowercase());
+                chan.modes.remove(&nick.to_lowercase());
                 let name = chan.name.clone();
                 vec![Out::Line(self.line(&name, "part", msg, msg.param(1), now))]
             }
@@ -146,6 +268,7 @@ impl Session {
                 let victim = msg.param(1).to_string();
                 let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
                 chan.members.remove(&victim.to_lowercase());
+                chan.modes.remove(&victim.to_lowercase());
                 let name = chan.name.clone();
                 let mut line = self.line(&name, "kick", msg, msg.param(2), now);
                 line.text = format!("{nick}: {}", msg.param(2));
@@ -165,6 +288,7 @@ impl Session {
                 for name in names {
                     if let Some(chan) = self.chans.get_mut(&name.to_lowercase()) {
                         chan.members.remove(&nick.to_lowercase());
+                        chan.modes.remove(&nick.to_lowercase());
                     }
                     out.push(Out::Line(self.line(&name, "quit", msg, msg.param(0), now)));
                 }
@@ -181,6 +305,9 @@ impl Session {
                     if let Some(chan) = self.chans.get_mut(&name.to_lowercase()) {
                         chan.members.remove(&nick.to_lowercase());
                         chan.members.insert(new.to_lowercase(), new.clone());
+                        if let Some(held) = chan.modes.remove(&nick.to_lowercase()) {
+                            chan.modes.insert(new.to_lowercase(), held);
+                        }
                     }
                     out.push(Out::Line(self.line(&name, "nick", msg, &new, now)));
                 }
@@ -204,7 +331,11 @@ impl Session {
             "353" => {
                 let key = msg.param(2).to_lowercase();
                 if let Some(chan) = self.chans.get_mut(&key) {
-                    let names = msg.param(3).split_whitespace().map(|n| n.trim_start_matches(NAME_PREFIXES).to_string());
+                    let support = &self.support;
+                    let names = msg.param(3).split_whitespace().map(|n| {
+                        let (held, nick) = split_name(support, n);
+                        (held, nick.to_string())
+                    });
                     chan.pending_names.extend(names);
                 }
                 vec![]
@@ -213,7 +344,8 @@ impl Session {
                 let key = msg.param(1).to_lowercase();
                 let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
                 let names = std::mem::take(&mut chan.pending_names);
-                chan.members = names.into_iter().map(|n| (n.to_lowercase(), n)).collect();
+                chan.modes = names.iter().filter(|(held, _)| !held.is_empty()).map(|(held, n)| (n.to_lowercase(), held.clone())).collect();
+                chan.members = names.into_iter().map(|(_, n)| (n.to_lowercase(), n)).collect();
                 vec![self.info(&self.chans[&key], true)]
             }
             "ERROR" => vec![Out::Line(self.line("", "status", msg, msg.param(0), now))],
@@ -364,6 +496,55 @@ mod tests {
         assert!(feed(&mut s, ":srv 375 rolle :- motd").is_empty());
         let out = feed(&mut s, ":srv 401 rolle nobody :No such nick/channel");
         assert_eq!(lines(&out), vec![("".into(), "info".into(), "srv".into())]);
+    }
+
+    fn modes(outs: &[Out]) -> Vec<(String, String)> {
+        let Some(Out::Buffer(info)) = outs.last() else { return vec![] };
+        info.modes.iter().map(|(n, m)| (n.clone(), m.clone())).collect()
+    }
+
+    fn pairs(list: &[(&str, &str)]) -> Vec<(String, String)> {
+        list.iter().map(|(n, m)| (n.to_string(), m.to_string())).collect()
+    }
+
+    #[test]
+    fn tracks_name_prefixes_through_names_mode_and_nick() {
+        let mut s = Session::new("net", "rolle");
+        feed(&mut s, ":rolle!r@h JOIN #a");
+        feed(&mut s, ":srv 353 rolle = #a :@+kaisla +jaska mikko @rolle");
+        let out = feed(&mut s, ":srv 366 rolle #a :End");
+        assert_eq!(modes(&out), pairs(&[("jaska", "+"), ("kaisla", "@+"), ("rolle", "@")]));
+
+        let out = feed(&mut s, ":rolle!r@h MODE #a +o-v mikko jaska");
+        assert_eq!(modes(&out), pairs(&[("kaisla", "@+"), ("mikko", "@"), ("rolle", "@")]));
+
+        // A ban's mask and a limit's number are not nicks.
+        assert!(feed(&mut s, ":rolle!r@h MODE #a +b *!*@mikko").is_empty());
+        let out = feed(&mut s, ":rolle!r@h MODE #a +lv 10 mikko");
+        assert_eq!(modes(&out), pairs(&[("kaisla", "@+"), ("mikko", "@+"), ("rolle", "@")]));
+
+        feed(&mut s, ":mikko!m@h NICK Mikko_");
+        let out = feed(&mut s, ":rolle!r@h MODE #a -o kaisla");
+        assert_eq!(modes(&out), pairs(&[("Mikko_", "@+"), ("kaisla", "+"), ("rolle", "@")]));
+
+        feed(&mut s, ":Mikko_!m@h PART #a");
+        let out = feed(&mut s, ":rolle!r@h MODE #a -v kaisla");
+        assert_eq!(modes(&out), pairs(&[("rolle", "@")]));
+
+        assert!(feed(&mut s, ":rolle MODE rolle +i").is_empty());
+    }
+
+    #[test]
+    fn reads_prefixes_and_mode_limit_from_isupport() {
+        let mut s = Session::new("net", "rolle");
+        let out = feed(&mut s, ":srv 005 rolle PREFIX=(ov)@+ CHANMODES=beI,k,l,imnpst MODES=4 :are supported by this server");
+        assert_eq!(out, vec![Out::ModesPerLine(4)]);
+        feed(&mut s, ":rolle!r@h JOIN #a");
+        feed(&mut s, ":srv 353 rolle = #a :@rolle %odd");
+        let out = feed(&mut s, ":srv 366 rolle #a :End");
+        let Some(Out::Buffer(info)) = out.last() else { panic!("no buffer") };
+        assert!(info.members.contains(&"%odd".to_string()));
+        assert_eq!(feed(&mut s, ":srv 005 rolle MODES :are supported"), vec![Out::ModesPerLine(UNLIMITED_MODES_PER_LINE)]);
     }
 
     #[test]
