@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.0.2: 2026-11-10
 
 * Add page pictures to shelf links
 
