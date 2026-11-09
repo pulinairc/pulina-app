@@ -872,6 +872,21 @@ dialog:focus {
   display: block;
   margin-top: 12px;
 }
+.notify-result {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.notify-result.ok {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+}
+.notify-result.fail {
+  color: var(--new);
+  background: color-mix(in srgb, var(--new) 14%, transparent);
+}
 #notify-guide {
   width: min(380px, calc(100vw - 24px));
 }

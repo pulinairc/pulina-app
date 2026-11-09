@@ -99,6 +99,7 @@ const el = {
   notifyTest: $('notify-test'),
   notifyState: $('notify-state'),
   notifyFix: $('notify-fix'),
+  notifyResult: $('notify-result'),
   notifyGuide: $('notify-guide'),
   notifyGuideText: $('notify-guide-text'),
   notifyGuideGo: $('notify-guide-go'),
@@ -3687,15 +3688,20 @@ async function showNotification(title, body, icon, target = null) {
   await invoke('notify_mac', { id, title, body, image: icon || null });
 }
 
-// The answer shows next to the button, so a refusal is never silent.
+// The answer shows under the button, green or red, so a refusal is never silent.
 el.notifyTest.addEventListener('click', async () => {
+  let ok = true;
+  let text = IS_MAC ? 'Sent to macOS' : 'Sent';
   try {
     await showNotification('Lobby', 'Notifications work.', null);
-    el.notifyState.textContent = IS_MAC ? 'Sent. macOS took it.' : 'Sent.';
   } catch (e) {
-    el.notifyState.textContent = `Not sent: ${e}`;
+    ok = false;
+    text = `Not sent: ${e}`;
   }
-  el.notifyState.hidden = false;
+  el.notifyResult.textContent = text;
+  el.notifyResult.classList.toggle('ok', ok);
+  el.notifyResult.classList.toggle('fail', !ok);
+  el.notifyResult.hidden = false;
 });
 
 // What macOS lets Lobby do, and the one step that fixes it: its Allow prompt the first time,
