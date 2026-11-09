@@ -1005,9 +1005,6 @@ dialog:focus {
   :root {
     --avatar: 18px;
   }
-  body {
-    font-size: 15px;
-  }
   #log {
     padding: 10px 12px;
   }
