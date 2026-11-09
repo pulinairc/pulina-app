@@ -1,5 +1,5 @@
 #!/bin/sh
-# Puts Lobby's icons into the Xcode project `tauri ios init` made: Teal night as the
+# Puts Lobby's icons into the Xcode project `tauri ios init` made: Pendant lamp as the
 # app icon, the others as alternates the icon picker in Settings switches to.
 set -eu
 cd "$(dirname "$0")/../src-tauri/gen/apple"
@@ -14,7 +14,7 @@ done
 for png in ../../icons/ios/*.png; do
   name=$(basename "$png" .png)
   dir="Assets.xcassets/AppIcon-$name.appiconset"
-  [ "$name" = teal-night ] && dir=Assets.xcassets/AppIcon.appiconset
+  [ "$name" = pendant-lamp ] && dir=Assets.xcassets/AppIcon.appiconset
   mkdir -p "$dir"
   rm -f "$dir"/*
   cp "$png" "$dir/icon.png"

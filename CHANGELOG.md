@@ -4,6 +4,7 @@
 * Change person card spoke time to relative
 * Change person card rows to align with names
 * Fix spacing above the connection button
+* Change the app icon to Pendant lamp
 
 ### 0.5.7: 2026-11-08
 

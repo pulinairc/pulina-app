@@ -279,9 +279,9 @@ fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> R
     Ok(())
 }
 
-/// Teal night is the bundle's own icon on iPhone; the others are alternates in its asset catalog.
+/// Pendant lamp is the bundle's own icon on iPhone; the others are alternates in its asset catalog.
 #[cfg(target_os = "ios")]
-const DEFAULT_ICON: &str = "teal-night";
+const DEFAULT_ICON: &str = "pendant-lamp";
 
 #[cfg(target_os = "ios")]
 fn ios_icon(wanted: Option<&str>) {
