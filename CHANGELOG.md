@@ -14,6 +14,7 @@
 * Change touch reactions to a long-press sheet
 * Show mode changes in the channel
 * Add keeping the people list beside the chat
+* Add editing a person from the people list
 * Change the message box to a darker shade
 
 ### 0.5.10: 2026-11-09

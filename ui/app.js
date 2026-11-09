@@ -1328,7 +1328,7 @@ const ICONS = {
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
   moreH:
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
-  dock: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></svg>',
+  dock: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/><path class="pane" d="M15 4h3a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-3z" fill="currentColor" stroke="none"/></svg>',
   close:
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   check:
@@ -1877,6 +1877,14 @@ function message(b, nick) {
   select(buffer(b.net, nick).key);
 }
 
+/** The person editor for a nick in the list: photo, colour, name and nicks. */
+function editListed(b, nick) {
+  closePeopleMenu();
+  closeNicklist();
+  nicklist.picked.clear();
+  openPerson(nick, knownAbout(b.net, nick).mask);
+}
+
 function pickedBar(b) {
   const picked = [...nicklist.picked];
   if (!picked.length) {
@@ -1910,10 +1918,15 @@ function pickedBar(b) {
     actions.append(btn);
   }
   if (picked.length === 1) {
-    const msg = h('button', 'nl-act plain', 'Message');
-    msg.type = 'button';
-    msg.addEventListener('click', () => message(b, picked[0]));
-    actions.append(msg);
+    for (const [label, run] of [
+      ['Message', () => message(b, picked[0])],
+      ['Edit', () => editListed(b, picked[0])],
+    ]) {
+      const btn = h('button', 'nl-act plain', label);
+      btn.type = 'button';
+      btn.addEventListener('click', run);
+      actions.append(btn);
+    }
   }
   bar.append(top, actions);
   return bar;
@@ -1949,10 +1962,7 @@ function peopleMenu(nick, x, y) {
   }
   if (targets.length === 1) {
     item('Message', () => message(b, nick));
-    item('Edit person', () => {
-      closeNicklist();
-      openPerson(nick, '');
-    });
+    item('Edit person', () => editListed(b, nick));
   }
   if (nicklist.picked.size) {
     item('Clear picks', () => {
