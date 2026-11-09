@@ -2496,7 +2496,7 @@ label.switch-row {
   gap: 6px;
   min-width: 34px;
   height: 34px;
-  padding: 0 9px 0 13px;
+  padding: 0 9px 0 10px;
   flex-shrink: 0;
   border: 1px solid var(--line);
   border-radius: 999px;
