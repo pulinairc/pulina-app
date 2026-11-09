@@ -5,6 +5,7 @@
 * Fix emoji picker overflowing on iPhone
 * Fix chat scrolling up as the message grows
 * Add a guide for allowing macOS notifications
+* Change the jump to latest button to neutral
 
 ### 0.5.8: 2026-11-09
 

@@ -1274,7 +1274,7 @@ dialog:focus { outline: none; }
 }
 .jump[hidden] { display: none; }
 #jump-unread.down svg { transform: rotate(180deg); }
-#jump-latest { bottom: 10px; }
+#jump-latest { --tint: var(--strong); bottom: 10px; }
 /* Thumb-sized on touch screens. */
 @media (pointer: coarse) {
   .jump { width: 40px; height: 40px; }
