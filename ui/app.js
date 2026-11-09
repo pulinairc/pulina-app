@@ -46,6 +46,8 @@ import {
   summarize,
   tokenize,
   youtube,
+  mediaKind,
+  inboxSplit,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -98,6 +100,19 @@ const el = {
   unread: $('unread'),
   gear: $('gear'),
   pill: $('pill'),
+  inboxPill: $('inbox-pill'),
+  inbox: $('inbox'),
+  inboxList: $('inbox-list'),
+  inboxTitle: $('inbox-title'),
+  inboxBack: $('inbox-back'),
+  inboxAll: $('inbox-all'),
+  inboxFoot: $('inbox-foot'),
+  openInbox: $('open-inbox'),
+  views: $('views'),
+  shelf: $('shelf'),
+  windowBar: $('window-bar'),
+  windowWhen: $('window-when'),
+  windowBack: $('window-back'),
   status: $('status'),
   statusText: $('status-text'),
   statusAction: $('status-action'),
@@ -491,7 +506,7 @@ function onLine(l) {
   }
 
   const visible = state.current === b.key;
-  if (visible) {
+  if (visible && !b.window) {
     appendLine(l, true);
     updateJumps();
   }
@@ -501,6 +516,10 @@ function onLine(l) {
   }
 
   b.unread += 1;
+  if (isHighlight(l)) {
+    inbox.lines.set(l.id, l);
+    renderInbox();
+  }
   const mentioned = isPrivate(b) || mentions(l.text, state.me[l.net]);
   if (mentioned) {
     b.mention = true;
@@ -674,6 +693,7 @@ function renderHeader() {
     el.chanMeta.textContent = topic;
     el.chanMeta.hidden = !topic;
     el.title.dataset.tip = b.topic || '';
+    el.views.hidden = b.name === '';
   }
   schedulePeople();
 
@@ -775,6 +795,10 @@ function select(k) {
   if (state.current !== k) {
     closeNicklist();
     nicklist.picked.clear();
+    const was = state.buffers.get(state.current);
+    if (was) {
+      was.window = null;
+    }
   }
   state.current = k;
   try {
@@ -785,6 +809,9 @@ function select(k) {
   el.input.placeholder = `Message ${label(b)}`;
   renderHeader();
   renderLog();
+  if (shelf.open) {
+    loadShelf();
+  }
   el.input.focus();
 }
 
@@ -972,11 +999,17 @@ function renderLog() {
   if (!b) {
     return updateJumps();
   }
-  view.separatorAfter = readMap[b.key] ?? lastId(b);
-  for (const l of b.lines) {
+  view.separatorAfter = b.window ? null : (readMap[b.key] ?? lastId(b));
+  for (const l of b.window ?? b.lines) {
     appendLine(l, false);
   }
-  if (view.separator) {
+  el.windowBar.hidden = !b.window;
+  document.body.classList.toggle('windowed', Boolean(b.window));
+  if (b.window) {
+    stuck = false;
+    el.windowWhen.textContent = `Earlier: ${dayLabel(b.window.find((l) => l.id === b.windowAt)?.ts ?? b.window[0].ts)}`;
+    centerLine(b.windowAt);
+  } else if (view.separator) {
     toSeparator();
   } else {
     toBottom();
@@ -3151,6 +3184,9 @@ function jumpToUnread() {
 el.jumpUnread.addEventListener('click', jumpToUnread);
 el.unreadCount.addEventListener('click', jumpToUnread);
 el.jumpLatest.addEventListener('click', () => {
+  if (state.buffers.get(state.current)?.window) {
+    return leaveWindow();
+  }
   el.log.scrollTo({ top: el.log.scrollHeight, behavior: 'smooth' });
 });
 
@@ -3210,6 +3246,7 @@ function applyStatus(st) {
   }
   state.people = st.people || [];
   state.settings = st.settings || {};
+  loadHighlightsSoon();
   refreshShortcutTips();
   renderAttach();
   applyReadSetting(state.settings[READ_SETTING]);
@@ -3492,6 +3529,7 @@ async function start() {
   await listen('buffer', (e) => onBuffer(e.payload));
   await listen('me', (e) => {
     state.me[e.payload.net] = e.payload.nick;
+    loadHighlightsSoon();
   });
   await listen('conn', (e) => {
     state.conn[e.payload.net] = e.payload.state;
@@ -3522,6 +3560,9 @@ async function start() {
     }
     if (e.payload.key === UPLOAD_SETTING) {
       renderAttach();
+    }
+    if (e.payload.key === HIGHLIGHTS_SETTING) {
+      renderInbox();
     }
   });
   // A lobby-server connection came back: fetch what was missed.
@@ -4503,6 +4544,433 @@ async function notify(b, l) {
 const notified = new Map();
 const NOTIFIED_KEEP = 50;
 const FLASH_MS = 2400;
+
+// Opening an older line: the channel shows the conversation around it until "Back to latest".
+
+const WINDOW_FLASH_DELAY_MS = 60;
+
+function centerLine(id) {
+  requestAnimationFrame(() => {
+    const row = [...el.col.querySelectorAll('.text')].find((r) => r.line?.id === id);
+    if (!row) {
+      return;
+    }
+    stuck = false;
+    row.scrollIntoView({ block: 'center' });
+    setTimeout(() => {
+      row.classList.add('flash');
+      setTimeout(() => row.classList.remove('flash'), FLASH_MS);
+    }, WINDOW_FLASH_DELAY_MS);
+  });
+}
+
+async function openLine(l) {
+  const b = buffer(l.net, l.buffer);
+  closeShelf();
+  if (b.lines.some((x) => x.id === l.id)) {
+    b.window = null;
+    select(b.key);
+    centerLine(l.id);
+    return;
+  }
+  const lines = await invoke('around', { net: l.net, buffer: l.buffer, line: l.id }).catch(() => []);
+  b.window = lines.length ? lines : null;
+  b.windowAt = l.id;
+  if (state.current === b.key) {
+    renderLog();
+  } else {
+    select(b.key);
+  }
+}
+
+function leaveWindow() {
+  const b = state.buffers.get(state.current);
+  if (!b) {
+    return;
+  }
+  b.window = null;
+  renderLog();
+}
+
+el.windowBack.addEventListener('click', leaveWindow);
+
+// Highlights inbox: every line that names you, until you mark it done. The rest is the archive.
+
+const HIGHLIGHTS_SETTING = 'highlights';
+const DONE_KEEP = 500;
+const FOUND_PAGE = 200;
+const SWIPE_DONE_PX = 80;
+const inbox = { lines: new Map(), archive: false, older: true, timer: 0 };
+
+/** Today as 14:02, earlier days as their date. */
+function shortWhen(ts) {
+  return sameDay(ts, Date.now()) ? clock(ts).slice(0, 5) : dayLabel(ts);
+}
+
+function isHighlight(l) {
+  return Boolean(l.id) && !l.own && CHAT_KINDS.has(l.kind) && isChannel(l.buffer) && mentions(l.text, state.me[l.net]);
+}
+
+function highlightMarks() {
+  try {
+    const v = JSON.parse(state.settings[HIGHLIGHTS_SETTING] || '{}');
+    return { upTo: v.upTo || 0, done: new Set(v.done || []) };
+  } catch {
+    return { upTo: 0, done: new Set() };
+  }
+}
+
+function saveMarks(upTo, done) {
+  const kept = [...done].filter((id) => id > upTo).slice(-DONE_KEEP);
+  saveSetting(HIGHLIGHTS_SETTING, JSON.stringify({ upTo, done: kept }));
+  renderInbox();
+}
+
+function markDone(id) {
+  const m = highlightMarks();
+  m.done.add(id);
+  saveMarks(m.upTo, m.done);
+}
+
+function markAllDone() {
+  const newest = Math.max(0, ...inbox.lines.keys());
+  saveMarks(Math.max(newest, highlightMarks().upTo), new Set());
+}
+
+function loadHighlightsSoon() {
+  clearTimeout(inbox.timer);
+  inbox.timer = setTimeout(() => loadHighlights(null), 400);
+}
+
+async function loadHighlights(before) {
+  const words = [...new Set(Object.values(state.me).filter(Boolean))];
+  if (!words.length) {
+    return;
+  }
+  const lines = await invoke('mentions', { words, before }).catch(() => []);
+  for (const l of lines) {
+    if (isHighlight(l)) {
+      inbox.lines.set(l.id, l);
+    }
+  }
+  if (before !== null) {
+    inbox.older = lines.length >= FOUND_PAGE;
+  }
+  renderInbox();
+}
+
+function inboxParts() {
+  const m = highlightMarks();
+  return inboxSplit(inbox.lines.values(), m.upTo, m.done);
+}
+
+function renderInbox() {
+  const { fresh, archived } = inboxParts();
+  el.inboxPill.hidden = fresh.length === 0;
+  el.inboxPill.textContent = `@${fresh.length}`;
+  el.inboxPill.dataset.tip = `${fresh.length} ${fresh.length === 1 ? 'highlight' : 'highlights'} for you`;
+  if (el.inbox.hidden) {
+    return;
+  }
+  const list = inbox.archive ? archived : fresh;
+  el.inboxTitle.textContent = inbox.archive ? 'Archive' : 'For you';
+  el.inboxBack.hidden = !inbox.archive;
+  el.inboxAll.hidden = inbox.archive || fresh.length === 0;
+  el.inboxList.replaceChildren(...list.map((l) => inboxRow(l, !inbox.archive)));
+  if (!list.length) {
+    el.inboxList.append(h('div', 'inbox-empty', inbox.archive ? 'Nothing here yet.' : 'All caught up.'));
+  }
+  el.inboxFoot.hidden = inbox.archive && !inbox.older;
+  el.inboxFoot.textContent = inbox.archive ? 'Load older' : `Archive · ${archived.length}`;
+}
+
+function inboxText(l) {
+  const box = h('div', 'inbox-text');
+  for (const t of tokenize(l.text, state.me[l.net])) {
+    box.append(t.type === 'mention' ? h('span', 'mention', t.value) : t.type === 'url' ? shortUrl(t.value) : t.value);
+  }
+  return box;
+}
+
+function inboxRow(l, fresh) {
+  const row = h('div', 'inbox-row');
+  row.tabIndex = 0;
+  const head = h('div', 'inbox-meta');
+  head.append(h('span', 'inbox-nick', l.nick), h('span', 'inbox-where', `${l.buffer} · ${shortWhen(l.ts)}`));
+  const body = h('div', 'inbox-body');
+  body.append(head, inboxText(l));
+  row.append(avatar(l.nick, l.mask), body);
+  if (fresh) {
+    const done = h('button', 'inbox-done');
+    done.type = 'button';
+    done.dataset.tip = 'Done';
+    done.setAttribute('aria-label', 'Done');
+    done.innerHTML =
+      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    done.addEventListener('click', (e) => {
+      e.stopPropagation();
+      markDone(l.id);
+    });
+    row.append(done);
+    swipeToDone(row, l.id);
+  }
+  const open = () => {
+    if (fresh) {
+      markDone(l.id);
+    }
+    closeInbox();
+    openLine(l);
+  };
+  row.addEventListener('click', open);
+  row.addEventListener('keydown', (e) => e.key === 'Enter' && open());
+  return row;
+}
+
+/** On a phone a highlight slides right to be done, as in a mail app. */
+function swipeToDone(row, id) {
+  let start = null;
+  row.addEventListener(
+    'touchstart',
+    (e) => {
+      start = { x: e.touches[0].clientX, y: e.touches[0].clientY, dx: 0 };
+    },
+    { passive: true },
+  );
+  row.addEventListener(
+    'touchmove',
+    (e) => {
+      if (!start) {
+        return;
+      }
+      const dx = e.touches[0].clientX - start.x;
+      if (Math.abs(e.touches[0].clientY - start.y) > Math.abs(dx)) {
+        start = null;
+        row.style.transform = '';
+        return;
+      }
+      start.dx = Math.max(0, dx);
+      row.style.transform = `translateX(${start.dx}px)`;
+      row.classList.toggle('swiped', start.dx > SWIPE_DONE_PX);
+    },
+    { passive: true },
+  );
+  row.addEventListener('touchend', () => {
+    const swiped = start && start.dx > SWIPE_DONE_PX;
+    start = null;
+    if (!swiped) {
+      row.style.transform = '';
+      row.classList.remove('swiped');
+      return;
+    }
+    row.addEventListener('click', (e) => e.stopImmediatePropagation(), { capture: true, once: true });
+    row.classList.add('leaving');
+    row.style.transform = 'translateX(100%)';
+    setTimeout(() => markDone(id), 180);
+  });
+}
+
+function openInbox() {
+  inbox.archive = false;
+  el.inbox.hidden = false;
+  document.body.classList.add('inbox-open');
+  renderInbox();
+  el.inboxList.querySelector('.inbox-row')?.focus({ preventScroll: true });
+}
+
+function closeInbox() {
+  el.inbox.hidden = true;
+  document.body.classList.remove('inbox-open');
+}
+
+el.inboxPill.addEventListener('click', (e) => {
+  e.stopPropagation();
+  el.inbox.hidden ? openInbox() : closeInbox();
+});
+el.openInbox.addEventListener('click', () => {
+  el.switcher.close();
+  openInbox();
+});
+el.inboxAll.addEventListener('click', markAllDone);
+el.inboxBack.addEventListener('click', () => {
+  inbox.archive = false;
+  renderInbox();
+});
+el.inboxFoot.addEventListener('click', () => {
+  if (!inbox.archive) {
+    inbox.archive = true;
+    return renderInbox();
+  }
+  loadHighlights(Math.min(...inbox.lines.keys()));
+});
+el.inbox.querySelector('.inbox-dim').addEventListener('click', closeInbox);
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.key === 'Escape' && !el.inbox.hidden) {
+      e.stopPropagation();
+      closeInbox();
+    }
+  },
+  true,
+);
+
+// Shelf: the channel's links, pictures and videos on its own timeline, newest first.
+
+const shelf = { open: false, key: null, lines: [], older: true, loading: false };
+const linkTitles = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) {
+      linkTitles.unobserve(e.target);
+      e.target.fill?.();
+    }
+  }
+});
+
+function setView(name) {
+  for (const b of el.views.querySelectorAll('button')) {
+    b.setAttribute('aria-pressed', String(b.dataset.view === name));
+  }
+  shelf.open = name === 'shelf';
+  el.shelf.hidden = !shelf.open;
+  document.body.classList.toggle('shelf-open', shelf.open);
+  if (shelf.open) {
+    loadShelf();
+  }
+}
+
+function closeShelf() {
+  if (shelf.open) {
+    setView('chat');
+  }
+}
+
+el.views.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-view]');
+  if (b) {
+    setView(b.dataset.view);
+  }
+});
+
+async function loadShelf(more = false) {
+  const b = state.buffers.get(state.current);
+  if (!b || shelf.loading) {
+    return;
+  }
+  if (!more || shelf.key !== b.key) {
+    shelf.key = b.key;
+    shelf.lines = [];
+    shelf.older = true;
+    el.shelf.replaceChildren(h('div', 'shelf-empty', 'Looking…'));
+  }
+  shelf.loading = true;
+  const before = more && shelf.lines.length ? shelf.lines[shelf.lines.length - 1].id : null;
+  const lines = await invoke('links', { net: b.net, buffer: b.name, before }).catch(() => []);
+  shelf.loading = false;
+  if (shelf.key !== b.key) {
+    return;
+  }
+  shelf.lines.push(...lines);
+  shelf.older = lines.length >= FOUND_PAGE;
+  renderShelf();
+}
+
+function renderShelf() {
+  const nodes = [];
+  let day = null;
+  let tiles = null;
+  for (const l of shelf.lines) {
+    if (!day || !sameDay(day, l.ts)) {
+      day = l.ts;
+      nodes.push(h('div', 'shelf-day', dayLabel(l.ts)));
+      tiles = null;
+    }
+    for (const t of tokenize(l.text, '')) {
+      if (t.type !== 'url') {
+        continue;
+      }
+      const kind = mediaKind(t.value);
+      if (kind === 'link') {
+        nodes.push(shelfLink(l, t.value));
+        tiles = null;
+        continue;
+      }
+      if (!tiles) {
+        tiles = h('div', 'shelf-tiles');
+        nodes.push(tiles);
+      }
+      tiles.append(shelfTile(l, t.value, kind));
+    }
+  }
+  if (!nodes.length) {
+    nodes.push(h('div', 'shelf-empty', 'No links, pictures or videos here yet.'));
+  }
+  if (shelf.older && shelf.lines.length) {
+    const more = h('button', 'shelf-more', 'Older');
+    more.type = 'button';
+    more.addEventListener('click', () => loadShelf(true));
+    nodes.push(more);
+  }
+  el.shelf.replaceChildren(...nodes);
+}
+
+function shelfTip(l) {
+  return `${l.nick} · ${dayLabel(l.ts)} ${clock(l.ts)}`;
+}
+
+function shelfTile(l, url, kind) {
+  const tile = h('button', `shelf-tile ${kind}`);
+  tile.type = 'button';
+  tile.dataset.tip = shelfTip(l);
+  const yt = kind === 'youtube' ? youtube(url) : null;
+  if (yt) {
+    tile.append(image(`https://i.ytimg.com/vi/${yt.id}/mqdefault.jpg`));
+  } else if (kind === 'image') {
+    tile.append(image(url));
+  } else {
+    const v = h('video');
+    v.muted = true;
+    v.preload = 'metadata';
+    v.src = `${url}#t=0.5`;
+    tile.append(v);
+  }
+  if (kind !== 'image') {
+    tile.append(h('span', 'shelf-play', '▶'));
+  }
+  tile.addEventListener('click', () => openLine(l));
+  return tile;
+}
+
+function shelfLink(l, url) {
+  const row = h('div', 'shelf-link');
+  row.tabIndex = 0;
+  let host = url;
+  try {
+    host = new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    /* shown as typed */
+  }
+  const badge = h('span', 'shelf-site', host.charAt(0).toUpperCase());
+  const title = h('span', 'shelf-title', shortUrl(url));
+  const text = h('div', 'shelf-text');
+  text.append(title, h('span', 'shelf-host', host));
+  const who = h('div', 'shelf-who');
+  who.append(avatar(l.nick, l.mask), h('span', 'shelf-time', shortWhen(l.ts)));
+  const out = openButton(url);
+  out.classList.add('shelf-out');
+  row.append(badge, text, who, out);
+  row.dataset.tip = shelfTip(l);
+  row.fill = async () => {
+    const p = await getPreview(url);
+    if (p?.title) {
+      title.textContent = p.title;
+    }
+  };
+  linkTitles.observe(row);
+  const open = () => openLine(l);
+  row.addEventListener('click', open);
+  row.addEventListener('keydown', (e) => e.key === 'Enter' && open());
+  return row;
+}
 
 function openNotified(id) {
   const target = notified.get(id);

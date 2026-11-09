@@ -90,7 +90,6 @@ button {
   gap: 10px;
   min-width: 0;
   flex: 0 1 auto;
-  margin-right: auto;
   padding: 2px;
   border: 0;
   border-radius: 8px;
@@ -3133,4 +3132,448 @@ body.docked #status {
   .sheet-pill > * {
     animation: none;
   }
+}
+
+/* Highlights inbox: "@3" beside the channel name, a list that drops from it, a sheet on a phone. */
+.top-gap {
+  flex: 1;
+}
+.inbox-pill {
+  flex-shrink: 0;
+  height: 22px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--mention-bg);
+  color: var(--mention);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.inbox-pill:hover {
+  background: color-mix(in srgb, var(--mention) 22%, var(--bg));
+}
+.inbox {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+.inbox-dim {
+  position: absolute;
+  inset: 0;
+}
+.inbox-panel.glass {
+  background: rgb(24 24 27 / 97%);
+}
+.inbox-panel {
+  position: absolute;
+  top: 54px;
+  left: 12px;
+  width: min(380px, calc(100vw - 24px));
+  max-height: min(560px, calc(100vh - 80px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.inbox-grip {
+  display: none;
+}
+.inbox-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 8px;
+}
+.inbox-title {
+  flex: 1;
+  font-weight: 600;
+  color: var(--strong);
+}
+.inbox-link {
+  border: 0;
+  background: none;
+  padding: 2px 0;
+  color: var(--mention);
+  font-size: 12.5px;
+}
+.inbox-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.inbox-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 14px;
+  border-top: 1px solid rgb(255 255 255 / 5%);
+  cursor: pointer;
+  transition:
+    transform 180ms ease,
+    opacity 180ms ease;
+}
+.inbox-row:hover,
+.inbox-row:focus-visible {
+  background: rgb(255 255 255 / 4%);
+  outline: none;
+}
+.inbox-row.swiped {
+  background: var(--mention-bg);
+}
+.inbox-row.leaving {
+  opacity: 0;
+}
+.inbox-row .av {
+  --avatar: 28px;
+  flex-shrink: 0;
+}
+.inbox-body {
+  flex: 1;
+  min-width: 0;
+}
+.inbox-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+.inbox-nick {
+  font-weight: 600;
+  color: var(--strong);
+}
+.inbox-where {
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.inbox-text {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.inbox-text .mention {
+  border-radius: 4px;
+  padding: 0 3px;
+  font-weight: 600;
+}
+.inbox-done {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--dim);
+  opacity: 0;
+}
+.inbox-row:hover .inbox-done,
+.inbox-row:focus-visible .inbox-done {
+  opacity: 1;
+}
+.inbox-done:hover {
+  color: var(--mention);
+  border-color: var(--mention);
+}
+.inbox-empty {
+  padding: 18px 14px 22px;
+  text-align: center;
+  color: var(--faint);
+  font-size: 13px;
+}
+.inbox-foot {
+  border: 0;
+  border-top: 1px solid rgb(255 255 255 / 7%);
+  background: none;
+  padding: 11px 14px;
+  text-align: left;
+  color: var(--dim);
+  font-size: 12.5px;
+}
+.inbox-foot:hover {
+  color: var(--strong);
+}
+.switch-inbox {
+  margin: 0 8px 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: none;
+  color: var(--dim);
+  font-size: 13px;
+  text-align: left;
+}
+.switch-inbox:hover {
+  color: var(--strong);
+  border-color: var(--line-strong);
+}
+@media (pointer: coarse), (max-width: 600px) {
+  .inbox-dim {
+    background: rgb(0 0 0 / 45%);
+  }
+  .inbox-panel {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-height: 72vh;
+    border-radius: 18px 18px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .inbox-grip {
+    display: block;
+    width: 36px;
+    height: 4px;
+    margin: 8px auto 0;
+    border-radius: 2px;
+    background: var(--line-strong);
+  }
+  .inbox-done {
+    display: none;
+  }
+}
+
+/* Chat | Shelf */
+.views {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 9px;
+  background: var(--panel);
+}
+.views[hidden] {
+  display: none;
+}
+.views button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.views button[aria-pressed="true"] {
+  background: var(--hover);
+  color: var(--strong);
+  font-weight: 600;
+}
+@media (max-width: 600px) {
+  .views span {
+    display: none;
+  }
+  .views button {
+    padding: 0 7px;
+  }
+}
+
+/* Viewing an earlier conversation, opened from the inbox or the shelf. */
+.windowed #unread-bar {
+  display: none;
+}
+.window-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  font-size: 12.5px;
+  color: var(--dim);
+}
+.window-bar[hidden] {
+  display: none;
+}
+.window-bar span {
+  flex: 1;
+}
+.window-bar button {
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.shelf-open #unread-bar,
+.shelf-open #jump-latest,
+.shelf-open .window-bar {
+  display: none;
+}
+.shelf {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  overflow-y: auto;
+  padding: 4px 0 16px;
+  background: var(--bg);
+}
+.shelf[hidden] {
+  display: none;
+}
+.shelf > * {
+  max-width: var(--column);
+  margin-inline: auto;
+}
+.shelf-day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 12px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--faint);
+}
+.shelf-day::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.shelf-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  gap: 5px;
+  padding: 0 12px 4px;
+}
+.shelf-tile {
+  position: relative;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--raised);
+}
+.shelf-tile img,
+.shelf-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.shelf-tile:hover img,
+.shelf-tile:hover video {
+  filter: brightness(1.12);
+}
+.shelf-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 55%);
+  color: #fff;
+  font-size: 11px;
+}
+.shelf-tile.youtube .shelf-play {
+  width: 32px;
+  height: 22px;
+  border-radius: 6px;
+  background: #e33;
+}
+.shelf-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.shelf-link:hover,
+.shelf-link:focus-visible {
+  background: var(--panel);
+  outline: none;
+}
+.shelf-site {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: var(--raised);
+  color: var(--dim);
+  font-weight: 700;
+  font-size: 13px;
+}
+.shelf-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.shelf-title {
+  color: var(--strong);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.shelf-host {
+  color: var(--faint);
+  font-size: 11.5px;
+}
+.shelf-who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex-shrink: 0;
+}
+.shelf-who .av {
+  --avatar: 18px;
+}
+.shelf-time {
+  font-size: 10.5px;
+  color: var(--faint);
+}
+.shelf-out.media-open {
+  position: static;
+  opacity: 0;
+  flex-shrink: 0;
+}
+.shelf-link:hover .shelf-out {
+  opacity: 1;
+}
+.shelf-empty {
+  padding: 40px 12px;
+  text-align: center;
+  color: var(--faint);
+  font-size: 13px;
+}
+.shelf-more {
+  display: block;
+  margin: 12px auto 0;
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: none;
+  color: var(--dim);
+  font-size: 12.5px;
 }

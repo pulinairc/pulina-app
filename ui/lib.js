@@ -802,3 +802,31 @@ export function botNicks(value = '') {
       .map((n) => n.toLowerCase()),
   );
 }
+
+const IMAGE_EXT = /\.(?:jpe?g|png|gif|webp|avif|heic)$/i;
+const VIDEO_EXT = /\.(?:mp4|webm|mov|m4v)$/i;
+
+/** What a link shows as on the shelf: a YouTube still, a picture, a video or a plain link row. */
+export function mediaKind(url) {
+  if (youtube(url)) {
+    return 'youtube';
+  }
+  let path = '';
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    return 'link';
+  }
+  if (IMAGE_EXT.test(path)) {
+    return 'image';
+  }
+  return VIDEO_EXT.test(path) ? 'video' : 'link';
+}
+
+/** Highlights split into the inbox and the archive, newest first: done ones and those up to `upTo` are archived. */
+export function inboxSplit(lines, upTo, done) {
+  const sorted = [...lines].sort((a, b) => b.id - a.id);
+  const fresh = sorted.filter((l) => l.id > upTo && !done.has(l.id));
+  const archived = sorted.filter((l) => l.id <= upTo || done.has(l.id));
+  return { fresh, archived };
+}

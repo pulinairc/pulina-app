@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
 import {
   APP_ICONS,
+  mediaKind,
+  inboxSplit,
   defaultShortcuts,
   nickMatches,
   nickQuery,
@@ -421,4 +423,25 @@ test('channel shortcuts move to Cmd on a Mac, so Option still types', () => {
   assert.equal(defaultShortcuts(true).channelNumber, 'Mod');
   assert.equal(defaultShortcuts(true).prevChannel, 'Mod+ArrowLeft');
   assert.equal(defaultShortcuts(false).channelNumber, 'Alt');
+});
+
+test('shelf sorts links into stills, pictures, videos and rows', () => {
+  assert.equal(mediaKind('https://youtu.be/aqz-KE-bpKQ'), 'youtube');
+  assert.equal(mediaKind('https://example.org/a/cat.JPG?w=2'), 'image');
+  assert.equal(mediaKind('https://example.org/clip.mp4'), 'video');
+  assert.equal(mediaKind('https://example.org/page'), 'link');
+  assert.equal(mediaKind('not a url'), 'link');
+});
+
+test('the inbox keeps what is not done and newer than the line read up to', () => {
+  const lines = [{ id: 3 }, { id: 9 }, { id: 5 }, { id: 7 }];
+  const { fresh, archived } = inboxSplit(lines, 4, new Set([7]));
+  assert.deepEqual(
+    fresh.map((l) => l.id),
+    [9, 5],
+  );
+  assert.deepEqual(
+    archived.map((l) => l.id),
+    [7, 3],
+  );
 });

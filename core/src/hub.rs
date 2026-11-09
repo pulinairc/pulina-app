@@ -16,6 +16,9 @@ const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
 const RECONNECT_DELAY: Duration = Duration::from_secs(10);
 const EVENT_BUFFER: usize = 4096;
 const HISTORY_PAGE: i64 = 300;
+/// Lines on each side of a line opened from the inbox or the shelf.
+const AROUND_LINES: i64 = 60;
+const FOUND_PAGE: i64 = 200;
 const RECENT_BUFFER_DAYS: i64 = 30;
 const DAY_MS: i64 = 86_400_000;
 
@@ -215,6 +218,18 @@ impl Hub {
 
     pub fn history(&self, net: &str, buffer: &str, before: Option<i64>) -> Result<Vec<Line>, String> {
         self.store.history(net, buffer, before.unwrap_or(i64::MAX), HISTORY_PAGE).map_err(|e| e.to_string())
+    }
+
+    pub fn around(&self, net: &str, buffer: &str, line: i64) -> Result<Vec<Line>, String> {
+        self.store.around(net, buffer, line, AROUND_LINES).map_err(|e| e.to_string())
+    }
+
+    pub fn mentions(&self, words: &[String], before: Option<i64>) -> Result<Vec<Line>, String> {
+        self.store.containing(words, before.unwrap_or(i64::MAX), FOUND_PAGE).map_err(|e| e.to_string())
+    }
+
+    pub fn links(&self, net: &str, buffer: &str, before: Option<i64>) -> Result<Vec<Line>, String> {
+        self.store.with_links(net, buffer, before.unwrap_or(i64::MAX), FOUND_PAGE).map_err(|e| e.to_string())
     }
 
     pub fn recent_buffers(&self) -> Result<Vec<BufferRef>, String> {

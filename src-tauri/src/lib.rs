@@ -124,6 +124,33 @@ async fn history(state: State<'_, AppState>, net: String, buffer: String, before
 }
 
 #[tauri::command]
+async fn around(state: State<'_, AppState>, net: String, buffer: String, line: i64) -> Result<Vec<Line>, String> {
+    match state.source() {
+        Source::Local(hub) => hub.around(&net, &buffer, line),
+        Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::Around { id, net, buffer, line }).await?),
+        Source::Unconfigured => Ok(vec![]),
+    }
+}
+
+#[tauri::command]
+async fn mentions(state: State<'_, AppState>, words: Vec<String>, before: Option<i64>) -> Result<Vec<Line>, String> {
+    match state.source() {
+        Source::Local(hub) => hub.mentions(&words, before),
+        Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::Mentions { id, words, before }).await?),
+        Source::Unconfigured => Ok(vec![]),
+    }
+}
+
+#[tauri::command]
+async fn links(state: State<'_, AppState>, net: String, buffer: String, before: Option<i64>) -> Result<Vec<Line>, String> {
+    match state.source() {
+        Source::Local(hub) => hub.links(&net, &buffer, before),
+        Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::Links { id, net, buffer, before }).await?),
+        Source::Unconfigured => Ok(vec![]),
+    }
+}
+
+#[tauri::command]
 async fn send(state: State<'_, AppState>, net: String, buffer: String, text: String) -> Result<(), String> {
     match state.source() {
         Source::Local(hub) => hub.send(&net, &buffer, &text),
@@ -570,6 +597,9 @@ pub fn run() {
             status,
             recent_buffers,
             history,
+            around,
+            mentions,
+            links,
             send,
             preview,
             save_person,

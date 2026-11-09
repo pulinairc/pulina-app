@@ -1,3 +1,8 @@
+### 1.0.0: 2026-11-10
+
+* Add a highlights inbox with an archive
+* Add a shelf of links, pictures and videos per channel
+
 ### 0.9.2: 2026-11-09
 
 * Fix uneven padding in reaction pills

@@ -29,6 +29,8 @@
 - **Reactions and replies:** sent as plain IRC (`nick: 😂`, `nick: text`) and shown as reactions and quotes in Lobby
 - **People:** a photo, a colour and any number of nicks per person, matched by pattern or ident and host
 - **Who is here:** the most active faces in the header open the channel's list, ops first, then by who spoke last; pick several to give op or voice in one go
+- **Highlights inbox:** every line that names you, from every channel, in one list: mark them done one by one or all at once, look back in the archive, and jump to where each was said
+- **Channel shelf:** switch a channel from Chat to Shelf to see every link, picture and video posted there, by day, each one a jump back into the conversation
 - **Unread that stays put:** a red New line, jump buttons, and nothing marked read until you say so
 - **Attachments:** paste, drop or pick a file, and its address goes into your message, through a file host of your own
 - **Notifications:** desktop notifications with the sender's photo for mentions and private messages, quiet for muted channels
