@@ -1,6 +1,7 @@
 ### [Unreleased]
 
 * Fix the missing message count on the jump button
+* Add a build status badge to the README
 
 ### 0.5.10: 2026-11-09
 
