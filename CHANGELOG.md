@@ -8,6 +8,7 @@
 * Add a green or red result to the test notification
 * Fix photo notifications failing on macOS
 * Fix the emoji picker freezing on macOS
+* Fix Add reaction vanishing as messages arrive
 
 ### 0.5.10: 2026-11-09
 

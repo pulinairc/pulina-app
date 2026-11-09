@@ -884,6 +884,12 @@ function toBottom() {
   el.log.scrollTop = el.log.scrollHeight;
 }
 
+// While a reaction row or message menu is open the chat holds still, so new messages
+// do not carry it away from the pointer; closing it catches up.
+function following() {
+  return atBottom() && !actionPanel;
+}
+
 function renderLog() {
   el.col.replaceChildren();
   view = { lastLine: null, group: null, events: null, lastByNick: new Map(), separator: null, separatorAfter: null };
@@ -909,7 +915,7 @@ function toSeparator() {
 }
 
 function appendLine(l, live) {
-  const pinned = atBottom();
+  const pinned = following();
   const prev = view.lastLine;
 
   // "nick: 😂" becomes a reaction under that nick's last message.
@@ -1324,8 +1330,14 @@ function menuButton(label, content, onClick, cls = 'act') {
 }
 
 function closePanel() {
-  actionPanel?.remove();
+  if (!actionPanel) {
+    return;
+  }
+  actionPanel.remove();
   actionPanel = null;
+  if (stuck) {
+    toBottom();
+  }
 }
 
 function togglePanel(build) {
@@ -1394,9 +1406,11 @@ function fillActions() {
   actions.replaceChildren(tools);
 }
 
+// An open reaction row or menu stays with its message, even as new messages scroll it
+// away under the pointer; a click outside it closes it.
 el.col.addEventListener('pointerover', (e) => {
   const r = e.target.closest('.text');
-  if (!r?.line || actions.parentElement === r) {
+  if (!r?.line || actions.parentElement === r || (actionPanel && e.pointerType === 'mouse')) {
     return;
   }
   fillActions();
@@ -1415,9 +1429,14 @@ el.log.addEventListener('pointerleave', (e) => {
   }
 });
 document.addEventListener('pointerdown', (e) => {
+  if (e.target.closest?.('.actions')) {
+    return;
+  }
   if (e.pointerType !== 'mouse' && !e.target.closest?.('.text')) {
     hideActions();
+    return;
   }
+  closePanel();
 });
 document.documentElement.addEventListener('mouseleave', hideActions);
 window.addEventListener('blur', () => {
@@ -1466,7 +1485,7 @@ function place(card, rowNode) {
   if (!rowNode.isConnected) {
     return;
   }
-  const pinned = atBottom();
+  const pinned = following();
   if (rowNode.dataset.onlyLink === 'true') {
     rowNode.replaceWith(card);
   } else {
@@ -2343,7 +2362,7 @@ let jumpFrame = 0;
 // A resize of the chat or of what is in it (a photo loading) keeps the latest message in view
 // when it was in view before.
 let stuck = true;
-const stayDown = new ResizeObserver(() => stuck && toBottom());
+const stayDown = new ResizeObserver(() => stuck && !actionPanel && toBottom());
 stayDown.observe(el.log);
 stayDown.observe(el.col);
 
