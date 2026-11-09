@@ -1,6 +1,35 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { continues, summarize, tokenize, nickColor, completeNick, dayLabel, mentions, shortUrl, nickHue, parseReaction, parseAddress, commandMatches, personFor, glob, colorFromRgb, clock, youtube, duration, animalFor, convertEmoticons, colonQuery, emojiSearch, splitNicks, formatWhois, comboOf, comboMods, comboLabel, ago } from '../ui/lib.js';
+import {
+  continues,
+  summarize,
+  tokenize,
+  nickColor,
+  completeNick,
+  dayLabel,
+  mentions,
+  shortUrl,
+  nickHue,
+  parseReaction,
+  parseAddress,
+  commandMatches,
+  personFor,
+  glob,
+  colorFromRgb,
+  clock,
+  youtube,
+  duration,
+  animalFor,
+  convertEmoticons,
+  colonQuery,
+  emojiSearch,
+  splitNicks,
+  formatWhois,
+  comboOf,
+  comboMods,
+  comboLabel,
+  ago,
+} from '../ui/lib.js';
 
 const at = (min) => Date.UTC(2026, 10, 7, 10, min);
 
@@ -21,7 +50,10 @@ test('summarizes joins and quits', () => {
 
 test('splits links and mentions', () => {
   const t = tokenize('rolle: see https://example.org/a). ok', 'rolle');
-  assert.deepEqual(t.map((x) => x.type), ['mention', 'text', 'url', 'text']);
+  assert.deepEqual(
+    t.map((x) => x.type),
+    ['mention', 'text', 'url', 'text'],
+  );
   assert.equal(t[2].value, 'https://example.org/a');
   assert.equal(mentions('trolleybus', 'rolle'), false);
   assert.equal(tokenize('\x02bold\x02 \x0304red', '')[0].value, 'bold red');
@@ -70,7 +102,10 @@ test('reads reactions and replies sent as plain IRC text', () => {
 
 test('slash menu matches typed commands', () => {
   assert.ok(commandMatches('/').length > 10);
-  assert.deepEqual(commandMatches('/wh').map((c) => c.name), ['whois']);
+  assert.deepEqual(
+    commandMatches('/wh').map((c) => c.name),
+    ['whois'],
+  );
   assert.equal(commandMatches('/me waves'), null);
   assert.equal(commandMatches('hello'), null);
   assert.deepEqual(commandMatches('/zzz'), []);
@@ -131,24 +166,63 @@ test('finds the colon word before the caret', () => {
 });
 
 test('ranks exact shortcodes first, then usage', () => {
-  const data = [{ emojis: [['😂', 'face with tears of joy nauru', 'joy'], ['😹', 'cat face with tears of joy', 'joy_cat'], ['🙂', 'slightly smiling face hymy', 'slightly_smiling_face']] }];
-  assert.deepEqual(emojiSearch('joy', data).map((h) => h.id), ['joy', 'joy_cat']);
-  assert.deepEqual(emojiSearch('joy', data, { '😹': 3 }).map((h) => h.id), ['joy', 'joy_cat']);
-  assert.deepEqual(emojiSearch('jo', data, { '😹': 3 }).map((h) => h.id), ['joy_cat', 'joy']);
-  assert.deepEqual(emojiSearch('nauru', data).map((h) => h.id), ['joy']);
+  const data = [
+    {
+      emojis: [
+        ['😂', 'face with tears of joy nauru', 'joy'],
+        ['😹', 'cat face with tears of joy', 'joy_cat'],
+        ['🙂', 'slightly smiling face hymy', 'slightly_smiling_face'],
+      ],
+    },
+  ];
+  assert.deepEqual(
+    emojiSearch('joy', data).map((h) => h.id),
+    ['joy', 'joy_cat'],
+  );
+  assert.deepEqual(
+    emojiSearch('joy', data, { '😹': 3 }).map((h) => h.id),
+    ['joy', 'joy_cat'],
+  );
+  assert.deepEqual(
+    emojiSearch('jo', data, { '😹': 3 }).map((h) => h.id),
+    ['joy_cat', 'joy'],
+  );
+  assert.deepEqual(
+    emojiSearch('nauru', data).map((h) => h.id),
+    ['joy'],
+  );
 });
 
 test('picks channel nicks out of text', () => {
-  const members = new Map([['kaisla', 'Kaisla'], ['mikko', 'mikko']]);
+  const members = new Map([
+    ['kaisla', 'Kaisla'],
+    ['mikko', 'mikko'],
+  ]);
   assert.deepEqual(splitNicks('ask kaisla, or Mikko', members), [
-    { type: 'text', value: 'ask ' }, { type: 'nick', value: 'kaisla', nick: 'Kaisla' },
-    { type: 'text', value: ', or ' }, { type: 'nick', value: 'Mikko', nick: 'mikko' },
+    { type: 'text', value: 'ask ' },
+    { type: 'nick', value: 'kaisla', nick: 'Kaisla' },
+    { type: 'text', value: ', or ' },
+    { type: 'nick', value: 'Mikko', nick: 'mikko' },
   ]);
   assert.deepEqual(splitNicks('kaislat', members), [{ type: 'text', value: 'kaislat' }]);
 });
 
 test('formats whois for a tooltip', () => {
-  const w = { nick: 'kaisla', found: true, user: 'ka', host: 'example.net', realname: 'Kaisla Example', channels: '#rust', idle_secs: 300, server: 'irc.example.net', server_info: '', account: '', away: '', secure: false, oper: false };
+  const w = {
+    nick: 'kaisla',
+    found: true,
+    user: 'ka',
+    host: 'example.net',
+    realname: 'Kaisla Example',
+    channels: '#rust',
+    idle_secs: 300,
+    server: 'irc.example.net',
+    server_info: '',
+    account: '',
+    away: '',
+    secure: false,
+    oper: false,
+  };
   assert.equal(formatWhois(w), 'kaisla (Kaisla Example)\nka@example.net\nOn #rust\nVia irc.example.net\nIdle 5 min');
   assert.equal(formatWhois({ nick: 'x', found: false }), 'x is not online');
 });

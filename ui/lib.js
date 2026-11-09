@@ -11,6 +11,7 @@ const PURPLE_FROM = 235;
 const PURPLE_SPAN = 85;
 const NICK_SATURATION = 70;
 const NICK_LIGHTNESS = 68;
+// biome-ignore lint/suspicious/noControlCharactersInRegex: IRC formatting codes are control characters.
 const FORMATTING = /[\x02\x0f\x11\x16\x1d\x1e\x1f]|\x03(\d{1,2}(,\d{1,2})?)?/g;
 const URL_RE = /\bhttps?:\/\/[^\s<>"']+/gi;
 const TRAILING_PUNCT = /[.,;:!?'"»)\]]+$/;
@@ -30,22 +31,32 @@ export function clock(ts) {
 }
 
 export function dayLabel(ts, now = Date.now()) {
-  if (sameDay(ts, now)) return 'Today';
-  if (sameDay(ts, now - 86_400_000)) return 'Yesterday';
+  if (sameDay(ts, now)) {
+    return 'Today';
+  }
+  if (sameDay(ts, now - 86_400_000)) {
+    return 'Yesterday';
+  }
   const d = new Date(ts);
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
 }
 
 /** Does `line` belong in the same group as `prev`? */
 export function continues(prev, line) {
-  if (!prev || !CHAT_KINDS.has(prev.kind) || !CHAT_KINDS.has(line.kind)) return false;
-  if (prev.nick.toLowerCase() !== line.nick.toLowerCase()) return false;
+  if (!prev || !CHAT_KINDS.has(prev.kind) || !CHAT_KINDS.has(line.kind)) {
+    return false;
+  }
+  if (prev.nick.toLowerCase() !== line.nick.toLowerCase()) {
+    return false;
+  }
   return line.ts - prev.ts < GROUP_GAP_MS && sameDay(prev.ts, line.ts);
 }
 
 function names(list, verb) {
   const unique = [...new Set(list)];
-  if (unique.length > NAMES_SHOWN) return `${unique.length} ${verb}`;
+  if (unique.length > NAMES_SHOWN) {
+    return `${unique.length} ${verb}`;
+  }
   const last = unique.pop();
   return unique.length ? `${unique.join(', ')} and ${last} ${verb}` : `${last} ${verb}`;
 }
@@ -55,16 +66,31 @@ export function summarize(events) {
   const by = { join: [], part: [], quit: [] };
   const extra = [];
   for (const e of events) {
-    if (by[e.kind]) by[e.kind].push(e.nick);
-    if (e.kind === 'nick') extra.push(`${e.nick} is now ${e.text}`);
-    if (e.kind === 'kick') extra.push(`${e.nick} was kicked by ${e.text.split(':')[0]}`);
+    if (by[e.kind]) {
+      by[e.kind].push(e.nick);
+    }
+    if (e.kind === 'nick') {
+      extra.push(`${e.nick} is now ${e.text}`);
+    }
+    if (e.kind === 'kick') {
+      extra.push(`${e.nick} was kicked by ${e.text.split(':')[0]}`);
+    }
   }
   const parts = [];
-  if (by.join.length) parts.push(names(by.join, 'joined'));
-  if (by.part.length) parts.push(names(by.part, 'left'));
-  if (by.quit.length) parts.push(names(by.quit, 'quit'));
-  if (extra.length > NAMES_SHOWN) parts.push(`${extra.length} changes`);
-  else parts.push(...extra);
+  if (by.join.length) {
+    parts.push(names(by.join, 'joined'));
+  }
+  if (by.part.length) {
+    parts.push(names(by.part, 'left'));
+  }
+  if (by.quit.length) {
+    parts.push(names(by.quit, 'quit'));
+  }
+  if (extra.length > NAMES_SHOWN) {
+    parts.push(`${extra.length} changes`);
+  } else {
+    parts.push(...extra);
+  }
   return parts.join(', ');
 }
 
@@ -73,7 +99,9 @@ export function stripFormatting(text) {
 }
 
 export function mentions(text, me) {
-  if (!me) return false;
+  if (!me) {
+    return false;
+  }
   const escaped = me.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`(^|[^\\w])${escaped}(?![\\w])`, 'i').test(text);
 }
@@ -85,25 +113,35 @@ export function tokenize(text, me) {
   let at = 0;
   for (const m of clean.matchAll(URL_RE)) {
     const url = m[0].replace(TRAILING_PUNCT, '');
-    if (m.index > at) out.push(...splitMentions(clean.slice(at, m.index), me));
+    if (m.index > at) {
+      out.push(...splitMentions(clean.slice(at, m.index), me));
+    }
     out.push({ type: 'url', value: url });
     at = m.index + url.length;
   }
-  if (at < clean.length) out.push(...splitMentions(clean.slice(at), me));
+  if (at < clean.length) {
+    out.push(...splitMentions(clean.slice(at), me));
+  }
   return out;
 }
 
 function splitMentions(text, me) {
-  if (!me || !mentions(text, me)) return [{ type: 'text', value: text }];
+  if (!me || !mentions(text, me)) {
+    return [{ type: 'text', value: text }];
+  }
   const escaped = me.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const out = [];
   let at = 0;
   for (const m of text.matchAll(new RegExp(`(?<![\\w])${escaped}(?![\\w])`, 'gi'))) {
-    if (m.index > at) out.push({ type: 'text', value: text.slice(at, m.index) });
+    if (m.index > at) {
+      out.push({ type: 'text', value: text.slice(at, m.index) });
+    }
     out.push({ type: 'mention', value: m[0] });
     at = m.index + m[0].length;
   }
-  if (at < text.length) out.push({ type: 'text', value: text.slice(at) });
+  if (at < text.length) {
+    out.push({ type: 'text', value: text.slice(at) });
+  }
   return out;
 }
 
@@ -115,7 +153,9 @@ export function shortUrl(url) {
     const u = new URL(url);
     const host = u.hostname.replace(/^www\./, '');
     const rest = (u.pathname + u.search).replace(/\/$/, '');
-    if (!rest) return host;
+    if (!rest) {
+      return host;
+    }
     return rest.length > SHORT_PATH_CHARS ? `${host}${rest.slice(0, SHORT_PATH_CHARS)}…` : host + rest;
   } catch {
     return url;
@@ -151,7 +191,9 @@ export function initial(nick) {
 export function completeNick(prefix, members, previous = '') {
   const p = prefix.toLowerCase();
   const matches = [...members].filter((m) => m.toLowerCase().startsWith(p)).sort((a, b) => a.localeCompare(b));
-  if (!matches.length) return null;
+  if (!matches.length) {
+    return null;
+  }
   const i = matches.indexOf(previous);
   return matches[(i + 1) % matches.length];
 }
@@ -199,7 +241,9 @@ export const COMMANDS = [
 /** Commands matching what is typed after "/", or null when the menu should be closed. */
 export function commandMatches(input) {
   const m = input.match(/^\/(\w*)$/);
-  if (!m) return null;
+  if (!m) {
+    return null;
+  }
   const q = m[1].toLowerCase();
   return COMMANDS.filter((c) => c.name.startsWith(q));
 }
@@ -212,7 +256,10 @@ function normNick(nick) {
 
 /** Shell-style pattern: * is anything, ? is one character. Case-insensitive. */
 export function glob(pattern, text) {
-  const re = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.');
+  const re = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')
+    .replace(/\?/g, '.');
   return new RegExp(`^${re}$`, 'i').test(text);
 }
 
@@ -226,7 +273,9 @@ export function personFor(people, nick, mask = '') {
   for (const person of people) {
     for (const pattern of person.nicks) {
       if (pattern.includes('@')) {
-        if (mask && glob(pattern.split('!').pop(), mask)) return person;
+        if (mask && glob(pattern.split('!').pop(), mask)) {
+          return person;
+        }
       } else if (glob(pattern, nick) || glob(normNick(pattern), plain)) {
         return person;
       }
@@ -244,9 +293,13 @@ export function colorFromRgb(r, g, b) {
   let hue = 0;
   if (d) {
     const [R, G, B] = [r / 255, g / 255, b / 255];
-    if (max === R) hue = ((G - B) / d) % 6;
-    else if (max === G) hue = (B - R) / d + 2;
-    else hue = (R - G) / d + 4;
+    if (max === R) {
+      hue = ((G - B) / d) % 6;
+    } else if (max === G) {
+      hue = (B - R) / d + 2;
+    } else {
+      hue = (R - G) / d + 4;
+    }
     hue = Math.round(hue * 60 + 360) % 360;
   }
   const sat = d ? d / (1 - Math.abs(2 * l - 1)) : 0;
@@ -271,7 +324,9 @@ export function youtube(url) {
   } else if (YOUTUBE_HOSTS.includes(host)) {
     id = u.searchParams.get('v') ?? u.pathname.match(/^\/(?:shorts|embed|live)\/([^/]+)/)?.[1];
   }
-  if (!/^[\w-]{11}$/.test(id ?? '')) return null;
+  if (!/^[\w-]{11}$/.test(id ?? '')) {
+    return null;
+  }
   return { id, portrait: u.pathname.startsWith('/shorts/') };
 }
 
@@ -281,7 +336,9 @@ export function duration(seconds) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-const ANIMALS = [...'🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🐔🐧🐦🐤🦆🦉🦇🐺🐗🐴🦄🐝🐛🦋🐌🐞🐢🐍🦎🐙🦑🦀🐡🐠🐟🐬🐳🦈🐊🐅🐆🦓🦍🦧🐘🦛🦏🐪🦒🦘🦬🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐈🐓🦃🦤🦚🦜🦢🦩🐇🦝🦨🦡🦫🦦🦥🐁🐀🦔🐉🦕🦖🐋🦭🪼🐹🐰🐭🐶🐱'];
+const ANIMALS = [
+  ...'🦊🐻🐼🐨🐯🦁🐮🐷🐸🐵🐔🐧🐦🐤🦆🦉🦇🐺🐗🐴🦄🐝🐛🦋🐌🐞🐢🐍🦎🐙🦑🦀🐡🐠🐟🐬🐳🦈🐊🐅🐆🦓🦍🦧🐘🦛🦏🐪🦒🦘🦬🐃🐂🐄🐎🐖🐏🐑🦙🐐🦌🐕🐩🦮🐈🐓🦃🦤🦚🦜🦢🦩🐇🦝🦨🦡🦫🦦🦥🐁🐀🦔🐉🦕🦖🐋🦭🪼🐹🐰🐭🐶🐱',
+];
 
 /** The animal a nick gets when it has no photo, the same one every time. */
 export function animalFor(nick) {
@@ -292,14 +349,24 @@ export function animalFor(nick) {
 
 /** Only standalone tokens convert, so "https://" and mid-word colons never match. Longer tokens first. */
 const EMOTICONS = [
-  [":'(", '😢'], [':D', '😁'], [';)', '😉'], [':)', '🙂'], [':(', '🙁'], [':P', '😛'], [':p', '😛'],
-  [':S', '😖'], [':s', '😖'], ['xD', '😆'], ['XD', '😆'], [':O', '😮'], [':o', '😮'], ['<3', '❤️'],
-  [':*', '😘'], [':/', '😕'],
+  [":'(", '😢'],
+  [':D', '😁'],
+  [';)', '😉'],
+  [':)', '🙂'],
+  [':(', '🙁'],
+  [':P', '😛'],
+  [':p', '😛'],
+  [':S', '😖'],
+  [':s', '😖'],
+  ['xD', '😆'],
+  ['XD', '😆'],
+  [':O', '😮'],
+  [':o', '😮'],
+  ['<3', '❤️'],
+  [':*', '😘'],
+  [':/', '😕'],
 ];
-const EMOTICON_RE = new RegExp(
-  `(^|\\s)(${EMOTICONS.map(([t]) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?=\\s|$)`,
-  'g',
-);
+const EMOTICON_RE = new RegExp(`(^|\\s)(${EMOTICONS.map(([t]) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?=\\s|$)`, 'g');
 const EMOTICON_MAP = Object.fromEntries(EMOTICONS);
 
 export function convertEmoticons(text) {
@@ -320,10 +387,16 @@ const Tier = { Exact: 0, Shortcode: 1, Keyword: 2 };
 
 /** A prefix, or a shared five-letter stem, since Finnish inflects the end of a word. */
 function matchesWord(q, word) {
-  if (word.startsWith(q)) return true;
-  if (q.length < STEM) return false;
+  if (word.startsWith(q)) {
+    return true;
+  }
+  if (q.length < STEM) {
+    return false;
+  }
   let i = 0;
-  while (i < q.length && i < word.length && q[i] === word[i]) i++;
+  while (i < q.length && i < word.length && q[i] === word[i]) {
+    i++;
+  }
   return i >= STEM;
 }
 
@@ -342,8 +415,12 @@ export function emojiSearch(query, data, freq = {}) {
         out.push({ id, native, start: at, end: at + q.length, tier: id === q ? Tier.Exact : Tier.Shortcode });
         continue;
       }
-      if (q.length < KEYWORD_MIN) continue;
-      if (!words.split(' ').some((w) => matchesWord(q, w))) continue;
+      if (q.length < KEYWORD_MIN) {
+        continue;
+      }
+      if (!words.split(' ').some((w) => matchesWord(q, w))) {
+        continue;
+      }
       out.push({ id, native, start: id.length, end: id.length + q.length, tier: Tier.Keyword });
     }
   }
@@ -363,12 +440,18 @@ export function splitNicks(text, members) {
   let at = 0;
   for (const m of text.matchAll(NICK_WORD)) {
     const nick = members.get(m[0].toLowerCase());
-    if (!nick) continue;
-    if (m.index > at) out.push({ type: 'text', value: text.slice(at, m.index) });
+    if (!nick) {
+      continue;
+    }
+    if (m.index > at) {
+      out.push({ type: 'text', value: text.slice(at, m.index) });
+    }
     out.push({ type: 'nick', value: m[0], nick });
     at = m.index + m[0].length;
   }
-  if (at < text.length) out.push({ type: 'text', value: text.slice(at) });
+  if (at < text.length) {
+    out.push({ type: 'text', value: text.slice(at) });
+  }
   return out;
 }
 
@@ -378,9 +461,15 @@ const DAY_S = 86400;
 
 /** A length of time in its largest sensible units: 45 s, 12 min, 3 h 5 min, 4 d. */
 export function span(secs) {
-  if (secs < MINUTE_S) return `${secs} s`;
-  if (secs < HOUR_S) return `${Math.floor(secs / MINUTE_S)} min`;
-  if (secs < DAY_S) return `${Math.floor(secs / HOUR_S)} h ${Math.floor((secs % HOUR_S) / MINUTE_S)} min`;
+  if (secs < MINUTE_S) {
+    return `${secs} s`;
+  }
+  if (secs < HOUR_S) {
+    return `${Math.floor(secs / MINUTE_S)} min`;
+  }
+  if (secs < DAY_S) {
+    return `${Math.floor(secs / HOUR_S)} h ${Math.floor((secs % HOUR_S) / MINUTE_S)} min`;
+  }
   return `${Math.floor(secs / DAY_S)} d`;
 }
 
@@ -392,18 +481,30 @@ export function ago(ts, now = Date.now()) {
 
 /** WHOIS as tooltip lines. */
 export function formatWhois(w) {
-  if (!w.found) return `${w.nick} is not online`;
+  if (!w.found) {
+    return `${w.nick} is not online`;
+  }
   const lines = [w.realname && w.realname !== w.nick ? `${w.nick} (${w.realname})` : w.nick, `${w.user}@${w.host}`];
-  if (w.account) lines.push(`Logged in as ${w.account}`);
-  if (w.channels) lines.push(`On ${w.channels}`);
-  if (w.server) lines.push(`Via ${w.server}${w.server_info ? `, ${w.server_info}` : ''}`);
+  if (w.account) {
+    lines.push(`Logged in as ${w.account}`);
+  }
+  if (w.channels) {
+    lines.push(`On ${w.channels}`);
+  }
+  if (w.server) {
+    lines.push(`Via ${w.server}${w.server_info ? `, ${w.server_info}` : ''}`);
+  }
   if (w.idle_secs != null) {
     const since = w.signon ? `, online since ${new Date(w.signon * 1000).toLocaleDateString('fi-FI')}` : '';
     lines.push(`Idle ${span(w.idle_secs)}${since}`);
   }
-  if (w.away) lines.push(`Away: ${w.away}`);
+  if (w.away) {
+    lines.push(`Away: ${w.away}`);
+  }
   const extra = [w.secure && 'secure connection', w.oper && 'IRC operator'].filter(Boolean);
-  if (extra.length) lines.push(extra.join(', '));
+  if (extra.length) {
+    lines.push(extra.join(', '));
+  }
   return lines.join('\n');
 }
 
@@ -425,12 +526,22 @@ const MODIFIER_KEYS = ['Control', 'Meta', 'Alt', 'Shift'];
 
 /** A key press as a combo like "Mod+Enter", or null for a lone modifier. */
 export function comboOf(e, mac) {
-  if (MODIFIER_KEYS.includes(e.key)) return null;
+  if (MODIFIER_KEYS.includes(e.key)) {
+    return null;
+  }
   const mods = [];
-  if (mac ? e.metaKey : e.ctrlKey) mods.push('Mod');
-  if (mac && e.ctrlKey) mods.push('Ctrl');
-  if (e.altKey) mods.push('Alt');
-  if (e.shiftKey) mods.push('Shift');
+  if (mac ? e.metaKey : e.ctrlKey) {
+    mods.push('Mod');
+  }
+  if (mac && e.ctrlKey) {
+    mods.push('Ctrl');
+  }
+  if (e.altKey) {
+    mods.push('Alt');
+  }
+  if (e.shiftKey) {
+    mods.push('Shift');
+  }
   // Letters and digits by position, so Option+A on a Mac still reads as A, not å.
   const byCode = /^Key([A-Z])$/.exec(e.code || '')?.[1] ?? /^Digit(\d)$/.exec(e.code || '')?.[1];
   const key = byCode ?? (e.key.length === 1 ? e.key.toUpperCase() : e.key);
@@ -446,9 +557,16 @@ const KEY_NAMES = { ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDo
 
 /** How a combo reads to a person on this system. */
 export function comboLabel(combo, mac) {
-  return combo.split('+').map((part) => {
-    if (part === 'Mod') return mac ? 'Cmd' : 'Ctrl';
-    if (part === 'Alt' && mac) return 'Option';
-    return KEY_NAMES[part] ?? part;
-  }).join('+');
+  return combo
+    .split('+')
+    .map((part) => {
+      if (part === 'Mod') {
+        return mac ? 'Cmd' : 'Ctrl';
+      }
+      if (part === 'Alt' && mac) {
+        return 'Option';
+      }
+      return KEY_NAMES[part] ?? part;
+    })
+    .join('+');
 }

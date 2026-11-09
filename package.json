@@ -1,9 +1,13 @@
 {
   "private": true,
   "scripts": {
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "format": "biome format --write && cargo fmt --all",
+    "check": "biome ci && cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings",
+    "test": "node --test tests/*.test.mjs && cargo test --workspace"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.6.6",
     "@tauri-apps/cli": "^2"
   }
 }

@@ -1,6 +1,37 @@
 import {
-  CHAT_KINDS, EVENT_KINDS, clock, commandMatches, completeNick, continues, dayLabel,
-  DEFAULT_SHORTCUTS, animalFor, colonQuery, comboLabel, comboMods, comboOf, colorFromRgb, convertEmoticons, emojiSearch, formatWhois, span, ago, splitNicks, duration, isChannel, mentions, nickColor, parseAddress, personFor, parseReaction, sameDay, shortUrl, stripFormatting, summarize, tokenize, youtube,
+  CHAT_KINDS,
+  EVENT_KINDS,
+  clock,
+  commandMatches,
+  completeNick,
+  continues,
+  dayLabel,
+  DEFAULT_SHORTCUTS,
+  animalFor,
+  colonQuery,
+  comboLabel,
+  comboMods,
+  comboOf,
+  colorFromRgb,
+  convertEmoticons,
+  emojiSearch,
+  formatWhois,
+  span,
+  ago,
+  splitNicks,
+  duration,
+  isChannel,
+  mentions,
+  nickColor,
+  parseAddress,
+  personFor,
+  parseReaction,
+  sameDay,
+  shortUrl,
+  stripFormatting,
+  summarize,
+  tokenize,
+  youtube,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -24,8 +55,10 @@ const ROUND_SAMPLE_PX = 32;
 const ROUND_INNER = 0.7;
 // Colours offered for people, purple left out.
 const SWATCHES = ['#f7768e', '#ff9e64', '#e0af68', '#9ece6a', '#73daca', '#7dcfff', '#bb9af7', '#d6d6da'];
-const PERSON_ICON = '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
-const CAMERA_ICON = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+const PERSON_ICON =
+  '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+const CAMERA_ICON =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.
 const REPLY_WINDOW_MS = 30 * 60 * 1000;
 const QUOTE_CHARS = 120;
@@ -38,23 +71,96 @@ const COMMAND_ANSWER_MS = 15000;
 
 const $ = (id) => document.getElementById(id);
 const el = {
-  title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
-  unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), statusText: $('status-text'), statusAction: $('status-action'), toast: $('toast'), log: $('log'), col: $('col'),
-  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), notifyState: $('notify-state'), notifyFix: $('notify-fix'), notifyGuide: $('notify-guide'), notifyGuideText: $('notify-guide-text'), notifyGuideGo: $('notify-guide-go'), notifyGuideLater: $('notify-guide-later'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), textSize: $('text-size'), textSizeNumber: $('text-size-number'), textSizeReset: $('text-size-reset'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
-  slash: $('slash'), replying: $('replying'),
-  openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
-  peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
-  personEdit: $('person-edit'), personPhoto: $('person-photo'),
-  personPhotoRemove: $('person-photo-remove'), personFile: $('person-file'), personName: $('person-name'),
-  personColor: $('person-color'), personColors: $('person-colors'),
-  personNicks: $('person-nicks'), personNick: $('person-nick'), personDelete: $('person-delete'), replyNick: $('reply-nick'), replyText: $('reply-text'), replyClose: $('reply-close'),
-  switcher: $('switcher'), filter: $('filter'), list: $('list'),
-  settings: $('settings'), settingsClose: $('settings-close'), connections: $('connections'), configPath: $('config-path'), openConnection: $('open-connection'),
-  connection: $('connection'), connectionState: $('connection-state'), connectionStateText: $('connection-state-text'), connectionForm: $('connection-form'), connectionClose: $('connection-close'), connectionAbout: $('connection-about'), connectionError: $('connection-error'),
-  connSsh: $('conn-ssh'), connSshPort: $('conn-ssh-port'), connPort: $('conn-port'), connKey: $('conn-key'), connCopy: $('conn-copy'), connUrl: $('conn-url'),
-  connToken: $('conn-token'), connNick: $('conn-nick'), connNetworks: $('conn-networks'), connAddNet: $('conn-add-net'),
-  serverNets: $('server-nets'), serverNetsHint: $('server-nets-hint'), serverNetNew: $('server-net-new'), serverNetAdd: $('server-net-add'),
+  title: $('title'),
+  chanIcon: $('chan-icon'),
+  chanName: $('chan-name'),
+  chanMeta: $('chan-meta'),
+  unread: $('unread'),
+  gear: $('gear'),
+  bell: $('bell'),
+  status: $('status'),
+  statusText: $('status-text'),
+  statusAction: $('status-action'),
+  toast: $('toast'),
+  log: $('log'),
+  col: $('col'),
+  form: $('composer'),
+  input: $('input'),
+  jumpUnread: $('jump-unread'),
+  jumpLatest: $('jump-latest'),
+  markRead: $('mark-read'),
+  notifyToggle: $('notify-toggle'),
+  notifyTest: $('notify-test'),
+  notifyState: $('notify-state'),
+  notifyFix: $('notify-fix'),
+  notifyGuide: $('notify-guide'),
+  notifyGuideText: $('notify-guide-text'),
+  notifyGuideGo: $('notify-guide-go'),
+  notifyGuideLater: $('notify-guide-later'),
+  emoticonToggle: $('emoticon-toggle'),
+  shortcodeToggle: $('shortcode-toggle'),
+  iconChoices: $('icon-choices'),
+  textSize: $('text-size'),
+  textSizeNumber: $('text-size-number'),
+  textSizeReset: $('text-size-reset'),
+  shortcutList: $('shortcut-list'),
+  shortcutReset: $('shortcut-reset'),
+  emojiBtn: $('emoji-btn'),
+  attachBtn: $('attach-btn'),
+  attachFile: $('attach-file'),
+  uploadUrl: $('upload-url'),
+  slash: $('slash'),
+  replying: $('replying'),
+  openPeople: $('open-people'),
+  people: $('people'),
+  peopleTitle: $('people-title'),
+  peopleBack: $('people-back'),
+  peopleClose: $('people-close'),
+  peopleList: $('people-list-view'),
+  peopleItems: $('people-list'),
+  personNew: $('person-new'),
+  personEdit: $('person-edit'),
+  personPhoto: $('person-photo'),
+  personPhotoRemove: $('person-photo-remove'),
+  personFile: $('person-file'),
+  personName: $('person-name'),
+  personColor: $('person-color'),
+  personColors: $('person-colors'),
+  personNicks: $('person-nicks'),
+  personNick: $('person-nick'),
+  personDelete: $('person-delete'),
+  replyNick: $('reply-nick'),
+  replyText: $('reply-text'),
+  replyClose: $('reply-close'),
+  switcher: $('switcher'),
+  filter: $('filter'),
+  list: $('list'),
+  settings: $('settings'),
+  settingsClose: $('settings-close'),
+  connections: $('connections'),
+  configPath: $('config-path'),
+  openConnection: $('open-connection'),
+  connection: $('connection'),
+  connectionState: $('connection-state'),
+  connectionStateText: $('connection-state-text'),
+  connectionForm: $('connection-form'),
+  connectionClose: $('connection-close'),
+  connectionAbout: $('connection-about'),
+  connectionError: $('connection-error'),
+  connSsh: $('conn-ssh'),
+  connSshPort: $('conn-ssh-port'),
+  connPort: $('conn-port'),
+  connKey: $('conn-key'),
+  connCopy: $('conn-copy'),
+  connUrl: $('conn-url'),
+  connToken: $('conn-token'),
+  connNick: $('conn-nick'),
+  connNetworks: $('conn-networks'),
+  connAddNet: $('conn-add-net'),
+  serverNets: $('server-nets'),
+  serverNetsHint: $('server-nets-hint'),
+  serverNetNew: $('server-net-new'),
+  serverNetAdd: $('server-net-add'),
 };
 
 const state = { networks: [], buffers: new Map(), current: null, me: {}, conn: {}, configPath: '', people: [], settings: {} };
@@ -73,8 +179,12 @@ const isPrivate = (b) => b.name !== '' && !isChannel(b.name);
 
 function h(tag, cls, text) {
   const node = document.createElement(tag);
-  if (cls) node.className = cls;
-  if (text !== undefined) node.textContent = text;
+  if (cls) {
+    node.className = cls;
+  }
+  if (text !== undefined) {
+    node.textContent = text;
+  }
   return node;
 }
 
@@ -85,7 +195,9 @@ function h(tag, cls, text) {
 const photoInfos = new Map();
 
 function photoInfo(photo) {
-  if (photoInfos.has(photo)) return photoInfos.get(photo);
+  if (photoInfos.has(photo)) {
+    return photoInfos.get(photo);
+  }
   photoInfos.set(photo, { src: photo, color: null });
   squarePhoto(photo).then(async (src) => {
     photoInfos.set(photo, { src, color: await colorOfPhoto(src) });
@@ -103,7 +215,9 @@ function refreshForPhotos() {
   photoRefreshTimer = setTimeout(() => {
     renderHeader();
     redrawKeepingScroll();
-    if (el.people.open && !el.peopleList.hidden) renderPeople();
+    if (el.people.open && !el.peopleList.hidden) {
+      renderPeople();
+    }
   }, PHOTO_REFRESH_DELAY_MS);
 }
 
@@ -112,8 +226,11 @@ function redrawKeepingScroll() {
   const fromBottom = el.log.scrollHeight - el.log.scrollTop;
   const pinned = atBottom();
   renderLog();
-  if (pinned) toBottom();
-  else el.log.scrollTop = el.log.scrollHeight - fromBottom;
+  if (pinned) {
+    toBottom();
+  } else {
+    el.log.scrollTop = el.log.scrollHeight - fromBottom;
+  }
 }
 
 function photoColorOf(photo) {
@@ -165,11 +282,15 @@ function animalInto(node, nick, color) {
 
 // Read markers: the last line id seen per channel, stored as a setting so every device agrees.
 
-let readMap = {};
+const readMap = {};
 let readSaveTimer = null;
 
 function lastId(b) {
-  for (let i = b.lines.length - 1; i >= 0; i -= 1) if (b.lines[i].id) return b.lines[i].id;
+  for (let i = b.lines.length - 1; i >= 0; i -= 1) {
+    if (b.lines[i].id) {
+      return b.lines[i].id;
+    }
+  }
   return 0;
 }
 
@@ -179,12 +300,16 @@ function saveReadSoon() {
 }
 
 document.addEventListener('visibilitychange', () => {
-  if (document.hidden) flushRead();
+  if (document.hidden) {
+    flushRead();
+  }
 });
 
 /** Save the read markers now, so other devices hear of it before this one sleeps. */
 function flushRead() {
-  if (readSaveTimer === null) return;
+  if (readSaveTimer === null) {
+    return;
+  }
   clearTimeout(readSaveTimer);
   readSaveTimer = null;
   saveSetting(READ_SETTING, JSON.stringify(readMap));
@@ -217,9 +342,19 @@ function recountUnread(b) {
 
 function applyReadSetting(value) {
   let incoming = {};
-  try { incoming = JSON.parse(value || '{}'); } catch { /* keep what we have */ }
-  for (const [k, id] of Object.entries(incoming)) readMap[k] = Math.max(readMap[k] || 0, id);
-  for (const b of state.buffers.values()) if (b.key !== state.current) recountUnread(b);
+  try {
+    incoming = JSON.parse(value || '{}');
+  } catch {
+    /* keep what we have */
+  }
+  for (const [k, id] of Object.entries(incoming)) {
+    readMap[k] = Math.max(readMap[k] || 0, id);
+  }
+  for (const b of state.buffers.values()) {
+    if (b.key !== state.current) {
+      recountUnread(b);
+    }
+  }
   // Read on another device: the open channel drops its New line too, once all of it is read there.
   const open = state.buffers.get(state.current);
   if (open && view && (readMap[open.key] || 0) >= lastId(open) && (open.unread || view.separator)) {
@@ -233,13 +368,17 @@ function applyReadSetting(value) {
 function buffer(net, name) {
   const k = key(net, name);
   const existing = state.buffers.get(k);
-  if (existing) return existing;
+  if (existing) {
+    return existing;
+  }
 
   const b = { key: k, net, name, lines: [], ids: new Set(), unread: 0, mention: false, topic: '', members: new Set(), joined: false };
   state.buffers.set(k, b);
   loadHistory(b);
   renderHeader();
-  if (!state.current && state.started) scheduleFirstPick();
+  if (!state.current && state.started) {
+    scheduleFirstPick();
+  }
   return b;
 }
 
@@ -251,8 +390,12 @@ async function loadHistory(b) {
     saveReadSoon();
   }
   const fresh = lines.filter((l) => !b.ids.has(l.id));
-  if (!fresh.length) return;
-  for (const l of fresh) b.ids.add(l.id);
+  if (!fresh.length) {
+    return;
+  }
+  for (const l of fresh) {
+    b.ids.add(l.id);
+  }
   b.lines = [...b.lines, ...fresh].sort((x, y) => (x.id || Infinity) - (y.id || Infinity)).slice(-MAX_LINES);
   if (state.current === b.key) {
     renderLog();
@@ -263,8 +406,12 @@ async function loadHistory(b) {
 }
 
 function trackMembers(b, l) {
-  if (l.kind === 'join') b.members.add(l.nick);
-  if (l.kind === 'part' || l.kind === 'quit' || l.kind === 'kick') b.members.delete(l.nick);
+  if (l.kind === 'join') {
+    b.members.add(l.nick);
+  }
+  if (l.kind === 'part' || l.kind === 'quit' || l.kind === 'kick') {
+    b.members.delete(l.nick);
+  }
   if (l.kind === 'nick') {
     b.members.delete(l.nick);
     b.members.add(l.text);
@@ -275,13 +422,21 @@ function onLine(l) {
   if (l.kind === 'info' && Date.now() - lastCommandAt < COMMAND_ANSWER_MS && view) {
     const pinned = atBottom();
     el.col.append(h('div', 'events info', l.text));
-    if (pinned) toBottom();
+    if (pinned) {
+      toBottom();
+    }
   }
   const b = buffer(l.net, l.buffer);
-  if (l.id && b.ids.has(l.id)) return;
-  if (l.id) b.ids.add(l.id);
+  if (l.id && b.ids.has(l.id)) {
+    return;
+  }
+  if (l.id) {
+    b.ids.add(l.id);
+  }
   b.lines.push(l);
-  if (b.lines.length > MAX_LINES) b.lines.shift();
+  if (b.lines.length > MAX_LINES) {
+    b.lines.shift();
+  }
   trackMembers(b, l);
 
   const visible = state.current === b.key;
@@ -290,12 +445,18 @@ function onLine(l) {
     updateJumps();
   }
   // Nothing is marked read on its own: only the Mark as read button does that.
-  if (!CHAT_KINDS.has(l.kind) || l.own) return;
+  if (!CHAT_KINDS.has(l.kind) || l.own) {
+    return;
+  }
 
   b.unread += 1;
   const mentioned = isPrivate(b) || mentions(l.text, state.me[l.net]);
-  if (mentioned) b.mention = true;
-  if (mentioned && !(visible && document.hasFocus())) notify(b, l);
+  if (mentioned) {
+    b.mention = true;
+  }
+  if (mentioned && !(visible && document.hasFocus())) {
+    notify(b, l);
+  }
   renderHeader();
 }
 
@@ -313,8 +474,7 @@ function ordered() {
     const i = state.networks.indexOf(b.net);
     return i === -1 ? 99 : i;
   };
-  return [...state.buffers.values()].sort((a, b) =>
-    netIndex(a) - netIndex(b) || kind(a) - kind(b) || label(a).localeCompare(label(b)));
+  return [...state.buffers.values()].sort((a, b) => netIndex(a) - netIndex(b) || kind(a) - kind(b) || label(a).localeCompare(label(b)));
 }
 
 // Header
@@ -324,7 +484,11 @@ const MUTED_SETTING = 'muted';
 
 /** Muted channels add nothing to unread counts or jumps, except mentions. */
 function mutedKeys() {
-  try { return new Set(JSON.parse(state.settings[MUTED_SETTING] || '[]')); } catch { return new Set(); }
+  try {
+    return new Set(JSON.parse(state.settings[MUTED_SETTING] || '[]'));
+  } catch {
+    return new Set();
+  }
 }
 
 function isMuted(b) {
@@ -338,15 +502,23 @@ function wantsAttention(b) {
 
 /** What a channel adds to the unread count: everything, or for a muted one only what names you. */
 function attentionCount(b) {
-  if (!b.unread) return 0;
-  if (!isMuted(b)) return b.unread;
-  if (!b.mention) return 0;
+  if (!b.unread) {
+    return 0;
+  }
+  if (!isMuted(b)) {
+    return b.unread;
+  }
+  if (!b.mention) {
+    return 0;
+  }
   const seen = readMap[b.key] ?? Infinity;
   return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && mentions(l.text, state.me[l.net])).length || 1;
 }
 
-const BELL = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
-const BELL_OFF = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>';
+const BELL =
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
+const BELL_OFF =
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>';
 
 function renderBell(b) {
   el.bell.hidden = b.name === '';
@@ -359,15 +531,22 @@ function renderBell(b) {
 
 function setMuted(b, muted) {
   const keys = mutedKeys();
-  if (muted) keys.add(b.key);
-  else keys.delete(b.key);
+  if (muted) {
+    keys.add(b.key);
+  } else {
+    keys.delete(b.key);
+  }
   saveSetting(MUTED_SETTING, JSON.stringify([...keys]));
   renderHeader();
 }
 
 /** A channel's own picture and colour, set from its header icon. */
 function channelLook(b) {
-  try { return JSON.parse(state.settings[CHANNELS_SETTING] || '{}')[b.key] || {}; } catch { return {}; }
+  try {
+    return JSON.parse(state.settings[CHANNELS_SETTING] || '{}')[b.key] || {};
+  } catch {
+    return {};
+  }
 }
 
 function icon(b, node) {
@@ -377,11 +556,15 @@ function icon(b, node) {
   node.replaceChildren();
   if (isPrivate(b)) {
     const who = identity(b.name);
-    if (who.photo) return photoInto(node, who.photo);
+    if (who.photo) {
+      return photoInto(node, who.photo);
+    }
     return animalInto(node, b.name, who.color);
   }
   const look = channelLook(b);
-  if (look.photo) return photoInto(node, shownPhoto(look.photo));
+  if (look.photo) {
+    return photoInto(node, shownPhoto(look.photo));
+  }
   node.textContent = b.name === '' ? '~' : '#';
   if (look.color) {
     node.style.background = look.color;
@@ -404,7 +587,9 @@ let shownBadge = -1;
 function highlightCount() {
   let n = 0;
   for (const b of state.buffers.values()) {
-    if (!b.mention) continue;
+    if (!b.mention) {
+      continue;
+    }
     const seen = readMap[b.key] ?? Infinity;
     const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own);
     n += isPrivate(b) ? fresh.length : fresh.filter((l) => mentions(l.text, state.me[l.net])).length;
@@ -414,7 +599,9 @@ function highlightCount() {
 
 function updateBadge() {
   const n = highlightCount();
-  if (n === shownBadge) return;
+  if (n === shownBadge) {
+    return;
+  }
   shownBadge = n;
   invoke('set_badge', { count: n }).catch(() => {});
 }
@@ -435,10 +622,15 @@ function renderHeader() {
   const total = others.reduce((n, x) => n + attentionCount(x), 0);
   el.unread.hidden = total === 0;
   el.unread.textContent = `${total} unread`;
-  el.unread.classList.toggle('mention', others.some((x) => x.mention));
+  el.unread.classList.toggle(
+    'mention',
+    others.some((x) => x.mention),
+  );
   document.title = total ? `Lobby (${total})` : 'Lobby';
 
-  if (el.switcher.open) renderList();
+  if (el.switcher.open) {
+    renderList();
+  }
 }
 
 // Connection trouble shows as one clear line under the header; other messages as a toast that goes away.
@@ -447,10 +639,15 @@ const UNREACHABLE = 'lobby-server unreachable';
 let toastTimer = null;
 
 function renderStatus(message) {
-  if (message !== undefined) showToast(message);
-  else if (el.toast.dataset.sticky) hideToast();
+  if (message !== undefined) {
+    showToast(message);
+  } else if (el.toast.dataset.sticky) {
+    hideToast();
+  }
   renderConnection();
-  if (el.settings.open) renderSettings();
+  if (el.settings.open) {
+    renderSettings();
+  }
 }
 
 function showToast(text) {
@@ -460,7 +657,9 @@ function showToast(text) {
   // A message ending in … is work in progress: it stays until the next one.
   const sticky = text.endsWith('…');
   el.toast.dataset.sticky = sticky ? '1' : '';
-  if (!sticky) toastTimer = setTimeout(hideToast, TOAST_MS);
+  if (!sticky) {
+    toastTimer = setTimeout(hideToast, TOAST_MS);
+  }
 }
 
 function hideToast() {
@@ -469,16 +668,24 @@ function hideToast() {
 }
 
 function connectionText() {
-  if (state.setupError) return { level: 'error', text: 'Lobby is not connected to anything yet.' };
-  if (state.serverDown) return { level: 'warn', text: `Can't reach lobby-server (${state.serverDown}). Trying again every few seconds.` };
+  if (state.setupError) {
+    return { level: 'error', text: 'Lobby is not connected to anything yet.' };
+  }
+  if (state.serverDown) {
+    return { level: 'warn', text: `Can't reach lobby-server (${state.serverDown}). Trying again every few seconds.` };
+  }
   const down = state.networks.filter((n) => state.conn[n] && state.conn[n] !== 'connected');
-  if (!down.length) return null;
+  if (!down.length) {
+    return null;
+  }
   if (down.every((n) => state.conn[n] === UNREACHABLE)) {
     return { level: 'warn', text: "Can't reach lobby-server. Trying again every few seconds." };
   }
   const connecting = down.filter((n) => state.conn[n] === 'connecting');
   const parts = [];
-  if (connecting.length) parts.push(`Connecting to ${connecting.join(', ')}…`);
+  if (connecting.length) {
+    parts.push(`Connecting to ${connecting.join(', ')}…`);
+  }
   for (const n of down.filter((x) => !connecting.includes(x))) {
     const reason = state.conn[n].replace(/^disconnected:?\s*/, '').replace(/\s*\(os error \d+\)/, '');
     const why = reason && reason !== UNREACHABLE ? `: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}` : '';
@@ -488,10 +695,14 @@ function connectionText() {
 }
 
 function renderConnection() {
-  if (el.connection.open) renderConnectionStatus();
+  if (el.connection.open) {
+    renderConnectionStatus();
+  }
   const c = connectionText();
   el.status.hidden = !c;
-  if (!c) return;
+  if (!c) {
+    return;
+  }
   el.status.dataset.level = c.level;
   el.statusText.textContent = c.text;
   el.statusAction.textContent = c.level === 'error' ? 'Set up' : 'Connection';
@@ -499,9 +710,15 @@ function renderConnection() {
 
 function select(k) {
   const b = state.buffers.get(k);
-  if (!b) return;
+  if (!b) {
+    return;
+  }
   state.current = k;
-  try { localStorage.setItem(LAST_BUFFER_KEY, k); } catch { /* storage may be unavailable */ }
+  try {
+    localStorage.setItem(LAST_BUFFER_KEY, k);
+  } catch {
+    /* storage may be unavailable */
+  }
   el.input.placeholder = `Message ${label(b)}`;
   renderHeader();
   renderLog();
@@ -512,7 +729,9 @@ function step(offset) {
   const list = ordered();
   const i = list.findIndex((b) => b.key === state.current);
   const next = list[(i + offset + list.length) % list.length];
-  if (next) select(next.key);
+  if (next) {
+    select(next.key);
+  }
 }
 
 // Switcher
@@ -540,8 +759,12 @@ function renderList() {
     item.classList.toggle('mention', b.mention);
     item.classList.toggle('muted', isMuted(b));
     item.append(icon(b, h('span', 'chan-icon')), h('span', 'name', label(b)));
-    if (isMuted(b)) item.append(svg(ICONS.bellOff));
-    if (wantsAttention(b)) item.append(h('span', 'count', String(attentionCount(b))));
+    if (isMuted(b)) {
+      item.append(svg(ICONS.bellOff));
+    }
+    if (wantsAttention(b)) {
+      item.append(h('span', 'count', String(attentionCount(b))));
+    }
     item.addEventListener('click', () => pick(b.key));
     nodes.push(item);
   });
@@ -565,14 +788,21 @@ function pick(k) {
 el.title.addEventListener('click', openSwitcher);
 el.bell.addEventListener('click', () => {
   const b = state.buffers.get(state.current);
-  if (b) setMuted(b, !isMuted(b));
+  if (b) {
+    setMuted(b, !isMuted(b));
+  }
 });
 el.chanIcon.addEventListener('click', (e) => {
   e.stopPropagation();
   const b = state.buffers.get(state.current);
-  if (!b || b.name === '') return;
-  if (isPrivate(b)) openPerson(b.name, '');
-  else editChannel(b);
+  if (!b || b.name === '') {
+    return;
+  }
+  if (isPrivate(b)) {
+    openPerson(b.name, '');
+  } else {
+    editChannel(b);
+  }
 });
 el.unread.addEventListener('click', jumpToUnreadChannel);
 el.filter.addEventListener('input', () => {
@@ -581,19 +811,24 @@ el.filter.addEventListener('input', () => {
 });
 el.filter.addEventListener('keydown', (e) => {
   const list = matches();
-  if (e.key === 'ArrowDown') picked = Math.min(picked + 1, list.length - 1);
-  else if (e.key === 'ArrowUp') picked = Math.max(picked - 1, 0);
-  else if (e.key === 'Enter' && list[picked]) {
+  if (e.key === 'ArrowDown') {
+    picked = Math.min(picked + 1, list.length - 1);
+  } else if (e.key === 'ArrowUp') {
+    picked = Math.max(picked - 1, 0);
+  } else if (e.key === 'Enter' && list[picked]) {
     // The same Enter would otherwise land in the message box as a new line.
     e.preventDefault();
     return pick(list[picked].key);
+  } else {
+    return;
   }
-  else return;
   e.preventDefault();
   renderList();
 });
 el.switcher.addEventListener('click', (e) => {
-  if (e.target === el.switcher) el.switcher.close();
+  if (e.target === el.switcher) {
+    el.switcher.close();
+  }
 });
 
 // Settings
@@ -624,7 +859,9 @@ el.gear.addEventListener('click', () => {
 });
 el.settingsClose.addEventListener('click', () => el.settings.close());
 el.settings.addEventListener('click', (e) => {
-  if (e.target === el.settings) el.settings.close();
+  if (e.target === el.settings) {
+    el.settings.close();
+  }
 });
 el.settings.addEventListener('close', () => el.input.focus());
 el.switcher.addEventListener('close', () => el.input.focus());
@@ -644,11 +881,18 @@ function renderLog() {
   el.col.replaceChildren();
   view = { lastLine: null, group: null, events: null, lastByNick: new Map(), separator: null, separatorAfter: null };
   const b = state.buffers.get(state.current);
-  if (!b) return updateJumps();
+  if (!b) {
+    return updateJumps();
+  }
   view.separatorAfter = readMap[b.key] ?? lastId(b);
-  for (const l of b.lines) appendLine(l, false);
-  if (view.separator) toSeparator();
-  else toBottom();
+  for (const l of b.lines) {
+    appendLine(l, false);
+  }
+  if (view.separator) {
+    toSeparator();
+  } else {
+    toBottom();
+  }
   updateJumps();
 }
 
@@ -666,7 +910,9 @@ function appendLine(l, live) {
   const reacted = reaction && view.lastByNick.get(reaction.nick.toLowerCase());
   if (reacted) {
     addReaction(reacted, reaction.emoji, l.nick, l.own);
-    if (live && pinned) toBottom();
+    if (live && pinned) {
+      toBottom();
+    }
     return;
   }
 
@@ -676,8 +922,7 @@ function appendLine(l, live) {
     view.events = null;
   }
 
-  const firstUnread = view.separatorAfter !== null && !view.separator
-    && l.id > view.separatorAfter && CHAT_KINDS.has(l.kind) && !l.own;
+  const firstUnread = view.separatorAfter !== null && !view.separator && l.id > view.separatorAfter && CHAT_KINDS.has(l.kind) && !l.own;
   if (firstUnread) {
     view.separator = separatorNode();
     el.col.append(view.separator);
@@ -696,7 +941,9 @@ function appendLine(l, live) {
     view.group = null;
   } else if (CHAT_KINDS.has(l.kind)) {
     view.events = null;
-    if (!view.group || !continues(view.group.last, l)) view.group = newGroup(l);
+    if (!view.group || !continues(view.group.last, l)) {
+      view.group = newGroup(l);
+    }
     view.group.body.append(row(l));
     view.group.last = l;
   } else {
@@ -707,7 +954,9 @@ function appendLine(l, live) {
 
   view.lastLine = l;
   // Your own message always brings the view down to it; a reaction stays put.
-  if (live && (pinned || l.own || l.nick === state.me[l.net])) toBottom();
+  if (live && (pinned || l.own || l.nick === state.me[l.net])) {
+    toBottom();
+  }
 }
 
 function newGroup(l) {
@@ -766,7 +1015,9 @@ function row(l) {
   }
   // A message that is only a link gets replaced by its card.
   r.dataset.onlyLink = String(tokens.length === 1 && tokens[0].type === 'url');
-  if (firstUrl) attachPreview(firstUrl, r);
+  if (firstUrl) {
+    attachPreview(firstUrl, r);
+  }
   view.lastByNick.set(l.nick.toLowerCase(), { line: l, row: r });
   return r;
 }
@@ -782,7 +1033,11 @@ function nicksOf(l) {
   const b = state.buffers.get(key(l.net, l.buffer));
   const me = (state.me[l.net] || '').toLowerCase();
   const out = new Map();
-  for (const n of b?.members || []) if (n.toLowerCase() !== me) out.set(n.toLowerCase(), n);
+  for (const n of b?.members || []) {
+    if (n.toLowerCase() !== me) {
+      out.set(n.toLowerCase(), n);
+    }
+  }
   return out;
 }
 
@@ -806,10 +1061,16 @@ function knownAbout(net, nick) {
   let last = null;
   const chans = [];
   for (const b of state.buffers.values()) {
-    if (b.net !== net) continue;
-    if ([...b.members].some((m) => m.toLowerCase() === low)) chans.push(b.name);
+    if (b.net !== net) {
+      continue;
+    }
+    if ([...b.members].some((m) => m.toLowerCase() === low)) {
+      chans.push(b.name);
+    }
     const l = b.lines.findLast((x) => x.nick?.toLowerCase() === low && CHAT_KINDS.has(x.kind));
-    if (l && (!last || l.ts > last.ts)) last = l;
+    if (l && (!last || l.ts > last.ts)) {
+      last = l;
+    }
   }
   return { mask: last?.mask || '', chans, last };
 }
@@ -827,32 +1088,56 @@ function personCard(net, nick) {
   names.append(h('div', 'pc-name', who.name));
   const mask = w?.found ? `${w.user}@${w.host}` : about.mask;
   const sub = [who.name !== nick && nick, mask].filter(Boolean).join(' · ');
-  if (sub) names.append(h('div', 'pc-sub', sub));
+  if (sub) {
+    names.append(h('div', 'pc-sub', sub));
+  }
   head.append(avatar(nick, about.mask, 'av pc-av'), names);
   card.append(head);
 
   const rows = [];
-  if (w && !w.found) rows.push(['Now', 'not online']);
-  if (w?.realname && w.realname !== nick && w.realname !== who.name) rows.push(['Name', w.realname]);
-  if (w?.account) rows.push(['Account', w.account]);
+  if (w && !w.found) {
+    rows.push(['Now', 'not online']);
+  }
+  if (w?.realname && w.realname !== nick && w.realname !== who.name) {
+    rows.push(['Name', w.realname]);
+  }
+  if (w?.account) {
+    rows.push(['Account', w.account]);
+  }
   const chans = w?.channels || about.chans.join(' ');
-  if (chans) rows.push(['On', chans]);
-  if (about.last) rows.push(['Spoke', ago(about.last.ts)]);
-  if (w?.idle_secs != null) rows.push(['Idle', span(w.idle_secs)]);
-  if (w?.away) rows.push(['Away', w.away]);
-  if (!rows.length) return card;
+  if (chans) {
+    rows.push(['On', chans]);
+  }
+  if (about.last) {
+    rows.push(['Spoke', ago(about.last.ts)]);
+  }
+  if (w?.idle_secs != null) {
+    rows.push(['Idle', span(w.idle_secs)]);
+  }
+  if (w?.away) {
+    rows.push(['Away', w.away]);
+  }
+  if (!rows.length) {
+    return card;
+  }
   const list = h('dl', 'pc-rows');
-  for (const [label, value] of rows) list.append(h('dt', null, label), h('dd', null, value));
+  for (const [label, value] of rows) {
+    list.append(h('dt', null, label), h('dd', null, value));
+  }
   card.append(list);
   return card;
 }
 
 el.log.addEventListener('pointerover', (e) => {
   const n = e.target.closest?.('[data-person]');
-  if (!n) return;
+  if (!n) {
+    return;
+  }
   const k = key(n.dataset.net, n.dataset.nick);
   const known = whois.get(k);
-  if (known && Date.now() - known.at < (known.pending ? WHOIS_WAIT_MS : WHOIS_FRESH_MS)) return;
+  if (known && Date.now() - known.at < (known.pending ? WHOIS_WAIT_MS : WHOIS_FRESH_MS)) {
+    return;
+  }
   // Asked quietly: the card shows what is known until a fuller answer arrives.
   whois.set(k, { ...known, pending: true, at: Date.now() });
   const b = state.buffers.get(state.current);
@@ -882,7 +1167,9 @@ function quoteNode(target) {
   name.style.color = identity(target.line.nick, target.line.mask).color;
   q.append(name, h('span', 'quote-text', stripFormatting(target.line.text).slice(0, QUOTE_CHARS)));
   q.addEventListener('click', () => {
-    if (!target.row?.isConnected) return;
+    if (!target.row?.isConnected) {
+      return;
+    }
     target.row.scrollIntoView({ block: 'center', behavior: 'smooth' });
     target.row.classList.add('flash');
     setTimeout(() => target.row.classList.remove('flash'), 1200);
@@ -900,30 +1187,41 @@ function addReaction(target, emoji, nick, own) {
   const who = target.reactions.get(emoji) ?? new Set();
   who.add(nick);
   target.reactions.set(emoji, who);
-  if (own) (target.mine ??= new Set()).add(emoji);
+  if (own) {
+    target.mine ??= new Set();
+    target.mine.add(emoji);
+  }
 
   let box = target.row.querySelector(':scope > .reacts');
   if (!box) {
     box = h('div', 'reacts');
     target.row.append(box);
   }
-  box.replaceChildren(...[...target.reactions].map(([e, nicks]) => {
-    const chip = h('button', 'react', nicks.size > 1 ? `${e} ${nicks.size}` : e);
-    chip.type = 'button';
-    chip.dataset.tip = [...nicks].join(', ');
-    chip.classList.toggle('mine', Boolean(target.mine?.has(e)));
-    chip.addEventListener('click', () => react(target.line, e));
-    return chip;
-  }));
+  box.replaceChildren(
+    ...[...target.reactions].map(([e, nicks]) => {
+      const chip = h('button', 'react', nicks.size > 1 ? `${e} ${nicks.size}` : e);
+      chip.type = 'button';
+      chip.dataset.tip = [...nicks].join(', ');
+      chip.classList.toggle('mine', Boolean(target.mine?.has(e)));
+      chip.addEventListener('click', () => react(target.line, e));
+      return chip;
+    }),
+  );
 }
 
 function reactionCounts() {
-  try { return JSON.parse(state.settings[REACTION_SETTING] || '{}'); } catch { return {}; }
+  try {
+    return JSON.parse(state.settings[REACTION_SETTING] || '{}');
+  } catch {
+    return {};
+  }
 }
 
 function topReactions() {
   const counts = reactionCounts();
-  const used = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([e]) => e);
+  const used = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([e]) => e);
   return [...new Set([...used, ...QUICK_REACTIONS])].slice(0, QUICK_REACTIONS.length);
 }
 
@@ -941,7 +1239,9 @@ function countReaction(emoji) {
 
 async function react(line, emoji) {
   const b = state.buffers.get(state.current);
-  if (!b) return;
+  if (!b) {
+    return;
+  }
   countReaction(emoji);
   try {
     await invoke('send', { net: b.net, buffer: b.name, text: `${line.nick}: ${emoji}` });
@@ -968,16 +1268,25 @@ function stopReply() {
 // Hover menu: quick reactions on top, actions under them. One instance, moved to the hovered line.
 
 const ICONS = {
-  addReaction: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.56"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/><path d="M19 2v6M16 5h6"/></svg>',
-  reply: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
-  moreV: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
-  bellOff: '<svg class="muted-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Muted"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>',
-  moreH: '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
-  check: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-  external: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>',
+  addReaction:
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.56"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><path d="M9 9h.01M15 9h.01"/><path d="M19 2v6M16 5h6"/></svg>',
+  reply:
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
+  moreV:
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
+  bellOff:
+    '<svg class="muted-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Muted"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>',
+  moreH:
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+  check:
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  external:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>',
   play: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5Z"/></svg>',
-  pause: '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
-  sound: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
+  pause:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg>',
+  sound:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 5 6 9H3v6h3l5 4V5Z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>',
 };
 
 const actions = h('div', 'actions');
@@ -992,12 +1301,17 @@ function menuButton(label, content, onClick, cls = 'act') {
   b.type = 'button';
   b.setAttribute('aria-label', label);
   b.dataset.tip = label;
-  if (content.startsWith('<')) b.append(svg(content));
-  else b.textContent = content;
+  if (content.startsWith('<')) {
+    b.append(svg(content));
+  } else {
+    b.textContent = content;
+  }
   b.addEventListener('click', (e) => {
     e.stopPropagation();
     const line = hoveredLine();
-    if (line) onClick(line, b);
+    if (line) {
+      onClick(line, b);
+    }
   });
   return b;
 }
@@ -1010,7 +1324,9 @@ function closePanel() {
 function togglePanel(build) {
   const open = actionPanel?.dataset.kind === build.name;
   closePanel();
-  if (open) return;
+  if (open) {
+    return;
+  }
   actionPanel = build();
   actionPanel.dataset.kind = build.name;
   actions.append(actionPanel);
@@ -1019,10 +1335,17 @@ function togglePanel(build) {
 function quickRow() {
   const row = h('div', 'glass emoji-row quick-row');
   row.append(
-    ...topReactions().map((e) => menuButton(`React ${e}`, e, (line) => {
-      closePanel();
-      react(line, e);
-    }, 'act emoji')),
+    ...topReactions().map((e) =>
+      menuButton(
+        `React ${e}`,
+        e,
+        (line) => {
+          closePanel();
+          react(line, e);
+        },
+        'act emoji',
+      ),
+    ),
     menuButton('More emojis', ICONS.moreH, (line, button) => {
       openPicker(button, (e) => react(line, e));
     }),
@@ -1039,7 +1362,9 @@ function moreMenu() {
       e.stopPropagation();
       const line = hoveredLine();
       closePanel();
-      if (line) run(line);
+      if (line) {
+        run(line);
+      }
     });
     return b;
   };
@@ -1064,7 +1389,9 @@ function fillActions() {
 
 el.col.addEventListener('pointerover', (e) => {
   const r = e.target.closest('.text');
-  if (!r || !r.line || actions.parentElement === r) return;
+  if (!r?.line || actions.parentElement === r) {
+    return;
+  }
   fillActions();
   r.append(actions);
 });
@@ -1076,10 +1403,14 @@ function hideActions() {
 // Leaving the chat, the window or its focus takes the hover menu away.
 // A finger always "leaves" when lifted, so on touch only a tap elsewhere closes it.
 el.log.addEventListener('pointerleave', (e) => {
-  if (e.pointerType === 'mouse') hideActions();
+  if (e.pointerType === 'mouse') {
+    hideActions();
+  }
 });
 document.addEventListener('pointerdown', (e) => {
-  if (e.pointerType !== 'mouse' && !e.target.closest?.('.text')) hideActions();
+  if (e.pointerType !== 'mouse' && !e.target.closest?.('.text')) {
+    hideActions();
+  }
 });
 document.documentElement.addEventListener('mouseleave', hideActions);
 window.addEventListener('blur', () => {
@@ -1097,7 +1428,12 @@ function note(l) {
 // Link previews
 
 function getPreview(url) {
-  if (!previews.has(url)) previews.set(url, invoke('preview', { url }).catch(() => null));
+  if (!previews.has(url)) {
+    previews.set(
+      url,
+      invoke('preview', { url }).catch(() => null),
+    );
+  }
   return previews.get(url);
 }
 
@@ -1108,18 +1444,27 @@ async function attachPreview(url, rowNode) {
     return place(youtubeCard(url, yt), rowNode);
   }
   const p = await getPreview(url);
-  if (!p || !rowNode.isConnected) return;
+  if (!p || !rowNode.isConnected) {
+    return;
+  }
   // A page with only a title says nothing the link does not: no card.
-  if (p.kind === 'page' && !p.image && !p.description) return;
+  if (p.kind === 'page' && !p.image && !p.description) {
+    return;
+  }
   const cards = { image: imageCard, video: videoCard, audio: audioCard, page: pageCard };
   place((cards[p.kind] ?? pageCard)(p), rowNode);
 }
 
 function place(card, rowNode) {
-  if (!rowNode.isConnected) return;
+  if (!rowNode.isConnected) {
+    return;
+  }
   const pinned = atBottom();
-  if (rowNode.dataset.onlyLink === 'true') rowNode.replaceWith(card);
-  else rowNode.after(card);
+  if (rowNode.dataset.onlyLink === 'true') {
+    rowNode.replaceWith(card);
+  } else {
+    rowNode.after(card);
+  }
   const keep = () => pinned && toBottom();
   card.querySelector('img')?.addEventListener('load', keep);
   card.querySelector('video')?.addEventListener('loadedmetadata', keep);
@@ -1127,9 +1472,14 @@ function place(card, rowNode) {
 }
 
 // Videos only play while they are on screen.
-const onScreen = new IntersectionObserver((entries) => {
-  for (const e of entries) e.target.visible?.(e.isIntersecting);
-}, { threshold: 0.25 });
+const onScreen = new IntersectionObserver(
+  (entries) => {
+    for (const e of entries) {
+      e.target.visible?.(e.isIntersecting);
+    }
+  },
+  { threshold: 0.25 },
+);
 
 function openButton(url) {
   const b = h('button', 'glass media-open');
@@ -1166,7 +1516,9 @@ function youtubeCard(url, { id, portrait }) {
 
   // The muted loop runs behind the still, which fades out once the loop really plays.
   box.visible = (on) => {
-    if (failed || box.classList.contains('playing')) return;
+    if (failed || box.classList.contains('playing')) {
+      return;
+    }
     if (on && !preview) {
       preview = youtubeFrame(id, `${YT_PREVIEW}&playlist=${id}`);
       preview.className = 'vid-preview';
@@ -1181,20 +1533,30 @@ function youtubeCard(url, { id, portrait }) {
 
   // Some videos refuse to play outside YouTube: they stay a still that opens YouTube.
   box.playerState = (state, frame) => {
-    if (state === 'playing') box.classList.add('live');
-    if (state !== 'error') return;
+    if (state === 'playing') {
+      box.classList.add('live');
+    }
+    if (state !== 'error') {
+      return;
+    }
     failed = true;
     frame.remove();
     preview = null;
     box.classList.remove('live', 'playing');
-    if (!poster.isConnected) box.prepend(poster);
+    if (!poster.isConnected) {
+      box.prepend(poster);
+    }
     box.dataset.tip = 'Open on YouTube';
   };
 
   box.dataset.tip = 'Play with sound';
   box.addEventListener('click', () => {
-    if (failed) return openUrl(url);
-    if (box.classList.contains('playing')) return;
+    if (failed) {
+      return openUrl(url);
+    }
+    if (box.classList.contains('playing')) {
+      return;
+    }
     onScreen.unobserve(box);
     preview?.remove();
     preview = null;
@@ -1206,14 +1568,18 @@ function youtubeCard(url, { id, portrait }) {
 
   getPreview(url).then((p) => {
     const title = p?.title?.replace(/ - YouTube$/, '');
-    if (title) box.append(h('span', 'vid-title', title));
+    if (title) {
+      box.append(h('span', 'vid-title', title));
+    }
   });
   return box;
 }
 
 window.addEventListener('message', (e) => {
   const state = e.data?.lobbyPlayer;
-  if (!state) return;
+  if (!state) {
+    return;
+  }
   const frame = [...document.querySelectorAll('.vid iframe')].find((f) => f.contentWindow === e.source);
   frame?.closest('.vid')?.playerState?.(state, frame);
 });
@@ -1225,14 +1591,19 @@ function videoCard(p) {
   v.addEventListener('error', () => box.replaceWith(pageLink(p)));
   box.append(v, openButton(p.url));
   box.visible = (on) => {
-    if (on) v.play().catch(() => {});
-    else v.pause();
+    if (on) {
+      v.play().catch(() => {});
+    } else {
+      v.pause();
+    }
   };
   onScreen.observe(box);
 
   box.dataset.tip = 'Play with sound';
   box.addEventListener('click', () => {
-    if (box.classList.contains('playing')) return;
+    if (box.classList.contains('playing')) {
+      return;
+    }
     delete box.dataset.tip;
     box.classList.add('playing');
     v.muted = false;
@@ -1278,7 +1649,9 @@ function audioCard(p) {
   });
   audio.addEventListener('error', () => box.replaceWith(pageLink(p)));
   bar.addEventListener('click', (e) => {
-    if (!audio.duration) return;
+    if (!audio.duration) {
+      return;
+    }
     const r = bar.getBoundingClientRect();
     audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
   });
@@ -1307,8 +1680,12 @@ function pageCard(p) {
   a.dataset.tip = p.url;
   const text = h('div', 'card-text');
   text.append(h('span', 'card-site', p.site || shortUrl(p.url)));
-  if (p.title) text.append(h('span', 'card-title', p.title));
-  if (p.description) text.append(h('span', 'card-desc', p.description));
+  if (p.title) {
+    text.append(h('span', 'card-title', p.title));
+  }
+  if (p.description) {
+    text.append(h('span', 'card-desc', p.description));
+  }
   a.append(text);
   if (p.image) {
     const media = h('div', 'card-media');
@@ -1329,8 +1706,11 @@ function closeBuffer(b) {
   if (state.current === b.key) {
     state.current = null;
     const next = ordered().find((x) => isChannel(x.name)) || ordered()[0];
-    if (next) select(next.key);
-    else renderLog();
+    if (next) {
+      select(next.key);
+    } else {
+      renderLog();
+    }
   }
   renderHeader();
 }
@@ -1347,7 +1727,9 @@ async function runLocal(b, text) {
   switch (cmd.toLowerCase()) {
     case 'wc':
     case 'close':
-      if (isChannel(b.name) && b.joined) await invoke('send', { net: b.net, buffer: b.name, text: '/part' });
+      if (isChannel(b.name) && b.joined) {
+        await invoke('send', { net: b.net, buffer: b.name, text: '/part' });
+      }
       closeBuffer(b);
       return true;
     case 'mute':
@@ -1360,7 +1742,9 @@ async function runLocal(b, text) {
       renderLog();
       return true;
     case 'query':
-      if (!rest) return true;
+      if (!rest) {
+        return true;
+      }
       select(buffer(b.net, rest.split(' ')[0]).key);
       return true;
     case 'names':
@@ -1374,7 +1758,9 @@ async function runLocal(b, text) {
 async function send() {
   const text = settingOn(EMOTICON_SETTING) ? convertEmoticons(el.input.value) : el.input.value;
   const b = state.buffers.get(state.current);
-  if (!text.trim() || !b) return;
+  if (!text.trim() || !b) {
+    return;
+  }
   hideSlash();
   try {
     if (text.startsWith('/') && !text.startsWith('//')) {
@@ -1390,7 +1776,9 @@ async function send() {
     let out = text;
     if (replying && !text.startsWith('/')) {
       const prefix = `${replying.nick}: `;
-      if (!out.startsWith(prefix)) out = prefix + out;
+      if (!out.startsWith(prefix)) {
+        out = prefix + out;
+      }
       replyHints.set(out, { line: replying, row: findRow(replying) });
     }
     await invoke('send', { net: b.net, buffer: b.name, text: out });
@@ -1405,14 +1793,18 @@ async function send() {
 
 function complete() {
   const b = state.buffers.get(state.current);
-  if (!b) return;
+  if (!b) {
+    return;
+  }
   const value = el.input.value;
   if (!completion) {
     const start = value.lastIndexOf(' ') + 1;
     completion = { start, prefix: value.slice(start), last: '' };
   }
   const nick = completeNick(completion.prefix, b.members, completion.last);
-  if (!nick) return;
+  if (!nick) {
+    return;
+  }
   completion.last = nick;
   const suffix = completion.start === 0 ? ': ' : ' ';
   el.input.value = value.slice(0, completion.start) + nick + suffix;
@@ -1444,21 +1836,25 @@ function hideSlash() {
 
 function renderSlash() {
   const items = menuEntries();
-  if (!items.length) return hideSlash();
+  if (!items.length) {
+    return hideSlash();
+  }
   slashItems = items;
   slashPick = Math.min(slashPick, items.length - 1);
-  el.slash.replaceChildren(...items.map((entry, i) => {
-    const item = h('button', 'slash-item');
-    item.type = 'button';
-    item.setAttribute('role', 'option');
-    item.setAttribute('aria-selected', String(i === slashPick));
-    item.append(...entry.parts);
-    item.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      entry.apply();
-    });
-    return item;
-  }));
+  el.slash.replaceChildren(
+    ...items.map((entry, i) => {
+      const item = h('button', 'slash-item');
+      item.type = 'button';
+      item.setAttribute('role', 'option');
+      item.setAttribute('aria-selected', String(i === slashPick));
+      item.append(...entry.parts);
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        entry.apply();
+      });
+      return item;
+    }),
+  );
   el.slash.hidden = false;
   el.slash.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
 }
@@ -1472,10 +1868,14 @@ function menuEntries() {
       apply: () => applySlash(c),
     }));
   }
-  if (!settingOn(SHORTCODE_SETTING)) return [];
+  if (!settingOn(SHORTCODE_SETTING)) {
+    return [];
+  }
   const caret = el.input.selectionStart ?? el.input.value.length;
   const q = colonQuery(el.input.value.slice(0, caret));
-  if (!q) return [];
+  if (!q) {
+    return [];
+  }
   if (!pickerState.data) {
     emojiData().then(renderSlash);
     return [];
@@ -1505,7 +1905,9 @@ function applySlash(c) {
   el.input.value = `/${c.name} `;
   hideSlash();
   el.input.focus();
-  if (!c.args) send();
+  if (!c.args) {
+    send();
+  }
 }
 
 el.input.addEventListener('input', () => {
@@ -1518,11 +1920,17 @@ el.input.addEventListener('input', () => {
 
 // ":D " becomes 😀 the moment a space lands after it; sending converts a last one too.
 function emoticonsAsTyped() {
-  if (!settingOn(EMOTICON_SETTING)) return;
+  if (!settingOn(EMOTICON_SETTING)) {
+    return;
+  }
   const caret = el.input.selectionStart ?? 0;
-  if (caret === 0 || !/\s/.test(el.input.value[caret - 1])) return;
+  if (caret === 0 || !/\s/.test(el.input.value[caret - 1])) {
+    return;
+  }
   const next = convertEmoticons(el.input.value);
-  if (next === el.input.value) return;
+  if (next === el.input.value) {
+    return;
+  }
   const moved = caret + next.length - el.input.value.length;
   el.input.value = next;
   el.input.setSelectionRange(moved, moved);
@@ -1537,10 +1945,16 @@ function colonPicker() {
   const fresh = caret > 0 && value[caret - 1] === ':' && (caret === 1 || /\s/.test(value[caret - 2]));
   if (fresh && settingOn(SHORTCODE_SETTING)) {
     colonAt = caret - 1;
-    openPicker(el.form, (native) => {
-      if (el.input.value[colonAt] === ':') insertEmoji(native, colonAt, colonAt + 1);
-      colonAt = null;
-    }, { focus: false });
+    openPicker(
+      el.form,
+      (native) => {
+        if (el.input.value[colonAt] === ':') {
+          insertEmoji(native, colonAt, colonAt + 1);
+        }
+        colonAt = null;
+      },
+      { focus: false },
+    );
   } else if (colonAt !== null) {
     colonAt = null;
     closePicker();
@@ -1557,18 +1971,27 @@ let keyboardTimer = 0;
 function fitKeyboard() {
   const vv = window.visualViewport;
   const root = document.documentElement;
-  if (!vv || !root.classList.contains('ios') || vv.scale > 1.01) return;
-  if (vv.offsetTop > 0.5) window.scrollTo(0, 0);
+  if (!vv || !root.classList.contains('ios') || vv.scale > 1.01) {
+    return;
+  }
+  if (vv.offsetTop > 0.5) {
+    window.scrollTo(0, 0);
+  }
   clearTimeout(keyboardTimer);
   keyboardTimer = setTimeout(() => {
     const full = root.clientHeight;
     const up = vv.height < full - KEYBOARD_MIN_PX;
     root.classList.toggle('keyboard', up);
     // The page's own zoom scales this length too, so it is given unzoomed.
-    if (up) root.style.setProperty('--app-h', `${Math.round(vv.height / pageScale)}px`);
-    else root.style.removeProperty('--app-h');
+    if (up) {
+      root.style.setProperty('--app-h', `${Math.round(vv.height / pageScale)}px`);
+    } else {
+      root.style.removeProperty('--app-h');
+    }
     const field = document.activeElement;
-    if (up && field?.closest('dialog')) requestAnimationFrame(() => field.scrollIntoView({ block: 'nearest' }));
+    if (up && field?.closest('dialog')) {
+      requestAnimationFrame(() => field.scrollIntoView({ block: 'nearest' }));
+    }
   }, KEYBOARD_SETTLE_MS);
 }
 
@@ -1580,14 +2003,21 @@ function fitInput() {
   const pinned = atBottom();
   el.input.style.height = 'auto';
   el.input.style.height = `${el.input.scrollHeight}px`;
-  if (pinned) toBottom();
+  if (pinned) {
+    toBottom();
+  }
 }
 
 // Text set from code (sending, replies, history) resizes the box too.
 const textValue = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value');
 Object.defineProperty(el.input, 'value', {
-  get() { return textValue.get.call(this); },
-  set(v) { textValue.set.call(this, v); fitInput(); },
+  get() {
+    return textValue.get.call(this);
+  },
+  set(v) {
+    textValue.set.call(this, v);
+    fitInput();
+  },
 });
 
 el.input.addEventListener('keydown', (e) => {
@@ -1650,7 +2080,11 @@ const SHORTCUT_ACTIONS = [
 let recordingShortcut = null;
 
 function shortcuts() {
-  try { return { ...DEFAULT_SHORTCUTS, ...JSON.parse(state.settings[SHORTCUT_SETTING] || '{}') }; } catch { return { ...DEFAULT_SHORTCUTS }; }
+  try {
+    return { ...DEFAULT_SHORTCUTS, ...JSON.parse(state.settings[SHORTCUT_SETTING] || '{}') };
+  } catch {
+    return { ...DEFAULT_SHORTCUTS };
+  }
 }
 
 function shortcutLabel(action) {
@@ -1671,62 +2105,91 @@ const SHORTCUT_RUN = {
   nextChannel: () => step(1),
 };
 
-document.addEventListener('keydown', (e) => {
-  if (recordingShortcut) return;
-  const combo = comboOf(e, IS_MAC);
-  if (!combo) return;
-  const keys = shortcuts();
-  const action = Object.keys(SHORTCUT_RUN).find((a) => keys[a] === combo);
-  const number = /^[1-9]$/.test(combo.split('+').pop()) && comboMods(combo) === keys.channelNumber && comboMods(combo) !== '';
-  if (!action && !number) return;
-  e.preventDefault();
-  e.stopPropagation();
-  if (action) SHORTCUT_RUN[action]();
-  else {
-    const b = ordered()[Number(combo.split('+').pop()) - 1];
-    if (b) select(b.key);
-  }
-  refreshShortcutTips();
-}, true);
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (recordingShortcut) {
+      return;
+    }
+    const combo = comboOf(e, IS_MAC);
+    if (!combo) {
+      return;
+    }
+    const keys = shortcuts();
+    const action = Object.keys(SHORTCUT_RUN).find((a) => keys[a] === combo);
+    const number = /^[1-9]$/.test(combo.split('+').pop()) && comboMods(combo) === keys.channelNumber && comboMods(combo) !== '';
+    if (!action && !number) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (action) {
+      SHORTCUT_RUN[action]();
+    } else {
+      const b = ordered()[Number(combo.split('+').pop()) - 1];
+      if (b) {
+        select(b.key);
+      }
+    }
+    refreshShortcutTips();
+  },
+  true,
+);
 
 /** Tooltips that name a shortcut follow the current setting. */
 function refreshShortcutTips() {
   el.jumpUnread.dataset.tip = `Jump to the first unread (${shortcutLabel('jumpUnread')})`;
-  for (const m of document.querySelectorAll('.sep-mark')) m.dataset.tip = `Mark as read (${shortcutLabel('markRead')})`;
+  for (const m of document.querySelectorAll('.sep-mark')) {
+    m.dataset.tip = `Mark as read (${shortcutLabel('markRead')})`;
+  }
 }
 
 function renderShortcuts() {
-  el.shortcutList.replaceChildren(...SHORTCUT_ACTIONS.map(([action, label]) => {
-    const row = h('div', 'shortcut-row');
-    const key = h('button', 'shortcut-key', recordingShortcut === action ? 'Press keys…' : shortcutLabel(action));
-    key.type = 'button';
-    key.classList.toggle('recording', recordingShortcut === action);
-    key.addEventListener('click', () => {
-      recordingShortcut = recordingShortcut === action ? null : action;
-      renderShortcuts();
-    });
-    row.append(h('span', null, label), key);
-    return row;
-  }));
+  el.shortcutList.replaceChildren(
+    ...SHORTCUT_ACTIONS.map(([action, label]) => {
+      const row = h('div', 'shortcut-row');
+      const key = h('button', 'shortcut-key', recordingShortcut === action ? 'Press keys…' : shortcutLabel(action));
+      key.type = 'button';
+      key.classList.toggle('recording', recordingShortcut === action);
+      key.addEventListener('click', () => {
+        recordingShortcut = recordingShortcut === action ? null : action;
+        renderShortcuts();
+      });
+      row.append(h('span', null, label), key);
+      return row;
+    }),
+  );
 }
 
 // While a shortcut is being set, the next key press is the new shortcut. Escape cancels.
-document.addEventListener('keydown', (e) => {
-  if (!recordingShortcut) return;
-  const combo = comboOf(e, IS_MAC);
-  if (!combo) return;
-  e.preventDefault();
-  e.stopPropagation();
-  if (combo !== 'Escape') {
-    let saved = {};
-    try { saved = JSON.parse(state.settings[SHORTCUT_SETTING] || '{}'); } catch { /* start over */ }
-    saved[recordingShortcut] = recordingShortcut === 'channelNumber' ? comboMods(combo) || 'Alt' : combo;
-    saveSetting(SHORTCUT_SETTING, JSON.stringify(saved));
-  }
-  recordingShortcut = null;
-  renderShortcuts();
-  refreshShortcutTips();
-}, true);
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (!recordingShortcut) {
+      return;
+    }
+    const combo = comboOf(e, IS_MAC);
+    if (!combo) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (combo !== 'Escape') {
+      let saved = {};
+      try {
+        saved = JSON.parse(state.settings[SHORTCUT_SETTING] || '{}');
+      } catch {
+        /* start over */
+      }
+      saved[recordingShortcut] = recordingShortcut === 'channelNumber' ? comboMods(combo) || 'Alt' : combo;
+      saveSetting(SHORTCUT_SETTING, JSON.stringify(saved));
+    }
+    recordingShortcut = null;
+    renderShortcuts();
+    refreshShortcutTips();
+  },
+  true,
+);
 
 el.shortcutReset.addEventListener('click', () => {
   saveSetting(SHORTCUT_SETTING, '{}');
@@ -1737,7 +2200,9 @@ el.shortcutReset.addEventListener('click', () => {
 
 document.addEventListener('click', (e) => {
   const a = e.target.closest('a[href]');
-  if (!a || a.getAttribute('href') === '#') return;
+  if (!a || a.getAttribute('href') === '#') {
+    return;
+  }
   e.preventDefault();
   openUrl(a.href);
 });
@@ -1758,13 +2223,17 @@ function separatorNode() {
 /** Messages after the read position in this channel. */
 function unreadCount(b) {
   const seen = readMap[b.key];
-  if (seen === undefined) return 0;
+  if (seen === undefined) {
+    return 0;
+  }
   return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own).length;
 }
 
 function markCurrentRead() {
   const b = state.buffers.get(state.current);
-  if (!b) return;
+  if (!b) {
+    return;
+  }
   markRead(b);
   flushRead();
   dropSeparator();
@@ -1776,14 +2245,22 @@ function markCurrentRead() {
 function dropSeparator() {
   const sep = view.separator;
   view.separator = null;
-  if (!sep) return;
+  if (!sep) {
+    return;
+  }
   const pinned = atBottom();
   // It folds away instead of vanishing, so the lines around it slide rather than jump.
   sep.classList.add('gone');
-  sep.addEventListener('transitionend', () => {
-    sep.remove();
-    if (pinned) toBottom();
-  }, { once: true });
+  sep.addEventListener(
+    'transitionend',
+    () => {
+      sep.remove();
+      if (pinned) {
+        toBottom();
+      }
+    },
+    { once: true },
+  );
 }
 
 // Jumping: to the channel with unread, to the "New" line, back to the latest.
@@ -1791,14 +2268,18 @@ function dropSeparator() {
 function jumpToUnreadChannel() {
   const waiting = ordered().filter((b) => b.key !== state.current && wantsAttention(b));
   const next = waiting.find((b) => b.mention) || waiting[0];
-  if (next) select(next.key);
+  if (next) {
+    select(next.key);
+  }
 }
 
 /** Messages wholly under the bottom edge, counted from the end until one is in sight. */
 function messagesBelow(bottom) {
   const rows = el.col.querySelectorAll('.text');
   let n = 0;
-  for (let i = rows.length - 1; i >= 0 && rows[i].getBoundingClientRect().top >= bottom; i -= 1) n += 1;
+  for (let i = rows.length - 1; i >= 0 && rows[i].getBoundingClientRect().top >= bottom; i -= 1) {
+    n += 1;
+  }
   return n;
 }
 
@@ -1853,13 +2334,17 @@ const stayDown = new ResizeObserver(() => stuck && toBottom());
 stayDown.observe(el.log);
 stayDown.observe(el.col);
 
-el.log.addEventListener('scroll', () => {
-  stuck = atBottom();
-  cancelAnimationFrame(jumpFrame);
-  jumpFrame = requestAnimationFrame(() => {
-    updateJumps();
-  });
-}, { passive: true });
+el.log.addEventListener(
+  'scroll',
+  () => {
+    stuck = atBottom();
+    cancelAnimationFrame(jumpFrame);
+    jumpFrame = requestAnimationFrame(() => {
+      updateJumps();
+    });
+  },
+  { passive: true },
+);
 
 // Start
 
@@ -1867,7 +2352,11 @@ function applyStatus(st) {
   // A network removed from the server takes its windows with it.
   const nets = new Set(st.networks.map((n) => n.name));
   if (nets.size) {
-    for (const [k, b] of state.buffers) if (!nets.has(b.net)) state.buffers.delete(k);
+    for (const [k, b] of state.buffers) {
+      if (!nets.has(b.net)) {
+        state.buffers.delete(k);
+      }
+    }
     if (state.current && !state.buffers.has(state.current)) {
       state.current = null;
       pickFirst();
@@ -1879,25 +2368,35 @@ function applyStatus(st) {
     document.documentElement.classList.toggle('mac', IS_MAC);
     document.documentElement.classList.toggle('ios', st.platform === 'ios');
     applyTextSize(textSize());
-    if (IS_MAC) offerNotifyGuide();
+    if (IS_MAC) {
+      offerNotifyGuide();
+    }
   }
   state.networks = st.networks.map((n) => n.name);
   state.configPath = st.config_path;
   for (const n of st.networks) {
     state.conn[n.name] = n.state;
-    if (n.nick) state.me[n.name] = n.nick;
+    if (n.nick) {
+      state.me[n.name] = n.nick;
+    }
   }
   state.people = st.people || [];
   state.settings = st.settings || {};
   refreshShortcutTips();
   renderAttach();
   applyReadSetting(state.settings[READ_SETTING]);
-  for (const info of st.channels) onBuffer(info);
+  for (const info of st.channels) {
+    onBuffer(info);
+  }
   state.setupError = st.error && !st.networks.length ? st.error : null;
-  if (st.error && st.networks.length) showToast(st.error);
+  if (st.error && st.networks.length) {
+    showToast(st.error);
+  }
   renderStatus();
   // Nothing set up yet, like on a phone's first start: go straight to the setup.
-  if (st.error && !st.networks.length && !el.connection.open) openConnection();
+  if (st.error && !st.networks.length && !el.connection.open) {
+    openConnection();
+  }
 }
 
 // Connection setup: the same choices on every device, saved to the config file.
@@ -1911,7 +2410,9 @@ const PROJECT_LINKS = {
 function linkNames(text) {
   const linked = new Set();
   return text.split(/(lobby-server|Lobby)/).map((part) => {
-    if (!PROJECT_LINKS[part] || linked.has(part)) return part;
+    if (!PROJECT_LINKS[part] || linked.has(part)) {
+      return part;
+    }
     linked.add(part);
     const a = h('a', null, part);
     a.href = PROJECT_LINKS[part];
@@ -1930,15 +2431,23 @@ let activeMode = null;
 
 /** Connected or not, for the tab on show: only the mode in use can be connected. */
 function connectionStatus(mode) {
-  if (state.setupError || mode !== activeMode) return { ok: false, text: 'Not connected' };
+  if (state.setupError || mode !== activeMode) {
+    return { ok: false, text: 'Not connected' };
+  }
   if (mode !== 'irc') {
     const unreachable = state.serverDown || (state.networks.length && state.networks.every((n) => state.conn[n] === UNREACHABLE));
-    if (unreachable) return { ok: false, text: `Not connected${state.serverDown ? `: ${state.serverDown}` : ''}` };
+    if (unreachable) {
+      return { ok: false, text: `Not connected${state.serverDown ? `: ${state.serverDown}` : ''}` };
+    }
     return { ok: true, text: 'Connected to lobby-server' };
   }
   const up = state.networks.filter((n) => state.conn[n] === 'connected');
-  if (!up.length) return { ok: false, text: 'Not connected' };
-  if (up.length === state.networks.length) return { ok: true, text: 'Connected' };
+  if (!up.length) {
+    return { ok: false, text: 'Not connected' };
+  }
+  if (up.length === state.networks.length) {
+    return { ok: true, text: 'Connected' };
+  }
   return { ok: true, text: `Connected to ${up.join(', ')}, not to ${state.networks.filter((n) => !up.includes(n)).join(', ')}` };
 }
 
@@ -1964,7 +2473,9 @@ async function openConnection() {
   el.serverNetNew.hidden = true;
   el.serverNetAdd.hidden = false;
   renderServerNetworks();
-  if (el.settings.open) el.settings.close();
+  if (el.settings.open) {
+    el.settings.close();
+  }
   el.connection.showModal();
 }
 
@@ -1980,27 +2491,29 @@ async function renderServerNetworks() {
     return;
   }
   el.serverNetsHint.textContent = 'Removing a network disconnects it on the server. Its history stays.';
-  el.serverNets.replaceChildren(...nets.map((n) => {
-    const row = h('div', 'server-net');
-    row.append(h('span', 'server-net-name', n.name), h('span', 'server-net-where', `${n.host}:${n.port}`));
-    const remove = h('button', 'link-btn danger', 'Remove');
-    remove.type = 'button';
-    remove.addEventListener('click', async () => {
-      if (!remove.dataset.sure) {
-        remove.dataset.sure = '1';
-        remove.textContent = `Remove ${n.name}?`;
-        return;
-      }
-      try {
-        await invoke('delete_server_network', { name: n.name });
-        renderServerNetworks();
-      } catch (e) {
-        el.serverNetsHint.textContent = String(e);
-      }
-    });
-    row.append(remove);
-    return row;
-  }));
+  el.serverNets.replaceChildren(
+    ...nets.map((n) => {
+      const row = h('div', 'server-net');
+      row.append(h('span', 'server-net-name', n.name), h('span', 'server-net-where', `${n.host}:${n.port}`));
+      const remove = h('button', 'link-btn danger', 'Remove');
+      remove.type = 'button';
+      remove.addEventListener('click', async () => {
+        if (!remove.dataset.sure) {
+          remove.dataset.sure = '1';
+          remove.textContent = `Remove ${n.name}?`;
+          return;
+        }
+        try {
+          await invoke('delete_server_network', { name: n.name });
+          renderServerNetworks();
+        } catch (e) {
+          el.serverNetsHint.textContent = String(e);
+        }
+      });
+      row.append(remove);
+      return row;
+    }),
+  );
 }
 
 el.serverNetAdd.addEventListener('click', () => {
@@ -2032,8 +2545,12 @@ el.serverNetAdd.addEventListener('click', () => {
 
 function setConnectionMode(mode) {
   connectionMode = mode;
-  for (const b of el.connectionForm.querySelectorAll('.segments button')) b.setAttribute('aria-checked', String(b.dataset.mode === mode));
-  for (const part of el.connectionForm.querySelectorAll('[data-modes]')) part.hidden = !part.dataset.modes.split(' ').includes(mode);
+  for (const b of el.connectionForm.querySelectorAll('.segments button')) {
+    b.setAttribute('aria-checked', String(b.dataset.mode === mode));
+  }
+  for (const part of el.connectionForm.querySelectorAll('[data-modes]')) {
+    part.hidden = !part.dataset.modes.split(' ').includes(mode);
+  }
   el.connectionAbout.replaceChildren(...linkNames(CONNECTION_ABOUT[mode]));
   renderConnectionStatus();
 }
@@ -2050,38 +2567,68 @@ function networkRow(n = {}) {
   remove.type = 'button';
   remove.setAttribute('aria-label', 'Remove network');
   remove.dataset.tip = 'Remove';
-  remove.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  remove.innerHTML =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   remove.addEventListener('click', () => row.remove());
-  row.append(field('name', 'Name', n.name), field('host', 'Host', n.host), field('port', 'Port', n.port), remove, field('pass', 'Password, if any', n.password, 'password'));
-  if (n.password_file) row.dataset.passwordFile = n.password_file;
+  row.append(
+    field('name', 'Name', n.name),
+    field('host', 'Host', n.host),
+    field('port', 'Port', n.port),
+    remove,
+    field('pass', 'Password, if any', n.password, 'password'),
+  );
+  if (n.password_file) {
+    row.dataset.passwordFile = n.password_file;
+  }
   return row;
 }
 
 function readConnection() {
   const num = (v) => (v.trim() ? Number(v) : null);
-  const networks = [...el.connNetworks.querySelectorAll('.net-row')].map((r) => ({
-    name: r.querySelector('.name').value.trim(),
-    host: r.querySelector('.host').value.trim(),
-    port: Number(r.querySelector('.port').value) || 6667,
-    password: r.querySelector('.pass').value || null,
-    password_file: r.querySelector('.pass').value ? null : r.dataset.passwordFile || null,
-  })).filter((n) => n.name && n.host);
+  const networks = [...el.connNetworks.querySelectorAll('.net-row')]
+    .map((r) => ({
+      name: r.querySelector('.name').value.trim(),
+      host: r.querySelector('.host').value.trim(),
+      port: Number(r.querySelector('.port').value) || 6667,
+      password: r.querySelector('.pass').value || null,
+      password_file: r.querySelector('.pass').value ? null : r.dataset.passwordFile || null,
+    }))
+    .filter((n) => n.name && n.host);
   return {
-    mode: connectionMode, ssh: el.connSsh.value, ssh_port: num(el.connSshPort.value), port: num(el.connPort.value),
-    url: el.connUrl.value, token: el.connToken.value, nick: el.connNick.value, networks, key_line: '',
+    mode: connectionMode,
+    ssh: el.connSsh.value,
+    ssh_port: num(el.connSshPort.value),
+    port: num(el.connPort.value),
+    url: el.connUrl.value,
+    token: el.connToken.value,
+    nick: el.connNick.value,
+    networks,
+    key_line: '',
   };
 }
 
 function connectionProblem(c) {
-  if (c.mode === 'ssh' && !/^[^@\s]+@[^@\s]+$/.test(c.ssh.trim())) return 'Write the SSH login as you@host.';
-  if (c.mode === 'url' && !/^wss?:\/\//.test(c.url.trim())) return 'The server address starts with wss:// or ws://.';
-  if (c.mode !== 'irc' && !c.token.trim()) return 'Paste the lobby-server token.';
-  if (c.mode === 'irc' && !c.nick.trim()) return 'Pick a nick.';
-  if (c.mode === 'irc' && !c.networks.length) return 'Add at least one network with a name and a host.';
+  if (c.mode === 'ssh' && !/^[^@\s]+@[^@\s]+$/.test(c.ssh.trim())) {
+    return 'Write the SSH login as you@host.';
+  }
+  if (c.mode === 'url' && !/^wss?:\/\//.test(c.url.trim())) {
+    return 'The server address starts with wss:// or ws://.';
+  }
+  if (c.mode !== 'irc' && !c.token.trim()) {
+    return 'Paste the lobby-server token.';
+  }
+  if (c.mode === 'irc' && !c.nick.trim()) {
+    return 'Pick a nick.';
+  }
+  if (c.mode === 'irc' && !c.networks.length) {
+    return 'Add at least one network with a name and a host.';
+  }
   return null;
 }
 
-for (const b of el.connectionForm.querySelectorAll('.segments button')) b.addEventListener('click', () => setConnectionMode(b.dataset.mode));
+for (const b of el.connectionForm.querySelectorAll('.segments button')) {
+  b.addEventListener('click', () => setConnectionMode(b.dataset.mode));
+}
 el.openConnection.addEventListener('click', openConnection);
 el.statusAction.addEventListener('click', openConnection);
 el.connectionClose.addEventListener('click', () => el.connection.close());
@@ -2100,7 +2647,9 @@ el.connectionForm.addEventListener('submit', async (e) => {
   const problem = connectionProblem(c);
   el.connectionError.hidden = !problem;
   el.connectionError.textContent = problem || '';
-  if (problem) return;
+  if (problem) {
+    return;
+  }
   try {
     await invoke('save_connection', { connection: c });
     location.reload();
@@ -2113,7 +2662,9 @@ el.connectionForm.addEventListener('submit', async (e) => {
 async function start() {
   await listen('line', (e) => onLine(e.payload));
   await listen('buffer', (e) => onBuffer(e.payload));
-  await listen('me', (e) => { state.me[e.payload.net] = e.payload.nick; });
+  await listen('me', (e) => {
+    state.me[e.payload.net] = e.payload.nick;
+  });
   await listen('conn', (e) => {
     state.conn[e.payload.net] = e.payload.state;
     renderStatus();
@@ -2122,42 +2673,70 @@ async function start() {
     state.people = e.payload;
     renderHeader();
     renderLog();
-    if (el.people.open && !el.peopleList.hidden) renderPeople();
+    if (el.people.open && !el.peopleList.hidden) {
+      renderPeople();
+    }
   });
   await listen('whois', (e) => onWhois(e.payload));
   await listen('notification-click', (e) => openNotified(e.payload));
   await listen('setting', (e) => {
     state.settings[e.payload.key] = e.payload.value;
-    if (e.payload.key === READ_SETTING) applyReadSetting(e.payload.value);
-    if (e.payload.key === SHORTCUT_SETTING) refreshShortcutTips();
-    if (e.payload.key === MUTED_SETTING || e.payload.key === CHANNELS_SETTING) renderHeader();
-    if (e.payload.key === UPLOAD_SETTING) renderAttach();
+    if (e.payload.key === READ_SETTING) {
+      applyReadSetting(e.payload.value);
+    }
+    if (e.payload.key === SHORTCUT_SETTING) {
+      refreshShortcutTips();
+    }
+    if (e.payload.key === MUTED_SETTING || e.payload.key === CHANNELS_SETTING) {
+      renderHeader();
+    }
+    if (e.payload.key === UPLOAD_SETTING) {
+      renderAttach();
+    }
   });
   // A lobby-server connection came back: fetch what was missed.
   await listen('server', (e) => {
-    state.serverDown = e.payload.down && e.payload.down.replace(/\s*\(os error \d+\)/, '').replace(/^IO error:\s*/i, '').toLowerCase();
+    state.serverDown = e.payload.down
+      ?.replace(/\s*\(os error \d+\)/, '')
+      .replace(/^IO error:\s*/i, '')
+      .toLowerCase();
     renderConnection();
   });
   await listen('resync', async () => {
     applyStatus(await invoke('status'));
-    for (const r of await invoke('recent_buffers').catch(() => [])) buffer(r.net, r.buffer);
-    for (const b of state.buffers.values()) loadHistory(b);
+    for (const r of await invoke('recent_buffers').catch(() => [])) {
+      buffer(r.net, r.buffer);
+    }
+    for (const b of state.buffers.values()) {
+      loadHistory(b);
+    }
   });
 
   applyStatus(await invoke('status'));
 
-  for (const r of await invoke('recent_buffers').catch(() => [])) buffer(r.net, r.buffer);
+  for (const r of await invoke('recent_buffers').catch(() => [])) {
+    buffer(r.net, r.buffer);
+  }
   state.started = true;
   pickFirst();
 }
 
 function pickFirst() {
-  if (state.current) return;
+  if (state.current) {
+    return;
+  }
   let saved = null;
-  try { saved = localStorage.getItem(LAST_BUFFER_KEY); } catch { /* storage may be unavailable */ }
+  try {
+    saved = localStorage.getItem(LAST_BUFFER_KEY);
+  } catch {
+    /* storage may be unavailable */
+  }
   const first = ordered().find((b) => isChannel(b.name));
-  if (saved && state.buffers.has(saved)) select(saved);
-  else if (first) select(first.key);
+  if (saved && state.buffers.has(saved)) {
+    select(saved);
+  } else if (first) {
+    select(first.key);
+  }
 }
 
 // Channels arrive in a burst after connecting: wait for it to settle before picking one.
@@ -2211,10 +2790,15 @@ function hideTip() {
 }
 
 document.addEventListener('pointermove', (e) => {
-  if (e.pointerType !== 'mouse') return;
+  if (e.pointerType !== 'mouse') {
+    return;
+  }
   const target = e.target.closest?.('[data-tip], [data-person]');
-  if (target) showTip(target, e.clientX);
-  else if (!tip.hidden) hideTip();
+  if (target) {
+    showTip(target, e.clientX);
+  } else if (!tip.hidden) {
+    hideTip();
+  }
 });
 document.addEventListener('pointerdown', hideTip);
 
@@ -2222,22 +2806,39 @@ document.addEventListener('pointerdown', hideTip);
 const TOUCH_TIP_MS = 4000;
 let lastPointer = 'mouse';
 let touchTipTimer = 0;
-document.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType; }, true);
-document.addEventListener('click', (e) => {
-  if (lastPointer === 'mouse') return;
-  const target = e.target.closest?.('[data-person], [data-tip]');
-  if (!target) return;
-  // Buttons and links do their own thing; their tooltips only name them.
-  if (!target.dataset.person && e.target.closest('a, button, input, textarea')) return;
-  // A name shows its card instead of opening the editor; the photo still opens it.
-  if (target.dataset.person) e.stopPropagation();
-  showTip(target, e.clientX);
-  clearTimeout(touchTipTimer);
-  touchTipTimer = setTimeout(hideTip, TOUCH_TIP_MS);
-}, true);
+document.addEventListener(
+  'pointerdown',
+  (e) => {
+    lastPointer = e.pointerType;
+  },
+  true,
+);
+document.addEventListener(
+  'click',
+  (e) => {
+    if (lastPointer === 'mouse') {
+      return;
+    }
+    const target = e.target.closest?.('[data-person], [data-tip]');
+    if (!target) {
+      return;
+    }
+    // Buttons and links do their own thing; their tooltips only name them.
+    if (!target.dataset.person && e.target.closest('a, button, input, textarea')) {
+      return;
+    }
+    // A name shows its card instead of opening the editor; the photo still opens it.
+    if (target.dataset.person) {
+      e.stopPropagation();
+    }
+    showTip(target, e.clientX);
+    clearTimeout(touchTipTimer);
+    touchTipTimer = setTimeout(hideTip, TOUCH_TIP_MS);
+  },
+  true,
+);
 el.log.addEventListener('scroll', hideTip, { passive: true });
 document.addEventListener('pointerleave', hideTip);
-
 
 // People: photos, colours and nicks, edited here and stored on lobby-server.
 
@@ -2305,10 +2906,14 @@ function editPerson(p) {
   el.personDelete.hidden = !p.id;
   el.personName.value = editing.name;
   renderEditor();
-  if (!p.channel) el.personName.focus();
+  if (!p.channel) {
+    el.personName.focus();
+  }
   if (editing.photo) {
     colorOfPhoto(editing.photo).then((c) => {
-      if (!editing || editing.id !== p.id) return;
+      if (!editing || editing.id !== p.id) {
+        return;
+      }
       editing.photoColor = c;
       renderEditor();
     });
@@ -2329,7 +2934,9 @@ function swatch(color, label, selected, content = '') {
   b.setAttribute('aria-label', label);
   b.dataset.tip = label;
   b.style.background = color;
-  if (content) b.append(content);
+  if (content) {
+    b.append(content);
+  }
   return b;
 }
 
@@ -2363,33 +2970,39 @@ function renderEditor() {
   el.personPhotoRemove.hidden = !p.photo;
 
   const swatches = [swatch(auto, 'Automatic', !p.color, h('span', 'swatch-mark', 'A'))];
-  for (const c of SWATCHES) swatches.push(swatch(c, c, p.color === c));
+  for (const c of SWATCHES) {
+    swatches.push(swatch(c, c, p.color === c));
+  }
   const custom = !swatches.some((b) => b.getAttribute('aria-checked') === 'true');
   swatches.push(swatch(custom ? color : 'var(--raised)', 'Pick any colour', custom, h('span', 'swatch-mark', '+')));
   const values = ['', ...SWATCHES];
-  swatches.forEach((b, i) => b.addEventListener('click', () => {
-    if (i === swatches.length - 1) {
-      el.personColor.value = toHex(color);
-      el.personColor.click();
-      return;
-    }
-    p.color = values[i];
-    renderEditor();
-  }));
-  el.personColors.replaceChildren(...swatches);
-
-  el.personNicks.replaceChildren(...p.nicks.map((n, i) => {
-    const chip = h('span', 'chip', n);
-    const x = h('button', '', '×');
-    x.type = 'button';
-    x.setAttribute('aria-label', `Remove ${n}`);
-    x.addEventListener('click', () => {
-      p.nicks.splice(i, 1);
+  for (const [i, b] of swatches.entries()) {
+    b.addEventListener('click', () => {
+      if (i === swatches.length - 1) {
+        el.personColor.value = toHex(color);
+        el.personColor.click();
+        return;
+      }
+      p.color = values[i];
       renderEditor();
     });
-    chip.append(x);
-    return chip;
-  }));
+  }
+  el.personColors.replaceChildren(...swatches);
+
+  el.personNicks.replaceChildren(
+    ...p.nicks.map((n, i) => {
+      const chip = h('span', 'chip', n);
+      const x = h('button', '', '×');
+      x.type = 'button';
+      x.setAttribute('aria-label', `Remove ${n}`);
+      x.addEventListener('click', () => {
+        p.nicks.splice(i, 1);
+        renderEditor();
+      });
+      chip.append(x);
+      return chip;
+    }),
+  );
 }
 
 /** Any CSS colour as #rrggbb, for the colour input. */
@@ -2426,11 +3039,15 @@ async function photoFrom(file) {
   const img = await loadImage(file);
   const side = Math.min(img.naturalWidth, img.naturalHeight);
   let crop = side;
-  if (isRound(img, side)) crop = side * ROUND_INNER;
+  if (isRound(img, side)) {
+    crop = side * ROUND_INNER;
+  }
   const canvas = document.createElement('canvas');
   canvas.width = PHOTO_PX;
   canvas.height = PHOTO_PX;
-  canvas.getContext('2d').drawImage(img, (img.naturalWidth - crop) / 2, (img.naturalHeight - crop) / 2, crop, crop, 0, 0, PHOTO_PX, PHOTO_PX);
+  canvas
+    .getContext('2d')
+    .drawImage(img, (img.naturalWidth - crop) / 2, (img.naturalHeight - crop) / 2, crop, crop, 0, 0, PHOTO_PX, PHOTO_PX);
   return canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
 }
 
@@ -2461,14 +3078,20 @@ async function squarePhoto(src) {
     i.onerror = () => resolve(null);
     i.src = src;
   });
-  if (!img) return src;
+  if (!img) {
+    return src;
+  }
   const side = Math.min(img.naturalWidth, img.naturalHeight);
-  if (!isRound(img, side)) return src;
+  if (!isRound(img, side)) {
+    return src;
+  }
   const crop = side * ROUND_INNER;
   const canvas = document.createElement('canvas');
   canvas.width = PHOTO_PX;
   canvas.height = PHOTO_PX;
-  canvas.getContext('2d').drawImage(img, (img.naturalWidth - crop) / 2, (img.naturalHeight - crop) / 2, crop, crop, 0, 0, PHOTO_PX, PHOTO_PX);
+  canvas
+    .getContext('2d')
+    .drawImage(img, (img.naturalWidth - crop) / 2, (img.naturalHeight - crop) / 2, crop, crop, 0, 0, PHOTO_PX, PHOTO_PX);
   return canvas.toDataURL('image/jpeg', PHOTO_QUALITY);
 }
 
@@ -2504,7 +3127,9 @@ function colorOfPhoto(src) {
 }
 
 async function setPhoto(file) {
-  if (!editing || !file?.type.startsWith('image/')) return;
+  if (!editing || !file?.type.startsWith('image/')) {
+    return;
+  }
   try {
     editing.photo = await photoFrom(file);
     editing.photoColor = await colorOfPhoto(editing.photo);
@@ -2524,7 +3149,9 @@ el.openPeople.addEventListener('click', () => {
 el.peopleClose.addEventListener('click', () => el.people.close());
 el.peopleBack.addEventListener('click', showList);
 el.people.addEventListener('click', (e) => {
-  if (e.target === el.people) el.people.close();
+  if (e.target === el.people) {
+    el.people.close();
+  }
 });
 el.personNew.addEventListener('click', () => editPerson({ id: 0, name: '', color: '', photo: '', nicks: [] }));
 el.personPhoto.addEventListener('click', () => el.personFile.click());
@@ -2535,16 +3162,22 @@ el.personFile.addEventListener('change', () => {
 /** An image on the clipboard: as a file, or as a clipboard item (copied from a browser or viewer). */
 function clipboardImage(e) {
   const data = e.clipboardData;
-  if (!data) return null;
+  if (!data) {
+    return null;
+  }
   const file = [...(data.files || [])].find((f) => f.type.startsWith('image/'));
-  if (file) return file;
+  if (file) {
+    return file;
+  }
   const item = [...(data.items || [])].find((i) => i.kind === 'file' && i.type.startsWith('image/'));
   return item ? item.getAsFile() : null;
 }
 
 el.people.addEventListener('paste', (e) => {
   const file = editing && clipboardImage(e);
-  if (!file) return;
+  if (!file) {
+    return;
+  }
   e.preventDefault();
   setPhoto(file);
 });
@@ -2558,25 +3191,37 @@ el.personColor.addEventListener('input', () => {
   renderEditor();
 });
 el.personName.addEventListener('input', () => {
-  if (!editing.photo) renderEditor();
+  if (!editing.photo) {
+    renderEditor();
+  }
 });
 el.personNick.addEventListener('keydown', (e) => {
-  if (e.key !== 'Enter') return;
+  if (e.key !== 'Enter') {
+    return;
+  }
   e.preventDefault();
   const nick = el.personNick.value.trim();
-  if (nick && !editing.nicks.includes(nick)) editing.nicks.push(nick);
+  if (nick && !editing.nicks.includes(nick)) {
+    editing.nicks.push(nick);
+  }
   el.personNick.value = '';
   renderEditor();
 });
 el.personEdit.addEventListener('submit', async (e) => {
   e.preventDefault();
   const pending = el.personNick.value.trim();
-  if (pending && !editing.nicks.includes(pending)) editing.nicks.push(pending);
+  if (pending && !editing.nicks.includes(pending)) {
+    editing.nicks.push(pending);
+  }
   el.personNick.value = '';
   editing.name = el.personName.value.trim() || editing.nicks[0] || 'Someone';
   if (editing.channel) {
     let all = {};
-    try { all = JSON.parse(state.settings[CHANNELS_SETTING] || '{}'); } catch { /* start fresh */ }
+    try {
+      all = JSON.parse(state.settings[CHANNELS_SETTING] || '{}');
+    } catch {
+      /* start fresh */
+    }
     all[editing.channel] = { photo: editing.photo, color: editing.color };
     saveSetting(CHANNELS_SETTING, JSON.stringify(all));
     el.people.close();
@@ -2586,14 +3231,19 @@ el.personEdit.addEventListener('submit', async (e) => {
   try {
     const { photoColor: _, ...person } = editing;
     await invoke('save_person', { person });
-    if (editingFromChat) el.people.close();
-    else showList();
+    if (editingFromChat) {
+      el.people.close();
+    } else {
+      showList();
+    }
   } catch (err) {
     renderStatus(String(err));
   }
 });
 el.personDelete.addEventListener('click', async () => {
-  if (!editing?.id) return;
+  if (!editing?.id) {
+    return;
+  }
   try {
     await invoke('delete_person', { id: editing.id });
     showList();
@@ -2602,7 +3252,6 @@ el.personDelete.addEventListener('click', async () => {
   }
 });
 el.people.addEventListener('close', () => el.input.focus());
-
 
 // Emoji picker: search, frequently used, every category, and a bar to jump between them.
 
@@ -2630,7 +3279,9 @@ async function emojiData() {
 }
 
 function categoryIcon(id) {
-  return svg(`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CATEGORY_ICONS[id]}</svg>`);
+  return svg(
+    `<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CATEGORY_ICONS[id]}</svg>`,
+  );
 }
 
 // One click handler on the picker serves every emoji button.
@@ -2658,7 +3309,9 @@ function section(id, title, buttons) {
 
 function frequentButtons() {
   const counts = reactionCounts();
-  const used = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([e]) => e);
+  const used = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([e]) => e);
   return [...new Set([...used, ...QUICK_REACTIONS])].slice(0, FREQUENT_COUNT).map((e) => emojiButton(e, e));
 }
 
@@ -2672,13 +3325,24 @@ async function buildPicker() {
   const input = h('input');
   input.placeholder = 'Search';
   input.setAttribute('aria-label', 'Search emoji');
-  search.append(svg('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>'), input);
+  search.append(
+    svg(
+      '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
+    ),
+    input,
+  );
 
   const scroll = h('div', 'picker-scroll');
   const results = section('results', 'Search results', []);
   results.hidden = true;
   const frequent = section('frequent', 'Frequently used', frequentButtons());
-  const cats = data.map((c) => section(c.id, c.name, c.emojis.map(([native, words]) => emojiButton(native, words.split(' ')[0]))));
+  const cats = data.map((c) =>
+    section(
+      c.id,
+      c.name,
+      c.emojis.map(([native, words]) => emojiButton(native, words.split(' ')[0])),
+    ),
+  );
   scroll.append(results, frequent, ...cats);
 
   const tabs = h('nav', 'picker-tabs');
@@ -2702,13 +3366,19 @@ async function buildPicker() {
   function showSearch(q) {
     const query = q.trim().toLowerCase();
     results.hidden = !query;
-    for (const sec of scroll.querySelectorAll('section:not([data-cat="results"])')) sec.hidden = Boolean(query);
-    if (!query) return;
+    for (const sec of scroll.querySelectorAll('section:not([data-cat="results"])')) {
+      sec.hidden = Boolean(query);
+    }
+    if (!query) {
+      return;
+    }
     // Best first: a whole word matches, then the name starts with it, then a word does, then any part.
     const scored = [];
     for (const c of data) {
       for (const [native, words] of c.emojis) {
-        if (!words.includes(query)) continue;
+        if (!words.includes(query)) {
+          continue;
+        }
         const list = words.split(' ');
         const score = list.includes(query) ? 0 : words.startsWith(query) ? 1 : list.some((w) => w.startsWith(query)) ? 2 : 3;
         scored.push([score, native, words]);
@@ -2725,21 +3395,35 @@ async function buildPicker() {
     if (e.key === 'Enter') {
       e.preventDefault();
       const first = results.querySelector('.pick');
-      if (first) choose(first.textContent);
+      if (first) {
+        choose(first.textContent);
+      }
     }
   });
-  scroll.addEventListener('scroll', () => {
-    const top = scroll.scrollTop + scroll.offsetTop + PICKER_GAP;
-    let current = 'frequent';
-    for (const sec of scroll.querySelectorAll('section:not([hidden])')) if (sec.offsetTop <= top) current = sec.dataset.cat;
-    for (const t of pickerState.tabs) t.classList.toggle('active', t.dataset.cat === current);
-  }, { passive: true });
+  scroll.addEventListener(
+    'scroll',
+    () => {
+      const top = scroll.scrollTop + scroll.offsetTop + PICKER_GAP;
+      let current = 'frequent';
+      for (const sec of scroll.querySelectorAll('section:not([hidden])')) {
+        if (sec.offsetTop <= top) {
+          current = sec.dataset.cat;
+        }
+      }
+      for (const t of pickerState.tabs) {
+        t.classList.toggle('active', t.dataset.cat === current);
+      }
+    },
+    { passive: true },
+  );
 
   root.append(search, scroll, tabs);
   root.addEventListener('pointerdown', (e) => e.stopPropagation());
   root.addEventListener('click', (e) => {
     const pick = e.target.closest('.pick');
-    if (pick) choose(pick.textContent);
+    if (pick) {
+      choose(pick.textContent);
+    }
   });
   // Kept laid out while closed, so opening it only has to show it.
   root.classList.add('closed');
@@ -2752,21 +3436,31 @@ async function buildPicker() {
 }
 
 // Built ahead, so the first colon or emoji button opens it at once.
-setTimeout(() => { pickerState.building ??= buildPicker(); }, PICKER_PREBUILD_MS);
+function pickerReady() {
+  pickerState.building ??= buildPicker();
+  return pickerState.building;
+}
+
+setTimeout(pickerReady, PICKER_PREBUILD_MS);
 
 /** Open the picker next to `anchor`; `onPick` gets the chosen emoji. */
 async function openPicker(anchor, onPick, { focus = true } = {}) {
-  const opening = ++pickerState.opening;
-  await (pickerState.building ??= buildPicker());
+  pickerState.opening += 1;
+  const opening = pickerState.opening;
+  await pickerReady();
   // Closed again while the emoji were still loading.
-  if (opening !== pickerState.opening) return;
+  if (opening !== pickerState.opening) {
+    return;
+  }
   const p = pickerState;
   p.onPick = onPick;
   p.frequent.querySelector('.picker-grid').replaceChildren(...frequentButtons());
   p.input.value = '';
   p.showSearch('');
   p.scroll.scrollTop = 0;
-  p.tabs.forEach((t, i) => t.classList.toggle('active', i === 0));
+  for (const [i, t] of p.tabs.entries()) {
+    t.classList.toggle('active', i === 0);
+  }
 
   p.el.classList.remove('closed');
   p.open = true;
@@ -2787,7 +3481,9 @@ async function openPicker(anchor, onPick, { focus = true } = {}) {
   p.el.style.left = `${Math.max(left, page.left + gap) / k}px`;
   p.el.style.top = `${Math.max(top, page.top + gap) / k}px`;
   closePanel();
-  if (focus) p.input.focus();
+  if (focus) {
+    p.input.focus();
+  }
 }
 
 function closePicker() {
@@ -2798,15 +3494,20 @@ function closePicker() {
 }
 
 document.addEventListener('pointerdown', () => {
-  if (pickerState.open) closePicker();
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && pickerState.open) {
-    e.stopPropagation();
+  if (pickerState.open) {
     closePicker();
   }
-}, true);
-
+});
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.key === 'Escape' && pickerState.open) {
+      e.stopPropagation();
+      closePicker();
+    }
+  },
+  true,
+);
 
 // Desktop notifications for mentions and private messages, on unless turned off in Settings.
 
@@ -2828,14 +3529,22 @@ const TEXT_SIZE_MAX = 200;
 const IOS_TEXT_BASE = 1.2;
 
 function textSize() {
-  try { return Number(localStorage.getItem(TEXT_SIZE_KEY)) || TEXT_SIZE_DEFAULT; } catch { return TEXT_SIZE_DEFAULT; }
+  try {
+    return Number(localStorage.getItem(TEXT_SIZE_KEY)) || TEXT_SIZE_DEFAULT;
+  } catch {
+    return TEXT_SIZE_DEFAULT;
+  }
 }
 
 let pageScale = 1;
 
 function applyTextSize(percent) {
   const p = Math.min(TEXT_SIZE_MAX, Math.max(TEXT_SIZE_MIN, Math.round(Number(percent) || TEXT_SIZE_DEFAULT)));
-  try { localStorage.setItem(TEXT_SIZE_KEY, String(p)); } catch { /* lasts this run */ }
+  try {
+    localStorage.setItem(TEXT_SIZE_KEY, String(p));
+  } catch {
+    /* lasts this run */
+  }
   el.textSize.value = p;
   el.textSizeNumber.value = p;
   const root = document.documentElement;
@@ -2847,7 +3556,10 @@ function applyTextSize(percent) {
   }
   // The macOS header keeps its size so it stays level with the window buttons.
   root.style.setProperty('--chrome-zoom', String(100 / p));
-  window.__TAURI__.webview.getCurrentWebview().setZoom(p / 100).catch(() => {});
+  window.__TAURI__.webview
+    .getCurrentWebview()
+    .setZoom(p / 100)
+    .catch(() => {});
 }
 
 el.textSize.addEventListener('input', () => applyTextSize(el.textSize.value));
@@ -2858,15 +3570,25 @@ applyTextSize(textSize());
 // The app icon, chosen per device: Dock on macOS, window icon elsewhere.
 const ICONS_KEY = 'lobby.icon';
 const APP_ICONS = [
-  ['pendant-lamp', 'Pendant lamp'], ['coffee-chat', 'Coffee chat'], ['teal-night', 'Teal night'], ['neon-night', 'Neon night'],
-  ['sunset', 'Sunset'], ['mint-glass', 'Mint glass'], ['porcelain', 'Porcelain'], ['neon-glow', 'Neon glow'],
+  ['pendant-lamp', 'Pendant lamp'],
+  ['coffee-chat', 'Coffee chat'],
+  ['teal-night', 'Teal night'],
+  ['neon-night', 'Neon night'],
+  ['sunset', 'Sunset'],
+  ['mint-glass', 'Mint glass'],
+  ['porcelain', 'Porcelain'],
+  ['neon-glow', 'Neon glow'],
 ];
 const DEFAULT_ICON = APP_ICONS[0][0];
 
 function chosenIcon() {
   // An icon that has since been removed falls back to the default.
   let saved = null;
-  try { saved = localStorage.getItem(ICONS_KEY); } catch { /* storage may be unavailable */ }
+  try {
+    saved = localStorage.getItem(ICONS_KEY);
+  } catch {
+    /* storage may be unavailable */
+  }
   return APP_ICONS.some(([name]) => name === saved) ? saved : DEFAULT_ICON;
 }
 
@@ -2876,36 +3598,48 @@ function useIcon(name) {
 
 function renderIconChoices() {
   const current = chosenIcon();
-  el.iconChoices.replaceChildren(...APP_ICONS.map(([name, label]) => {
-    const b = h('button', 'icon-choice');
-    b.type = 'button';
-    b.setAttribute('role', 'radio');
-    b.setAttribute('aria-checked', String(name === current));
-    b.setAttribute('aria-label', label);
-    b.dataset.tip = label;
-    const img = h('img');
-    img.src = `icons/${name}.png`;
-    img.alt = '';
-    b.append(img);
-    b.addEventListener('click', () => {
-      try { localStorage.setItem(ICONS_KEY, name); } catch { /* the choice lasts this run */ }
-      useIcon(name);
-      renderIconChoices();
-    });
-    return b;
-  }));
+  el.iconChoices.replaceChildren(
+    ...APP_ICONS.map(([name, label]) => {
+      const b = h('button', 'icon-choice');
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(name === current));
+      b.setAttribute('aria-label', label);
+      b.dataset.tip = label;
+      const img = h('img');
+      img.src = `icons/${name}.png`;
+      img.alt = '';
+      b.append(img);
+      b.addEventListener('click', () => {
+        try {
+          localStorage.setItem(ICONS_KEY, name);
+        } catch {
+          /* the choice lasts this run */
+        }
+        useIcon(name);
+        renderIconChoices();
+      });
+      return b;
+    }),
+  );
 }
 
-if (chosenIcon() !== DEFAULT_ICON) useIcon(chosenIcon());
+if (chosenIcon() !== DEFAULT_ICON) {
+  useIcon(chosenIcon());
+}
 
 function notifyOn() {
   return state.settings[NOTIFY_SETTING] !== 'off';
 }
 
 async function notify(b, l) {
-  if (!notifyOn() || !notifier) return;
+  if (!notifyOn() || !notifier) {
+    return;
+  }
   notifyAllowed ??= (await notifier.isPermissionGranted()) || (await notifier.requestPermission()) === 'granted';
-  if (!notifyAllowed) return;
+  if (!notifyAllowed) {
+    return;
+  }
   const who = identity(l.nick, l.mask);
   const title = isPrivate(b) ? l.nick : `${who.name} in ${label(b)}`;
   const icon = await notifyIcon(who.photo);
@@ -2919,16 +3653,22 @@ const FLASH_MS = 2400;
 
 function openNotified(id) {
   const target = notified.get(id);
-  if (!target) return;
+  if (!target) {
+    return;
+  }
   select(target.key);
   // After the channel's own scroll to its New line has run.
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    const row = [...el.col.querySelectorAll('.text')].find((r) => r.line?.id === target.line);
-    if (!row) return;
-    row.scrollIntoView({ block: 'center' });
-    row.classList.add('flash');
-    setTimeout(() => row.classList.remove('flash'), FLASH_MS);
-  }));
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      const row = [...el.col.querySelectorAll('.text')].find((r) => r.line?.id === target.line);
+      if (!row) {
+        return;
+      }
+      row.scrollIntoView({ block: 'center' });
+      row.classList.add('flash');
+      setTimeout(() => row.classList.remove('flash'), FLASH_MS);
+    }),
+  );
 }
 
 // macOS gets its notifications from the system notification centre, the rest through the plugin.
@@ -2937,14 +3677,15 @@ function showNotification(title, body, icon, target = null) {
     const id = `${Date.now()}`;
     if (target) {
       notified.set(id, target);
-      if (notified.size > NOTIFIED_KEEP) notified.delete(notified.keys().next().value);
+      if (notified.size > NOTIFIED_KEEP) {
+        notified.delete(notified.keys().next().value);
+      }
     }
     invoke('notify_mac', { id, title, body, image: icon || null }).catch((e) => renderStatus(`Notification: ${e}`));
   } else {
     notifier.sendNotification({ title, body, icon });
   }
 }
-
 
 el.notifyTest.addEventListener('click', () => showNotification('Lobby', 'Notifications work.', null));
 
@@ -2953,16 +3694,27 @@ el.notifyTest.addEventListener('click', () => showNotification('Lobby', 'Notific
 const GUIDE_SEEN_KEY = 'lobby.notifyGuide';
 
 function notifyFix(p) {
-  if (!p) return null;
+  if (!p) {
+    return null;
+  }
   if (p.state === 'ask') {
-    return { text: 'macOS asks once whether Lobby may show notifications. Lobby uses them for mentions and private messages.', action: 'Allow notifications' };
+    return {
+      text: 'macOS asks once whether Lobby may show notifications. Lobby uses them for mentions and private messages.',
+      action: 'Allow notifications',
+    };
   }
   if (p.state === 'denied') {
-    return { text: 'Notifications are off for Lobby in System Settings, so mentions and private messages make no sound or banner.', action: 'Open System Settings' };
+    return {
+      text: 'Notifications are off for Lobby in System Settings, so mentions and private messages make no sound or banner.',
+      action: 'Open System Settings',
+    };
   }
   const off = [!p.banners && 'banners', !p.badge && 'the Dock badge'].filter(Boolean);
   if (off.length) {
-    return { text: `Lobby may notify, but ${off.join(' and ')} ${off.length > 1 ? 'are' : 'is'} off in System Settings.`, action: 'Open System Settings' };
+    return {
+      text: `Lobby may notify, but ${off.join(' and ')} ${off.length > 1 ? 'are' : 'is'} off in System Settings.`,
+      action: 'Open System Settings',
+    };
   }
   return null;
 }
@@ -2973,8 +3725,11 @@ async function notifyPermission() {
 
 async function fixNotifications() {
   const p = await notifyPermission();
-  if (p?.state === 'ask') await invoke('allow_notifications').catch((e) => renderStatus(`Notifications: ${e}`));
-  else await invoke('open_notify_settings').catch((e) => renderStatus(`System Settings: ${e}`));
+  if (p?.state === 'ask') {
+    await invoke('allow_notifications').catch((e) => renderStatus(`Notifications: ${e}`));
+  } else {
+    await invoke('open_notify_settings').catch((e) => renderStatus(`System Settings: ${e}`));
+  }
   renderNotifyState();
 }
 
@@ -2982,17 +3737,29 @@ async function renderNotifyState() {
   const fix = notifyFix(await notifyPermission());
   el.notifyState.hidden = !fix;
   el.notifyFix.hidden = !fix;
-  if (!fix) return;
+  if (!fix) {
+    return;
+  }
   el.notifyState.textContent = fix.text;
   el.notifyFix.textContent = fix.action;
 }
 
 /** Once per Mac, the first time notifications are not working: say why and offer the fix. */
 async function offerNotifyGuide() {
-  if (!notifyOn()) return;
-  try { if (localStorage.getItem(GUIDE_SEEN_KEY)) return; } catch { /* ask again next time */ }
+  if (!notifyOn()) {
+    return;
+  }
+  try {
+    if (localStorage.getItem(GUIDE_SEEN_KEY)) {
+      return;
+    }
+  } catch {
+    /* ask again next time */
+  }
   const fix = notifyFix(await notifyPermission());
-  if (!fix) return;
+  if (!fix) {
+    return;
+  }
   el.notifyGuideText.textContent = fix.text;
   el.notifyGuideGo.textContent = fix.action;
   el.notifyGuide.showModal();
@@ -3005,12 +3772,18 @@ el.notifyGuideGo.addEventListener('click', async () => {
 });
 el.notifyGuideLater.addEventListener('click', () => el.notifyGuide.close());
 el.notifyGuide.addEventListener('close', () => {
-  try { localStorage.setItem(GUIDE_SEEN_KEY, '1'); } catch { /* asks again next start */ }
+  try {
+    localStorage.setItem(GUIDE_SEEN_KEY, '1');
+  } catch {
+    /* asks again next start */
+  }
   el.input.focus();
 });
 // Back from System Settings, the settings sheet shows what changed there.
 window.addEventListener('focus', () => {
-  if (el.settings.open) renderNotifyState();
+  if (el.settings.open) {
+    renderNotifyState();
+  }
 });
 
 // A photo as a file the notification can show, written once per photo.
@@ -3019,11 +3792,16 @@ const PHOTO_EXT = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp
 
 function notifyIcon(photo) {
   const m = photo?.match(/^data:(image\/[a-z]+);base64,(.+)$/);
-  if (!m || !PHOTO_EXT[m[1]]) return Promise.resolve(undefined);
+  if (!m || !PHOTO_EXT[m[1]]) {
+    return Promise.resolve(undefined);
+  }
   if (!notifyIcons.has(photo)) {
     const bytes = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
     const key = hashHex(photo);
-    notifyIcons.set(photo, invoke('notify_icon', bytes, { headers: { 'x-key': key, 'x-ext': PHOTO_EXT[m[1]] } }).catch(() => undefined));
+    notifyIcons.set(
+      photo,
+      invoke('notify_icon', bytes, { headers: { 'x-key': key, 'x-ext': PHOTO_EXT[m[1]] } }).catch(() => undefined),
+    );
   }
   return notifyIcons.get(photo);
 }
@@ -3031,7 +3809,9 @@ function notifyIcon(photo) {
 // FNV-1a, enough to name a cache file.
 function hashHex(text) {
   let h = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  for (let i = 0; i < text.length; i++) {
+    h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
+  }
   return (h >>> 0).toString(16);
 }
 
@@ -3041,7 +3821,6 @@ el.notifyToggle.addEventListener('change', () => {
 
 el.emoticonToggle.addEventListener('change', () => saveSetting(EMOTICON_SETTING, el.emoticonToggle.checked ? 'on' : 'off'));
 el.shortcodeToggle.addEventListener('change', () => saveSetting(SHORTCODE_SETTING, el.shortcodeToggle.checked ? 'on' : 'off'));
-
 
 // Attachments: files go to the file host set in Settings, and their address into the message.
 
@@ -3059,7 +3838,7 @@ function insertAtCursor(text) {
   const start = el.input.selectionStart ?? el.input.value.length;
   const end = el.input.selectionEnd ?? start;
   const before = el.input.value.slice(0, start);
-  const spaced = (before && !before.endsWith(' ') ? ' ' : '') + text + ' ';
+  const spaced = `${before && !before.endsWith(' ') ? ' ' : ''}${text} `;
   el.input.setRangeText(spaced, start, end, 'end');
   fitInput();
   el.input.focus();
@@ -3071,7 +3850,7 @@ async function uploadFiles(files) {
     return;
   }
   for (const file of files) {
-    const name = file.name || `pasted.${(file.type.split('/')[1] || 'png')}`;
+    const name = file.name || `pasted.${file.type.split('/')[1] || 'png'}`;
     renderStatus(`Uploading ${name}…`);
     try {
       const bytes = new Uint8Array(await file.arrayBuffer());
@@ -3093,22 +3872,30 @@ el.attachFile.addEventListener('change', () => {
 });
 el.input.addEventListener('paste', (e) => {
   const file = clipboardImage(e);
-  if (!file) return;
+  if (!file) {
+    return;
+  }
   e.preventDefault();
   uploadFiles([file]);
 });
 document.addEventListener('dragover', (e) => {
-  if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
+  if (![...(e.dataTransfer?.types || [])].includes('Files')) {
+    return;
+  }
   e.preventDefault();
   document.body.classList.add('dropping');
 });
 document.addEventListener('dragleave', (e) => {
-  if (!e.relatedTarget) document.body.classList.remove('dropping');
+  if (!e.relatedTarget) {
+    document.body.classList.remove('dropping');
+  }
 });
 document.addEventListener('drop', (e) => {
   document.body.classList.remove('dropping');
   const files = [...(e.dataTransfer?.files || [])];
-  if (!files.length) return;
+  if (!files.length) {
+    return;
+  }
   e.preventDefault();
   uploadFiles(files);
 });
