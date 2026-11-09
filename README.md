@@ -173,7 +173,7 @@ token_file = "~/.config/lobby/server.token"
 
 Every shortcut can be changed under Settings, Keyboard shortcuts.
 
-**Reactions and replies.** Point at a message for your favourite emojis, more emojis, reply and a menu. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a reaction under that person's message. A reply goes out as `nick: text` and shows the message it answers.
+**Reactions and replies.** Point at a message for your favourite emojis, more emojis, reply and a menu. On a phone, hold a message instead: it lifts out of the chat with your favourite emojis, more emojis and reply above it. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a reaction under that person's message. A reply goes out as `nick: text` and shows the message it answers.
 
 **Unread.** A red New line marks where unread messages start. Nothing is marked read on its own: click the checkmark at the end of the New line, the Mark read button at the top, or press `Ctrl+Enter` (`Cmd+Enter` on a Mac).
 

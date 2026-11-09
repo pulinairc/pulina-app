@@ -1446,12 +1446,149 @@ function fillActions() {
 // away under the pointer; a click outside it closes it.
 el.col.addEventListener('pointerover', (e) => {
   const r = e.target.closest('.text');
-  if (!r?.line || actions.parentElement === r || (actionPanel && e.pointerType === 'mouse')) {
+  // A finger gets the long-press sheet instead of the hover bar.
+  if (e.pointerType === 'touch' || !r?.line || actions.parentElement === r || (actionPanel && e.pointerType === 'mouse')) {
     return;
   }
   fillActions();
   r.append(actions);
 });
+// Touch: holding a message, as in Signal. The chat dims and blurs, the message lifts above it
+// toward the middle of the screen, and the quick reactions arrive over it. A tap outside closes.
+// Moving the finger or letting go early is a scroll or a tap, never a press.
+
+const HOLD_MS = 400;
+const HOLD_MOVE_PX = 10;
+const SHEET_PILL_PX = 56;
+const SHEET_MARGIN_PX = 12;
+const SHEET_EXIT_MS = 420;
+const press = { timer: 0, x: 0, y: 0, sheet: null, held: null };
+
+function cancelPress() {
+  clearTimeout(press.timer);
+  press.timer = 0;
+}
+
+el.col.addEventListener('pointerdown', (e) => {
+  const r = e.target.closest('.text');
+  if (e.pointerType !== 'touch' || !r?.line) {
+    return;
+  }
+  cancelPress();
+  press.x = e.clientX;
+  press.y = e.clientY;
+  press.timer = setTimeout(() => {
+    press.timer = 0;
+    openSheet(r);
+  }, HOLD_MS);
+});
+el.col.addEventListener('pointermove', (e) => {
+  if (press.timer && Math.hypot(e.clientX - press.x, e.clientY - press.y) > HOLD_MOVE_PX) {
+    cancelPress();
+  }
+});
+for (const type of ['pointerup', 'pointercancel']) {
+  el.col.addEventListener(type, cancelPress);
+}
+// The system's own long-press menu would cover the sheet.
+el.col.addEventListener('contextmenu', (e) => {
+  if (e.target.closest('.text') && matchMedia('(hover: none)').matches) {
+    e.preventDefault();
+  }
+});
+
+function openSheet(row) {
+  closeSheet();
+  // iOS may have started a text selection during the hold, and the keyboard would leave
+  // the sheet half a screen: the sheet is the interaction now.
+  document.getSelection()?.removeAllRanges();
+  document.activeElement?.blur?.();
+  row.classList.add('pressed');
+  press.held = row;
+
+  const line = row.line;
+  const sheet = h('div', 'sheet');
+  const dim = h('div', 'sheet-dim');
+  const lifted = h('div', 'sheet-lift');
+  const copy = row.cloneNode(true);
+  copy.querySelector('.actions')?.remove();
+  copy.classList.remove('pressed');
+  lifted.append(copy);
+  const pill = h('div', 'glass sheet-pill');
+  const pick = (run) => () => {
+    closeSheet();
+    run();
+  };
+  for (const emoji of topReactions()) {
+    const b = h('button', 'sheet-react', emoji);
+    b.type = 'button';
+    b.setAttribute('aria-label', `React ${emoji}`);
+    b.addEventListener(
+      'click',
+      pick(() => react(line, emoji)),
+    );
+    pill.append(b);
+  }
+  const tool = (label, icon, run) => {
+    const b = h('button', 'sheet-tool');
+    b.type = 'button';
+    b.setAttribute('aria-label', label);
+    b.append(svg(icon));
+    b.addEventListener('click', pick(run));
+    pill.append(b);
+  };
+  tool('More emojis', ICONS.moreH, () => openPicker(row, (e) => react(line, e)));
+  tool('Reply', ICONS.reply, () => startReply(line));
+  dim.addEventListener('click', closeSheet);
+  sheet.addEventListener('pointerdown', (e) => e.stopPropagation());
+  sheet.addEventListener('touchmove', (e) => e.target === dim && e.preventDefault(), { passive: false });
+  sheet.append(dim, lifted, pill);
+  document.body.append(sheet);
+  press.sheet = sheet;
+
+  // Measured against the page, which the keyboard shortens; `k` turns measured pixels into
+  // style pixels when the window is zoomed for text size. The message rises toward the middle,
+  // never down, keeps room for the reactions above it, and scrolls inside when too tall.
+  const k = sheet.getBoundingClientRect().width / sheet.offsetWidth || 1;
+  const page = document.body.getBoundingClientRect();
+  const r = row.getBoundingClientRect();
+  const above = (SHEET_PILL_PX + PICKER_GAP + SHEET_MARGIN_PX) * k;
+  const room = Math.max(96 * k, page.height - above - SHEET_MARGIN_PX * k);
+  const height = Math.min(r.height, room);
+  let dy = Math.min(0, page.top + (page.height - height) / 2 - r.top);
+  if (r.top + dy < page.top + above) {
+    dy = page.top + above - r.top;
+  }
+  const over = r.top + height + dy + SHEET_MARGIN_PX * k - page.bottom;
+  if (over > 0) {
+    dy = Math.max(page.top + above - r.top, dy - over);
+  }
+  Object.assign(lifted.style, { left: `${r.left / k}px`, top: `${r.top / k}px`, width: `${r.width / k}px` });
+  if (height < r.height) {
+    lifted.style.height = `${height / k}px`;
+    lifted.classList.add('scrolls');
+  }
+  const pillWidth = pill.offsetWidth;
+  const left = Math.max(SHEET_MARGIN_PX, Math.min(r.left / k, page.width / k - pillWidth - SHEET_MARGIN_PX));
+  Object.assign(pill.style, { left: `${left}px`, top: `${(r.top - (SHEET_PILL_PX + PICKER_GAP) * k) / k}px` });
+  sheet.style.setProperty('--rise', `${dy / k}px`);
+  requestAnimationFrame(() => sheet.classList.add('lifted'));
+}
+
+function closeSheet() {
+  const sheet = press.sheet;
+  press.sheet = null;
+  press.held?.classList.replace('pressed', 'released');
+  const held = press.held;
+  press.held = null;
+  setTimeout(() => held?.classList.remove('released'), SHEET_EXIT_MS);
+  if (!sheet) {
+    return;
+  }
+  sheet.classList.add('closing');
+  setTimeout(() => sheet.remove(), SHEET_EXIT_MS);
+}
+
 function hideActions() {
   closePanel();
   actions.remove();
@@ -1494,7 +1631,7 @@ const CAN_VOICE = /[~&@%]/;
 
 /** When each nick last said something, per network: `net\nnick` to a timestamp. */
 const spoke = new Map();
-const nicklist = { el: null, menu: null, picked: new Set(), frame: 0 };
+const nicklist = { el: null, menu: null, picked: new Set(), frame: 0, timer: 0 };
 
 function spokeKey(net, nick) {
   return `${net}\n${nick.toLowerCase()}`;
@@ -1526,16 +1663,23 @@ function channelShown() {
   return b && b.name !== '' && !isPrivate(b) ? b : null;
 }
 
-// Messages arrive in bursts; the pill and the list redraw once per frame at most.
+// Messages arrive in bursts: the pill redraws once per frame at most, and the list, which can
+// hold a thousand people, at most every LIST_REDRAW_MS. Picking redraws it at once.
+const LIST_REDRAW_MS = 1000;
+
 function schedulePeople() {
-  if (nicklist.frame) {
-    return;
+  if (!nicklist.frame) {
+    nicklist.frame = requestAnimationFrame(() => {
+      nicklist.frame = 0;
+      renderPill();
+    });
   }
-  nicklist.frame = requestAnimationFrame(() => {
-    nicklist.frame = 0;
-    renderPill();
-    renderNicklist();
-  });
+  if (nicklist.el && !nicklist.timer) {
+    nicklist.timer = setTimeout(() => {
+      nicklist.timer = 0;
+      renderNicklist();
+    }, LIST_REDRAW_MS);
+  }
 }
 
 function renderPill() {
