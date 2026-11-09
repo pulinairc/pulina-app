@@ -506,6 +506,7 @@ fn app_info() -> AppInfo {
     AppInfo { version: env!("CARGO_PKG_VERSION"), commit: env!("LOBBY_COMMIT") }
 }
 
+#[cfg(desktop)]
 const ABOUT_MENU_ID: &str = "about";
 
 /// macOS: the standard menu bar, with Help > About Lobby opening the About section in Settings.
@@ -520,14 +521,15 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
 }
 
 pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_notification::init())
-        .on_menu_event(|app, event| {
-            if event.id().0 == ABOUT_MENU_ID {
-                let _ = app.emit("show-about", ());
-            }
-        })
+    let builder = tauri::Builder::default().plugin(tauri_plugin_opener::init()).plugin(tauri_plugin_notification::init());
+    // Phones have no menu bar.
+    #[cfg(desktop)]
+    let builder = builder.on_menu_event(|app, event| {
+        if event.id().0 == ABOUT_MENU_ID {
+            let _ = app.emit("show-about", ());
+        }
+    });
+    builder
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_menu(mac_menu(app.handle())?)?;
