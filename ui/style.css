@@ -1280,7 +1280,6 @@ dialog:focus { outline: none; }
   .jump { width: 40px; height: 40px; }
   .jump svg { width: 18px; height: 18px; }
 }
-}
 
 /* Small avatars and channel icons get the true squircle shape. */
 .av, .chan-icon {

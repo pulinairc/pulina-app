@@ -1,3 +1,7 @@
+### 0.5.10: 2026-11-09
+
+* Fix squircle photos and channel icons
+
 ### 0.5.9: 2026-11-09
 
 * Change jump buttons to matching outline icons
