@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Add page pictures to shelf links
+
 ### 1.0.1: 2026-11-10
 
 * Change the highlights inbox to a bit larger on big screens

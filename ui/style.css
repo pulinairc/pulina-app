@@ -3531,18 +3531,25 @@ body.docked #status {
   background: var(--panel);
   outline: none;
 }
+/* The page's own picture when it has one, otherwise a faint empty square. */
 .shelf-site {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 40px;
+  height: 40px;
   border-radius: 9px;
-  background: var(--raised);
-  color: var(--dim);
-  font-weight: 700;
-  font-size: 13px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 4%);
+}
+.shelf-site img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.shelf-site.filled img {
+  opacity: 1;
 }
 .shelf-text {
   flex: 1;

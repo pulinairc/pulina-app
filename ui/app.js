@@ -4949,7 +4949,7 @@ function shelfLink(l, url) {
   } catch {
     /* shown as typed */
   }
-  const badge = h('span', 'shelf-site', host.charAt(0).toUpperCase());
+  const badge = h('span', 'shelf-site');
   const title = h('span', 'shelf-title', shortUrl(url));
   const text = h('div', 'shelf-text');
   text.append(title, h('span', 'shelf-host', host));
@@ -4961,6 +4961,11 @@ function shelfLink(l, url) {
     const p = await getPreview(url);
     if (p?.title) {
       title.textContent = p.title;
+    }
+    if (p?.image) {
+      const img = image(p.image);
+      img.addEventListener('load', () => badge.classList.add('filled'));
+      badge.append(img);
     }
   };
   linkTitles.observe(row);
