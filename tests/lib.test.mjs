@@ -23,7 +23,6 @@ import {
   summarize,
   tokenize,
   nickColor,
-  completeNick,
   dayLabel,
   mentions,
   shortUrl,
@@ -88,11 +87,16 @@ test('nick colours ignore trailing underscores and avoid purple', () => {
   assert.ok(new Set(nicks.map(nickColor)).size >= 9);
 });
 
-test('completes nicks in order', () => {
-  const m = ['kaisla', 'Kaisla_', 'jaska'];
-  assert.equal(completeNick('ka', m), 'kaisla');
-  assert.equal(completeNick('ka', m, 'kaisla'), 'Kaisla_');
-  assert.equal(completeNick('x', m), null);
+test('Tab cycles every nick that starts with the word', () => {
+  const m = ['AnReal', 'AnReali', 'Acamus', 'anna'];
+  assert.deepEqual(
+    nickMatches('an', m, () => 0, Number.POSITIVE_INFINITY),
+    ['anna', 'AnReal', 'AnReali'],
+  );
+  assert.deepEqual(
+    nickMatches('x', m, () => 0),
+    [],
+  );
 });
 
 test('day labels use Finnish date format', () => {

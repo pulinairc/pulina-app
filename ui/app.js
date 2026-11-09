@@ -8,7 +8,6 @@ import {
   EVENT_KINDS,
   clock,
   commandMatches,
-  completeNick,
   continues,
   dayLabel,
   defaultShortcuts,
@@ -2531,23 +2530,37 @@ async function send() {
   }
 }
 
+/**
+ * Tab: the nicks that start with the word at the caret, one after another and round again,
+ * "AnReal: ", "AnReali: ", "AnReal: ". The word is remembered until another key is pressed.
+ */
 function complete() {
   const b = state.buffers.get(state.current);
   if (!b) {
     return;
   }
-  const value = el.input.value;
   if (!completion) {
-    const start = value.lastIndexOf(' ') + 1;
-    completion = { start, prefix: value.slice(start), last: '' };
+    const caret = el.input.selectionStart ?? el.input.value.length;
+    const m = /(^|\s)@?([^\s@:,]*)$/u.exec(el.input.value.slice(0, caret));
+    const list = nickMatches(m[2], nickCandidates(b), (n) => -spokeIn(b.net)(n), Number.POSITIVE_INFINITY);
+    if (!list.length) {
+      return;
+    }
+    completion = { start: m.index + m[1].length, end: caret, list, index: -1 };
   }
-  const nick = completeNick(completion.prefix, b.members, completion.last);
-  if (!nick) {
-    return;
-  }
-  completion.last = nick;
-  const suffix = completion.start === 0 ? ': ' : ' ';
-  el.input.value = value.slice(0, completion.start) + nick + suffix;
+  completion.index = (completion.index + 1) % completion.list.length;
+  putNick(completion.list[completion.index]);
+}
+
+/** Write a nick over the completion's span: "nick: " at the start of a message, "nick " elsewhere. */
+function putNick(nick) {
+  const { start, end } = completion;
+  const value = el.input.value;
+  const text = start === 0 ? `${nick}: ` : `${nick} `;
+  el.input.value = `${value.slice(0, start)}${text}${value.slice(end)}`;
+  completion.end = start + text.length;
+  el.input.focus();
+  el.input.setSelectionRange(completion.end, completion.end);
 }
 
 function findRow(line) {
@@ -2640,24 +2653,36 @@ function menuEntries() {
  * "nick: " at the start of a message and "nick " elsewhere; the @ goes, IRC has no use for it.
  * Enter picks only after an @, so a plain word that happens to match still sends with Enter.
  */
-function nickEntries(caret) {
-  const b = state.buffers.get(state.current);
-  const q = b && b.name !== '' ? nickQuery(el.input.value.slice(0, caret)) : null;
-  if (!q) {
-    return [];
-  }
-  const me = (state.me[b.net] || '').toLowerCase();
-  const spokeAt = spokeIn(b.net);
-  // Who is here, and who spoke here even if they have since left: answering someone who just
-  // quit is common, and their nick usually comes back.
+const NICK_MENU_SIZE = 6;
+
+/** Who is here, and who spoke here even if they have since left: answering someone who just
+ * quit is common, and their nick usually comes back. Never yourself. */
+function nickCandidates(b) {
   const seen = new Map([...b.members].map((n) => [n.toLowerCase(), n]));
   for (const l of b.lines) {
     if (CHAT_KINDS.has(l.kind) && l.nick && !seen.has(l.nick.toLowerCase())) {
       seen.set(l.nick.toLowerCase(), l.nick);
     }
   }
-  seen.delete(me);
-  const nicks = nickMatches(q.word, seen.values(), (n) => -spokeAt(n));
+  seen.delete((state.me[b.net] || '').toLowerCase());
+  return [...seen.values()];
+}
+
+/** A pick from the list, which Tab then carries on from through the rest of the matches. */
+function pickNick(list, nick, start, end) {
+  completion = { start, end, list, index: list.indexOf(nick) };
+  putNick(nick);
+  hideSlash();
+}
+
+function nickEntries(caret) {
+  const b = state.buffers.get(state.current);
+  const q = b && b.name !== '' ? nickQuery(el.input.value.slice(0, caret)) : null;
+  if (!q) {
+    return [];
+  }
+  const all = nickMatches(q.word, nickCandidates(b), (n) => -spokeIn(b.net)(n), Number.POSITIVE_INFINITY);
+  const nicks = all.slice(0, NICK_MENU_SIZE);
   // Already typed out in full: nothing left to suggest.
   if (!q.at && nicks.length === 1 && nicks[0].toLowerCase() === q.word.toLowerCase()) {
     return [];
@@ -2670,18 +2695,8 @@ function nickEntries(caret) {
     if (who.name !== nick) {
       parts.push(h('span', 'slash-desc', who.name));
     }
-    return { parts, nick: true, enter: q.at, apply: () => insertNick(nick, q.start, caret) };
+    return { parts, nick: true, enter: q.at, apply: () => pickNick(all, nick, q.start, caret) };
   });
-}
-
-function insertNick(nick, start, end) {
-  const value = el.input.value;
-  const text = start === 0 ? `${nick}: ` : `${nick} `;
-  el.input.value = `${value.slice(0, start)}${text}${value.slice(end)}`;
-  const caret = start + text.length;
-  el.input.focus();
-  el.input.setSelectionRange(caret, caret);
-  hideSlash();
 }
 
 /** Put an emoji where the colon or shortcode was, with a space after it. */

@@ -229,17 +229,6 @@ export function initial(nick) {
   return m ? m[0].toUpperCase() : '?';
 }
 
-/** Next nick matching `prefix`, cycling past `previous`. */
-export function completeNick(prefix, members, previous = '') {
-  const p = prefix.toLowerCase();
-  const matches = [...members].filter((m) => m.toLowerCase().startsWith(p)).sort((a, b) => a.localeCompare(b));
-  if (!matches.length) {
-    return null;
-  }
-  const i = matches.indexOf(previous);
-  return matches[(i + 1) % matches.length];
-}
-
 /**
  * The word being typed at the caret when it could be a nick: "@mi" or "mi" at the end of `before`.
  * Gives where it starts, whether it began with @, and the part to match. A bare word needs two letters.
