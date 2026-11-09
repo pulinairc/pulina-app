@@ -102,6 +102,7 @@ const el = {
   jumpLatest: $('jump-latest'),
   jumpLatestLabel: $('jump-latest-label'),
   markRead: $('mark-read'),
+  unreadCount: $('unread-count'),
   notifyToggle: $('notify-toggle'),
   notifyTest: $('notify-test'),
   notifyState: $('notify-state'),
@@ -1752,7 +1753,8 @@ function renderPill() {
   if (dock.side && dock.shown && !nicklist.el) {
     openNicklist();
   }
-  el.pill.setAttribute('aria-expanded', String(Boolean(nicklist.el)));
+  // Lit only while the drop-down hangs from it; a column beside the chat stands on its own.
+  el.pill.setAttribute('aria-expanded', String(Boolean(nicklist.el) && !nicklist.el.classList.contains('docked')));
 }
 
 function openNicklist() {
@@ -2932,6 +2934,9 @@ function updateJumps() {
     el.jumpLatestLabel.textContent = more ? `${more} more` : 'Latest';
   }
   el.markRead.hidden = count === 0;
+  // Said in words in the middle, so a busy chat at the bottom still shows what is unread.
+  el.unreadCount.hidden = count === 0;
+  el.unreadCount.textContent = `${count} unread`;
   el.markRead.dataset.tip = `Mark ${count} ${messages} read (${shortcutLabel('markRead')})`;
 }
 
@@ -2954,6 +2959,7 @@ function jumpToUnread() {
 }
 
 el.jumpUnread.addEventListener('click', jumpToUnread);
+el.unreadCount.addEventListener('click', jumpToUnread);
 el.jumpLatest.addEventListener('click', () => {
   el.log.scrollTo({ top: el.log.scrollHeight, behavior: 'smooth' });
 });

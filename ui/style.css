@@ -1929,6 +1929,24 @@ dialog:focus {
   position: static;
   transform: none;
 }
+#unread-count {
+  position: absolute;
+  left: 50%;
+  top: 11px;
+  height: 28px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--new);
+  font-size: 12px;
+  font-weight: 600;
+  transform: translateX(-50%);
+  pointer-events: auto;
+}
+#unread-count[hidden] {
+  display: none;
+}
+
 /* Jump on the left, Mark read on the right, even when only one shows. */
 #mark-read {
   --tint: var(--ok);
