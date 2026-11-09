@@ -1,9 +1,10 @@
-### [Unreleased]
+### 0.9.1: 2026-11-09
 
 * Add Windows and Android builds
 * Add person cards when pointing at the people list
 * Fix name suggestions missing people who just left
 * Fix Tab to cycle through every matching nick
+* Remove the dot beside messages meant for you
 
 ### 0.8.3: 2026-11-09
 
