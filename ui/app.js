@@ -2607,6 +2607,7 @@ el.people.addEventListener('close', () => el.input.focus());
 // Emoji picker: search, frequently used, every category, and a bar to jump between them.
 
 const PICKER_GAP = 8;
+const PICKER_PREBUILD_MS = 3000;
 const FREQUENT_COUNT = 18;
 const SEARCH_LIMIT = 120;
 const CATEGORY_ICONS = {
@@ -2621,7 +2622,7 @@ const CATEGORY_ICONS = {
   flags: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
 };
 
-const pickerState = { el: null, data: null, onPick: null, sections: [], tabs: [], opening: 0 };
+const pickerState = { el: null, data: null, onPick: null, sections: [], tabs: [], opening: 0, open: false };
 
 async function emojiData() {
   pickerState.data ??= await fetch('vendor/emoji.json').then((r) => r.json());
@@ -2632,11 +2633,11 @@ function categoryIcon(id) {
   return svg(`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CATEGORY_ICONS[id]}</svg>`);
 }
 
+// One click handler on the picker serves every emoji button.
 function emojiButton(native, label) {
   const b = h('button', 'pick', native);
   b.type = 'button';
   b.setAttribute('aria-label', label);
-  b.addEventListener('click', () => choose(native));
   return b;
 }
 
@@ -2736,6 +2737,13 @@ async function buildPicker() {
 
   root.append(search, scroll, tabs);
   root.addEventListener('pointerdown', (e) => e.stopPropagation());
+  root.addEventListener('click', (e) => {
+    const pick = e.target.closest('.pick');
+    if (pick) choose(pick.textContent);
+  });
+  // Kept laid out while closed, so opening it only has to show it.
+  root.classList.add('closed');
+  document.body.append(root);
   pickerState.el = root;
   pickerState.input = input;
   pickerState.frequent = frequent;
@@ -2743,10 +2751,13 @@ async function buildPicker() {
   pickerState.showSearch = showSearch;
 }
 
+// Built ahead, so the first colon or emoji button opens it at once.
+setTimeout(() => { pickerState.building ??= buildPicker(); }, PICKER_PREBUILD_MS);
+
 /** Open the picker next to `anchor`; `onPick` gets the chosen emoji. */
 async function openPicker(anchor, onPick, { focus = true } = {}) {
   const opening = ++pickerState.opening;
-  if (!pickerState.el) await buildPicker();
+  await (pickerState.building ??= buildPicker());
   // Closed again while the emoji were still loading.
   if (opening !== pickerState.opening) return;
   const p = pickerState;
@@ -2757,7 +2768,8 @@ async function openPicker(anchor, onPick, { focus = true } = {}) {
   p.scroll.scrollTop = 0;
   p.tabs.forEach((t, i) => t.classList.toggle('active', i === 0));
 
-  document.body.append(p.el);
+  p.el.classList.remove('closed');
+  p.open = true;
   // Measured once placed, against the page rather than the window: the iPhone zooms the page
   // and shortens it for the keyboard. `k` turns measured pixels back into style pixels.
   const k = p.el.getBoundingClientRect().width / p.el.offsetWidth || 1;
@@ -2780,15 +2792,16 @@ async function openPicker(anchor, onPick, { focus = true } = {}) {
 
 function closePicker() {
   pickerState.opening += 1;
-  pickerState.el?.remove();
+  pickerState.el?.classList.add('closed');
+  pickerState.open = false;
   pickerState.onPick = null;
 }
 
 document.addEventListener('pointerdown', () => {
-  if (pickerState.el?.isConnected) closePicker();
+  if (pickerState.open) closePicker();
 });
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && pickerState.el?.isConnected) {
+  if (e.key === 'Escape' && pickerState.open) {
     e.stopPropagation();
     closePicker();
   }

@@ -1312,6 +1312,8 @@ dialog:focus { outline: none; }
   overflow: hidden;
 }
 
+.picker.closed { visibility: hidden; pointer-events: none; }
+
 .picker-search {
   display: flex;
   align-items: center;
