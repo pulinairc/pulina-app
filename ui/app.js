@@ -3532,8 +3532,8 @@ const TEXT_SIZE_KEY = 'lobby.textSize';
 const TEXT_SIZE_DEFAULT = 100;
 const TEXT_SIZE_MIN = 70;
 const TEXT_SIZE_MAX = 200;
-/** One press of Cmd/Ctrl + or -: two steps of the slider. */
-const TEXT_SIZE_STEP = 10;
+/** One press of Cmd/Ctrl + or -: one percent. */
+const TEXT_SIZE_STEP = 1;
 /** On iPhone 100 % is a fifth larger than the page's own pixel sizes. */
 const IOS_TEXT_BASE = 1.2;
 

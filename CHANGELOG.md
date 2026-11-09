@@ -4,7 +4,7 @@
 * Add a build status badge to the README
 * Fix macOS notifications not showing while Lobby is in front
 * Fix text size changing with the window width
-* Add Cmd or Ctrl with plus, minus and 0 for text size
+* Add Cmd or Ctrl with plus, minus and 0 for text size, 1 % a press
 * Add a delivery check to the test notification
 
 ### 0.5.10: 2026-11-09
