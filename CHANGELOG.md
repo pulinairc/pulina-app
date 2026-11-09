@@ -1,4 +1,4 @@
-### [Unreleased]
+### 0.7.0: 2026-11-09
 
 * Add an About section and Help > About on macOS
 * Add remembering the window size on Linux and macOS
@@ -6,6 +6,7 @@
 * Add a live unread count to the top of the chat
 * Change highlights to a margin dot and a sweeping light
 * Change /me to a narration line, or a spark after a message
+* Remove the crown from ops in the people list
 
 ### 0.6.0: 2026-11-09
 
