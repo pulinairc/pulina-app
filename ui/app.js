@@ -1711,22 +1711,23 @@ function schedulePeople() {
   }
 }
 
-// Where the list lives, per device: a drop-down from the pill, or a column beside the chat
-// that stays (`side`), and whether that column is showing (`shown`).
+// Where the list lives: a drop-down from the pill, or a column beside the chat that stays
+// (`side`), and whether that column is showing (`shown`). Kept per platform in the synced
+// settings, which last: a phone's web storage can be lost when the system ends the app.
+function dockSetting() {
+  return `${DOCK_KEY}.${PLATFORM.value || 'desktop'}`;
+}
+
 function dockPrefs() {
   try {
-    return JSON.parse(localStorage.getItem(DOCK_KEY)) || {};
+    return JSON.parse(state.settings[dockSetting()] || 'null') || {};
   } catch {
     return {};
   }
 }
 
 function saveDock(prefs) {
-  try {
-    localStorage.setItem(DOCK_KEY, JSON.stringify(prefs));
-  } catch {
-    /* storage may be unavailable */
-  }
+  saveSetting(dockSetting(), JSON.stringify(prefs));
 }
 
 const PEOPLE_ICON =

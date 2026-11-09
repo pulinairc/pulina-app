@@ -1,6 +1,8 @@
 ### [Unreleased]
 
 * Add an About section and Help > About on macOS
+* Add remembering the window size on Linux and macOS
+* Fix the people list forgetting it was kept beside the chat
 
 ### 0.6.0: 2026-11-09
 
