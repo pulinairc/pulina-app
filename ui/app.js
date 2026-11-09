@@ -1575,8 +1575,11 @@ window.visualViewport?.addEventListener('resize', fitKeyboard);
 window.visualViewport?.addEventListener('scroll', fitKeyboard);
 
 function fitInput() {
+  // Measuring collapses the box for a moment, which scrolls the chat; the bottom stays the bottom.
+  const pinned = atBottom();
   el.input.style.height = 'auto';
   el.input.style.height = `${el.input.scrollHeight}px`;
+  if (pinned) toBottom();
 }
 
 // Text set from code (sending, replies, history) resizes the box too.
@@ -1842,9 +1845,12 @@ el.jumpLatest.addEventListener('click', () => {
 });
 
 let jumpFrame = 0;
-// A resize keeps the latest message in view when it was in view before.
+// A resize of the chat or of what is in it (a photo loading) keeps the latest message in view
+// when it was in view before.
 let stuck = true;
-new ResizeObserver(() => stuck && toBottom()).observe(el.log);
+const stayDown = new ResizeObserver(() => stuck && toBottom());
+stayDown.observe(el.log);
+stayDown.observe(el.col);
 
 el.log.addEventListener('scroll', () => {
   stuck = atBottom();
