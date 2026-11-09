@@ -1,6 +1,7 @@
-### [Unreleased]
+### 0.8.1: 2026-11-09
 
 * Change command cards to the size of reply quotes
+* Change the space after the macOS window buttons to be tighter
 
 ### 0.8.0: 2026-11-09
 
