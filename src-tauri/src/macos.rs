@@ -11,6 +11,7 @@ use objc2_user_notifications::{
     UNNotificationPresentationOptions, UNNotificationRequest, UNNotificationResponse, UNNotificationSetting, UNNotificationSettings,
     UNNotificationSound, UNUserNotificationCenter, UNUserNotificationCenterDelegate,
 };
+use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::sync::{Mutex, OnceLock};
 use tokio::sync::oneshot;
@@ -136,14 +137,22 @@ pub fn authorize() -> oneshot::Receiver<Result<bool, String>> {
     rx
 }
 
+/// macOS moves an attachment's file into its own store, so each notification gets its own copy of the cached photo.
+fn attachment_copy(id: &str, path: &Path) -> Option<PathBuf> {
+    let ext = path.extension()?.to_str()?;
+    let copy = std::env::temp_dir().join(format!("lobby-notify-{id}.{ext}"));
+    std::fs::copy(path, &copy).ok()?;
+    Some(copy)
+}
+
 /// Answers with the reason when macOS refuses it.
 pub fn notify(id: &str, title: &str, body: &str, image: Option<&str>) -> oneshot::Receiver<Option<String>> {
     let content = UNMutableNotificationContent::new();
     content.setTitle(&NSString::from_str(title));
     content.setBody(&NSString::from_str(body));
     content.setSound(Some(&UNNotificationSound::defaultSound()));
-    if let Some(path) = image {
-        let url = NSURL::fileURLWithPath(&NSString::from_str(path));
+    if let Some(path) = image.and_then(|p| attachment_copy(id, Path::new(p))) {
+        let url = NSURL::fileURLWithPath(&NSString::from_str(&path.to_string_lossy()));
         let attachment: Option<Retained<UNNotificationAttachment>> =
             unsafe { UNNotificationAttachment::attachmentWithIdentifier_URL_options_error(&NSString::from_str("photo"), &url, None) }.ok();
         if let Some(a) = attachment {
@@ -160,6 +169,18 @@ pub fn notify(id: &str, title: &str, body: &str, image: Option<&str>) -> oneshot
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn attachment_copy_leaves_the_cached_photo_alone() {
+        let photo = std::env::temp_dir().join("lobby-test-photo.png");
+        std::fs::write(&photo, b"png").unwrap();
+        let copy = attachment_copy("42", &photo).unwrap();
+        assert_ne!(copy, photo);
+        assert_eq!(std::fs::read(&copy).unwrap(), b"png");
+        std::fs::remove_file(&copy).unwrap();
+        assert!(photo.exists());
+        assert!(attachment_copy("43", &std::env::temp_dir().join("lobby-missing.png")).is_none());
+    }
 
     #[test]
     fn states_read_as_the_page_expects() {

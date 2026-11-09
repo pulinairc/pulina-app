@@ -369,8 +369,15 @@ fn open_notify_settings() -> Result<(), String> {
 #[tauri::command]
 async fn notify_mac(id: String, title: String, body: String, image: Option<String>) -> Result<(), String> {
     #[cfg(target_os = "macos")]
-    if let Ok(Some(refused)) = macos::notify(&id, &title, &body, image.as_deref()).await {
-        return Err(refused);
+    {
+        let mut refused = macos::notify(&id, &title, &body, image.as_deref()).await.ok().flatten();
+        // A photo macOS will not take should not cost the notification itself.
+        if refused.is_some() && image.is_some() {
+            refused = macos::notify(&id, &title, &body, None).await.ok().flatten();
+        }
+        if let Some(reason) = refused {
+            return Err(reason);
+        }
     }
     #[cfg(not(target_os = "macos"))]
     let _ = (id, title, body, image);
