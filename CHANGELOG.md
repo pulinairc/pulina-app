@@ -3,6 +3,7 @@
 * Change Mac channel keys to Cmd, so Option+2 types @
 * Add name suggestions with photos as you type, @ optional
 * Fix long press still selecting text on iPhone
+* Change the jump buttons on touch screens to a smaller size
 
 ### 0.8.1: 2026-11-09
 

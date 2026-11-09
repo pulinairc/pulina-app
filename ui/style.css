@@ -2135,20 +2135,20 @@ dialog:focus {
   font-size: 13px;
   white-space: nowrap;
 }
-/* Thumb-sized on touch screens. */
+/* A little bigger for a thumb on touch screens. */
 @media (pointer: coarse) {
   .jump {
-    width: 40px;
-    height: 40px;
+    width: 34px;
+    height: 34px;
   }
   .jump svg {
-    width: 18px;
-    height: 18px;
+    width: 15px;
+    height: 15px;
   }
   #jump-latest {
-    gap: 7px;
-    padding: 0 16px 0 14px;
-    font-size: 15px;
+    gap: 5px;
+    padding: 0 12px 0 10px;
+    font-size: 13px;
   }
 }
 
