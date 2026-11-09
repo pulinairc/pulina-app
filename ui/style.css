@@ -3176,21 +3176,6 @@ body.docked #status {
   border-radius: 14px;
   overflow: hidden;
 }
-@media (min-width: 520px) and (min-height: 560px) {
-  .inbox-panel {
-    width: min(440px, calc(100vw - 24px));
-    max-height: min(680px, calc(100vh - 80px));
-  }
-  .inbox-row .av {
-    --avatar: 32px;
-  }
-  .inbox-text {
-    font-size: 14px;
-  }
-  .inbox-meta {
-    font-size: 12.5px;
-  }
-}
 .inbox-grip {
   display: none;
 }
@@ -3198,11 +3183,28 @@ body.docked #status {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 12px 14px 8px;
+  padding: 10px 14px 10px 10px;
 }
-.inbox-title {
+.inbox-tabs {
   flex: 1;
+  display: flex;
+  gap: 4px;
+}
+.inbox-tab {
+  height: 28px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--faint);
+  font-size: 13px;
   font-weight: 600;
+}
+.inbox-tab:hover {
+  color: var(--text);
+}
+.inbox-tab[aria-selected="true"] {
+  background: var(--hover);
   color: var(--strong);
 }
 .inbox-link {
@@ -3280,8 +3282,9 @@ body.docked #status {
 }
 .inbox-done {
   flex-shrink: 0;
-  width: 26px;
-  height: 26px;
+  align-self: center;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3317,19 +3320,24 @@ body.docked #status {
 .inbox-foot:hover {
   color: var(--strong);
 }
-.switch-inbox {
-  margin: 0 8px 6px;
-  padding: 7px 10px;
-  border: 1px solid var(--line);
-  border-radius: 9px;
-  background: none;
-  color: var(--dim);
-  font-size: 13px;
-  text-align: left;
-}
-.switch-inbox:hover {
-  color: var(--strong);
-  border-color: var(--line-strong);
+@media (min-width: 520px) and (min-height: 560px) {
+  .inbox-panel {
+    width: min(440px, calc(100vw - 24px));
+    max-height: min(680px, calc(100vh - 80px));
+  }
+  .inbox-row .av {
+    --avatar: 32px;
+  }
+  .inbox-text {
+    font-size: 14px;
+  }
+  .inbox-meta {
+    font-size: 12.5px;
+  }
+  .inbox-done {
+    width: 34px;
+    height: 34px;
+  }
 }
 @media (pointer: coarse), (max-width: 600px) {
   .inbox-dim {
@@ -3568,14 +3576,6 @@ body.docked #status {
   font-size: 10.5px;
   color: var(--faint);
 }
-.shelf-out.media-open {
-  position: static;
-  opacity: 0;
-  flex-shrink: 0;
-}
-.shelf-link:hover .shelf-out {
-  opacity: 1;
-}
 .shelf-empty {
   padding: 40px 12px;
   text-align: center;
@@ -3584,7 +3584,7 @@ body.docked #status {
 }
 .shelf-more {
   display: block;
-  margin: 12px auto 0;
+  margin: 8px auto 4px;
   padding: 6px 14px;
   border: 1px solid var(--line);
   border-radius: 9px;

@@ -1,6 +1,11 @@
-### [Unreleased]
+### 1.0.1: 2026-11-10
 
 * Change the highlights inbox to a bit larger on big screens
+* Change the inbox done button to a bit larger
+* Change opening a highlight to leave it unread
+* Change the inbox header to For you and Archive tabs
+* Change the shelf to show the newest at the bottom
+* Add a Highlights button beside Settings
 
 ### 1.0.0: 2026-11-10
 

@@ -103,8 +103,8 @@ const el = {
   inboxPill: $('inbox-pill'),
   inbox: $('inbox'),
   inboxList: $('inbox-list'),
-  inboxTitle: $('inbox-title'),
-  inboxBack: $('inbox-back'),
+  inboxFreshTab: $('inbox-fresh-tab'),
+  inboxArchiveTab: $('inbox-archive-tab'),
   inboxAll: $('inbox-all'),
   inboxFoot: $('inbox-foot'),
   openInbox: $('open-inbox'),
@@ -4673,15 +4673,16 @@ function renderInbox() {
     return;
   }
   const list = inbox.archive ? archived : fresh;
-  el.inboxTitle.textContent = inbox.archive ? 'Archive' : 'For you';
-  el.inboxBack.hidden = !inbox.archive;
+  el.inboxFreshTab.textContent = fresh.length ? `For you · ${fresh.length}` : 'For you';
+  el.inboxFreshTab.setAttribute('aria-selected', String(!inbox.archive));
+  el.inboxArchiveTab.setAttribute('aria-selected', String(inbox.archive));
   el.inboxAll.hidden = inbox.archive || fresh.length === 0;
   el.inboxList.replaceChildren(...list.map((l) => inboxRow(l, !inbox.archive)));
   if (!list.length) {
     el.inboxList.append(h('div', 'inbox-empty', inbox.archive ? 'Nothing here yet.' : 'All caught up.'));
   }
-  el.inboxFoot.hidden = inbox.archive && !inbox.older;
-  el.inboxFoot.textContent = inbox.archive ? 'Load older' : `Archive · ${archived.length}`;
+  el.inboxFoot.hidden = !inbox.archive || !inbox.older;
+  el.inboxFoot.textContent = 'Load older';
 }
 
 function inboxText(l) {
@@ -4706,7 +4707,7 @@ function inboxRow(l, fresh) {
     done.dataset.tip = 'Done';
     done.setAttribute('aria-label', 'Done');
     done.innerHTML =
-      '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+      '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
     done.addEventListener('click', (e) => {
       e.stopPropagation();
       markDone(l.id);
@@ -4715,9 +4716,6 @@ function inboxRow(l, fresh) {
     swipeToDone(row, l.id);
   }
   const open = () => {
-    if (fresh) {
-      markDone(l.id);
-    }
     closeInbox();
     openLine(l);
   };
@@ -4791,17 +4789,16 @@ el.openInbox.addEventListener('click', () => {
   openInbox();
 });
 el.inboxAll.addEventListener('click', markAllDone);
-el.inboxBack.addEventListener('click', () => {
-  inbox.archive = false;
-  renderInbox();
-});
-el.inboxFoot.addEventListener('click', () => {
-  if (!inbox.archive) {
-    inbox.archive = true;
-    return renderInbox();
-  }
-  loadHighlights(Math.min(...inbox.lines.keys()));
-});
+for (const [tab, archive] of [
+  [el.inboxFreshTab, false],
+  [el.inboxArchiveTab, true],
+]) {
+  tab.addEventListener('click', () => {
+    inbox.archive = archive;
+    renderInbox();
+  });
+}
+el.inboxFoot.addEventListener('click', () => loadHighlights(Math.min(...inbox.lines.keys())));
 el.inbox.querySelector('.inbox-dim').addEventListener('click', closeInbox);
 document.addEventListener(
   'keydown',
@@ -4863,6 +4860,7 @@ async function loadShelf(more = false) {
     el.shelf.replaceChildren(h('div', 'shelf-empty', 'Looking…'));
   }
   shelf.loading = true;
+  const fromBottom = el.shelf.scrollHeight - el.shelf.scrollTop;
   const before = more && shelf.lines.length ? shelf.lines[shelf.lines.length - 1].id : null;
   const lines = await invoke('links', { net: b.net, buffer: b.name, before }).catch(() => []);
   shelf.loading = false;
@@ -4871,14 +4869,21 @@ async function loadShelf(more = false) {
   }
   shelf.lines.push(...lines);
   shelf.older = lines.length >= FOUND_PAGE;
-  renderShelf();
+  renderShelf(more ? fromBottom : null);
 }
 
-function renderShelf() {
+/** Oldest first like the chat, so the newest sits at the bottom where the shelf opens. */
+function renderShelf(keepFromBottom = null) {
   const nodes = [];
+  if (shelf.older && shelf.lines.length) {
+    const more = h('button', 'shelf-more', 'Older');
+    more.type = 'button';
+    more.addEventListener('click', () => loadShelf(true));
+    nodes.push(more);
+  }
   let day = null;
   let tiles = null;
-  for (const l of shelf.lines) {
+  for (const l of [...shelf.lines].reverse()) {
     if (!day || !sameDay(day, l.ts)) {
       day = l.ts;
       nodes.push(h('div', 'shelf-day', dayLabel(l.ts)));
@@ -4901,16 +4906,11 @@ function renderShelf() {
       tiles.append(shelfTile(l, t.value, kind));
     }
   }
-  if (!nodes.length) {
+  if (!shelf.lines.length) {
     nodes.push(h('div', 'shelf-empty', 'No links, pictures or videos here yet.'));
   }
-  if (shelf.older && shelf.lines.length) {
-    const more = h('button', 'shelf-more', 'Older');
-    more.type = 'button';
-    more.addEventListener('click', () => loadShelf(true));
-    nodes.push(more);
-  }
   el.shelf.replaceChildren(...nodes);
+  el.shelf.scrollTop = keepFromBottom === null ? el.shelf.scrollHeight : el.shelf.scrollHeight - keepFromBottom;
 }
 
 function shelfTip(l) {
@@ -4955,9 +4955,7 @@ function shelfLink(l, url) {
   text.append(title, h('span', 'shelf-host', host));
   const who = h('div', 'shelf-who');
   who.append(avatar(l.nick, l.mask), h('span', 'shelf-time', shortWhen(l.ts)));
-  const out = openButton(url);
-  out.classList.add('shelf-out');
-  row.append(badge, text, who, out);
+  row.append(badge, text, who);
   row.dataset.tip = shelfTip(l);
   row.fill = async () => {
     const p = await getPreview(url);

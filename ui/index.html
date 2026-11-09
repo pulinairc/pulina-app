@@ -85,11 +85,13 @@
     <label for="filter" class="sr">Find a channel</label>
     <div class="switch-top">
       <input id="filter" autocomplete="off" placeholder="Jump to a channel or person">
+      <button id="open-inbox" class="icon-btn" type="button" aria-label="Highlights" data-tip="Highlights">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-3.9 7.9"/></svg>
+      </button>
       <button id="gear" class="icon-btn" type="button" aria-label="Settings" data-tip="Settings" aria-controls="settings">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       </button>
     </div>
-    <button id="open-inbox" class="switch-inbox" type="button">Highlights</button>
     <div id="list" role="listbox"></div>
   </dialog>
 
@@ -98,8 +100,10 @@
     <div class="inbox-panel glass">
       <div class="inbox-grip" aria-hidden="true"></div>
       <div class="inbox-head">
-        <button id="inbox-back" class="inbox-link" type="button" hidden>‹ For you</button>
-        <span id="inbox-title" class="inbox-title">For you</span>
+        <div class="inbox-tabs" role="tablist">
+          <button id="inbox-fresh-tab" class="inbox-tab" type="button" role="tab">For you</button>
+          <button id="inbox-archive-tab" class="inbox-tab" type="button" role="tab">Archive</button>
+        </div>
         <button id="inbox-all" class="inbox-link" type="button">Mark all read</button>
       </div>
       <div id="inbox-list" class="inbox-list"></div>
