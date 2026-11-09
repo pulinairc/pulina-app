@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Add an About section and Help > About on macOS
+
 ### 0.6.0: 2026-11-09
 
 * Fix the missing message count on the jump button

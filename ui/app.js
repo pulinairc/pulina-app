@@ -903,6 +903,27 @@ el.gear.addEventListener('click', () => {
   el.settings.showModal();
   el.settings.focus();
 });
+// About: the version and the commit it was built from, linked to that commit.
+const REPO_URL = 'https://github.com/rollecode/lobby';
+
+async function showVersion() {
+  const info = await invoke('app_info').catch(() => null);
+  if (!info) {
+    return;
+  }
+  const link = $('about-version');
+  link.textContent = `Lobby ${info.version}${info.commit ? `-${info.commit}` : ''}`;
+  link.href = info.commit ? `${REPO_URL}/commit/${info.commit}` : REPO_URL;
+}
+
+// Help > About on macOS: Settings, scrolled to the end.
+function showAbout() {
+  if (!el.settings.open) {
+    el.gear.click();
+  }
+  $('about-section').scrollIntoView({ block: 'end' });
+}
+
 el.settingsClose.addEventListener('click', () => el.settings.close());
 el.settings.addEventListener('click', (e) => {
   if (e.target === el.settings) {
@@ -3293,6 +3314,8 @@ async function start() {
   });
   await listen('whois', (e) => onWhois(e.payload));
   await listen('notification-click', (e) => openNotified(e.payload));
+  await listen('show-about', showAbout);
+  showVersion();
   await listen('setting', (e) => {
     state.settings[e.payload.key] = e.payload.value;
     if (e.payload.key === READ_SETTING) {

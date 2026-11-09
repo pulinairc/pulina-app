@@ -1042,6 +1042,24 @@ dialog:focus {
   color: var(--faint);
 }
 
+#about-section p {
+  margin: 0 0 8px;
+}
+#about-section a {
+  color: var(--dim);
+}
+#about-section a:hover {
+  color: var(--strong);
+}
+.about {
+  font-size: 15px;
+}
+#about-section .about a {
+  color: var(--strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* Compact: the corner-of-the-screen size */
 
 @media (max-width: 520px) {

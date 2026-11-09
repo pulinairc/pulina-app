@@ -494,11 +494,44 @@ fn player() -> String {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// The version and the commit it was built from, for the About section in Settings.
+#[derive(Serialize)]
+struct AppInfo {
+    version: &'static str,
+    commit: &'static str,
+}
+
+#[tauri::command]
+fn app_info() -> AppInfo {
+    AppInfo { version: env!("CARGO_PKG_VERSION"), commit: env!("LOBBY_COMMIT") }
+}
+
+const ABOUT_MENU_ID: &str = "about";
+
+/// macOS: the standard menu bar, with Help > About Lobby opening the About section in Settings.
+#[cfg(target_os = "macos")]
+fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
+    use tauri::menu::{HELP_SUBMENU_ID, Menu, MenuItem};
+    let menu = Menu::default(app)?;
+    if let Some(help) = menu.get(HELP_SUBMENU_ID).and_then(|m| m.as_submenu().cloned()) {
+        help.append(&MenuItem::with_id(app, ABOUT_MENU_ID, "About Lobby", true, None::<&str>)?)?;
+    }
+    Ok(menu)
+}
+
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .on_menu_event(|app, event| {
+            if event.id().0 == ABOUT_MENU_ID {
+                let _ = app.emit("show-about", ());
+            }
+        })
         .setup(|app| {
+            #[cfg(target_os = "macos")]
+            app.set_menu(mac_menu(app.handle())?)?;
+
             let data = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data)?;
 
@@ -544,7 +577,8 @@ pub fn run() {
             save_connection,
             server_networks,
             save_server_network,
-            delete_server_network
+            delete_server_network,
+            app_info
         ])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
