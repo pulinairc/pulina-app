@@ -336,6 +336,27 @@ a:focus-visible {
   margin-left: -6px;
   padding-left: 6px;
 }
+/* Your name in a line meant for you: a soft shine crosses it now and then. */
+.text.for-me .mention {
+  background: linear-gradient(110deg, var(--mention-bg) 35%, rgb(95 224 179 / 38%) 50%, var(--mention-bg) 65%) no-repeat;
+  background-size: 300% 100%;
+  animation: glimmer 2.6s ease-in-out infinite;
+}
+@keyframes glimmer {
+  0%,
+  25% {
+    background-position: 100% 0;
+  }
+  75%,
+  100% {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .text.for-me .mention {
+    animation: none;
+  }
+}
 .text.for-me::before {
   content: "";
   position: absolute;

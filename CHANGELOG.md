@@ -1,6 +1,7 @@
 ### [Unreleased]
 
 * Remove the sweeping light from highlights
+* Add a soft glimmer to your name in highlights
 
 ### 0.7.0: 2026-11-09
 
