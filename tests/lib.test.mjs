@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
 import {
   APP_ICONS,
+  byActivity,
+  fadeFor,
+  modeAction,
+  peopleGroups,
+  quietFor,
+  roleOf,
   DEFAULT_ICON,
   colonOpensPicker,
   notifyAdvice,
@@ -316,4 +322,53 @@ test('every app icon exists for each platform', () => {
   assert.deepEqual(pngs('ui/icons'), names);
   assert.deepEqual(pngs('ui/icons/mac'), names);
   assert.deepEqual(pngs('src-tauri/icons/ios'), names);
+});
+
+test('people sort by when they last spoke, ops first', () => {
+  const now = Date.UTC(2026, 10, 9, 18);
+  const dayStart = Date.UTC(2026, 10, 9);
+  const spoke = { veera: now - 2 * 60e3, otso: now - 3600e3, lumi: now - 30 * 60e3, iida: now - 4 * 86400e3 };
+  const modes = new Map([
+    ['otso', '@'],
+    ['kaisla', '@+'],
+    ['jaska', '+'],
+  ]);
+  const groups = peopleGroups(['iida', 'jaska', 'kaisla', 'lumi', 'otso', 'pekka', 'veera'], modes, (n) => spoke[n], now, dayStart);
+  assert.deepEqual(
+    groups.map((g) => [g.id, g.people.map((p) => p.nick)]),
+    [
+      ['ops', ['otso', 'kaisla']],
+      ['now', ['veera']],
+      ['today', ['lumi']],
+      ['away', ['iida', 'jaska', 'pekka']],
+    ],
+  );
+  assert.deepEqual(
+    byActivity(['b', 'A', 'c'], () => 0),
+    ['A', 'b', 'c'],
+  );
+});
+
+test('quiet people fade and say for how long', () => {
+  const now = 1_000_000_000_000;
+  assert.equal(quietFor(0, now), '');
+  assert.equal(quietFor(now - 20e3, now), 'now');
+  assert.equal(quietFor(now - 14 * 60e3, now), '14 min');
+  assert.equal(quietFor(now - 3 * 3600e3, now), '3 h');
+  assert.equal(quietFor(now - 4 * 86400e3, now), '4 d');
+  assert.equal(fadeFor(now - 60e3, now), 1);
+  assert.ok(fadeFor(now - 5 * 3600e3, now) < fadeFor(now - 2 * 3600e3, now));
+  assert.equal(fadeFor(0, now), fadeFor(now - 30 * 86400e3, now));
+});
+
+test('op and voice give to whoever lacks it, else take from all', () => {
+  assert.equal(roleOf('@+'), 'op');
+  assert.equal(roleOf('%'), 'voice');
+  assert.equal(roleOf(''), '');
+  const modes = new Map([
+    ['a', '+'],
+    ['b', '@'],
+  ]);
+  assert.deepEqual(modeAction(['a', 'b', 'c'], modes, '+'), { give: true, nicks: ['b', 'c'] });
+  assert.deepEqual(modeAction(['a'], modes, '+'), { give: false, nicks: ['a'] });
 });

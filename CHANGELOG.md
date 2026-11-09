@@ -9,6 +9,8 @@
 * Fix photo notifications failing on macOS
 * Fix the emoji picker freezing on macOS
 * Fix Add reaction vanishing as messages arrive
+* Add a people list with op and voice in batches
+* Move settings and mute into the channel list
 
 ### 0.5.10: 2026-11-09
 

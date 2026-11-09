@@ -635,3 +635,88 @@ export const APP_ICONS = [
   ['neon-glow', 'Neon glow'],
 ];
 export const DEFAULT_ICON = APP_ICONS[0][0];
+
+// The people list: ops first, then everyone by when they last spoke.
+
+const MINUTE_MS = 60 * 1000;
+const HOUR_MS = 60 * MINUTE_MS;
+const DAY_MS = 24 * HOUR_MS;
+/** Spoke this recently: talking now. */
+export const TALKING_MS = 10 * MINUTE_MS;
+/** How faint someone gets the longer they stay quiet; anyone quieter than the last step is at the floor. */
+const FADE_STEPS = [
+  [TALKING_MS, 1],
+  [HOUR_MS, 0.9],
+  [3 * HOUR_MS, 0.8],
+  [DAY_MS, 0.68],
+  [3 * DAY_MS, 0.55],
+  [7 * DAY_MS, 0.45],
+];
+const FADE_FLOOR = 0.35;
+const OP_PREFIXES = /[~&@]/;
+
+/** "op", "voice" or "" from name prefixes like "@+"; half-ops count as voiced. */
+export function roleOf(held = '') {
+  if (OP_PREFIXES.test(held)) {
+    return 'op';
+  }
+  return /[%+]/.test(held) ? 'voice' : '';
+}
+
+/** Short time since someone spoke: now, 12 min, 3 h, 4 d; nothing when never. */
+export function quietFor(ts, now = Date.now()) {
+  if (!ts) {
+    return '';
+  }
+  const ms = now - ts;
+  if (ms < MINUTE_MS) {
+    return 'now';
+  }
+  if (ms < HOUR_MS) {
+    return `${Math.floor(ms / MINUTE_MS)} min`;
+  }
+  if (ms < DAY_MS) {
+    return `${Math.floor(ms / HOUR_MS)} h`;
+  }
+  return `${Math.floor(ms / DAY_MS)} d`;
+}
+
+/** Opacity for someone who last spoke at `ts`. */
+export function fadeFor(ts, now = Date.now()) {
+  if (!ts) {
+    return FADE_FLOOR;
+  }
+  return FADE_STEPS.find(([limit]) => now - ts < limit)?.[1] ?? FADE_FLOOR;
+}
+
+/** Nicks by when they last spoke, latest first; those who never did in name order. */
+export function byActivity(nicks, spokeAt) {
+  return [...nicks].sort((a, b) => (spokeAt(b) || 0) - (spokeAt(a) || 0) || a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+/**
+ * The list's groups: Ops, Talking now, Earlier today, Away. Empty groups are left out.
+ * `modes` maps nick to name prefixes, `spokeAt` gives a nick's last message time, `dayStart` is local midnight.
+ */
+export function peopleGroups(nicks, modes, spokeAt, now, dayStart) {
+  const people = byActivity(nicks, spokeAt).map((nick) => {
+    const held = modes.get(nick) || '';
+    return { nick, held, role: roleOf(held), ts: spokeAt(nick) || 0 };
+  });
+  const rest = people.filter((p) => p.role !== 'op');
+  return [
+    { id: 'ops', title: 'Ops', people: people.filter((p) => p.role === 'op') },
+    { id: 'now', title: 'Talking now', people: rest.filter((p) => p.ts && now - p.ts < TALKING_MS) },
+    { id: 'today', title: 'Earlier today', people: rest.filter((p) => p.ts >= dayStart && now - p.ts >= TALKING_MS) },
+    { id: 'away', title: 'Away', people: rest.filter((p) => p.ts < dayStart) },
+  ].filter((g) => g.people.length);
+}
+
+/**
+ * What one press of Op or Voice does to the picked people: give it when anyone lacks it,
+ * otherwise take it from all. `nicks` is only those it changes.
+ */
+export function modeAction(picked, modes, symbol) {
+  const lacking = picked.filter((n) => !(modes.get(n) || '').includes(symbol));
+  return lacking.length ? { give: true, nicks: lacking } : { give: false, nicks: [...picked] };
+}

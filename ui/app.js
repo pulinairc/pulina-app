@@ -23,6 +23,11 @@ import {
   formatWhois,
   span,
   ago,
+  byActivity,
+  fadeFor,
+  modeAction,
+  peopleGroups,
+  quietFor,
   splitNicks,
   duration,
   isChannel,
@@ -82,7 +87,7 @@ const el = {
   chanMeta: $('chan-meta'),
   unread: $('unread'),
   gear: $('gear'),
-  bell: $('bell'),
+  pill: $('pill'),
   status: $('status'),
   statusText: $('status-text'),
   statusAction: $('status-action'),
@@ -379,7 +384,19 @@ function buffer(net, name) {
     return existing;
   }
 
-  const b = { key: k, net, name, lines: [], ids: new Set(), unread: 0, mention: false, topic: '', members: new Set(), joined: false };
+  const b = {
+    key: k,
+    net,
+    name,
+    lines: [],
+    ids: new Set(),
+    unread: 0,
+    mention: false,
+    topic: '',
+    members: new Set(),
+    modes: new Map(),
+    joined: false,
+  };
   state.buffers.set(k, b);
   loadHistory(b);
   renderHeader();
@@ -397,6 +414,9 @@ async function loadHistory(b) {
     saveReadSoon();
   }
   const fresh = lines.filter((l) => !b.ids.has(l.id));
+  for (const l of fresh) {
+    noteSpoke(l);
+  }
   if (!fresh.length) {
     return;
   }
@@ -418,10 +438,17 @@ function trackMembers(b, l) {
   }
   if (l.kind === 'part' || l.kind === 'quit' || l.kind === 'kick') {
     b.members.delete(l.nick);
+    b.modes.delete(l.nick);
   }
   if (l.kind === 'nick') {
     b.members.delete(l.nick);
     b.members.add(l.text);
+    const held = b.modes.get(l.nick);
+    b.modes.delete(l.nick);
+    if (held) {
+      b.modes.set(l.text, held);
+    }
+    renameSpoke(b.net, l.nick, l.text);
   }
 }
 
@@ -445,6 +472,10 @@ function onLine(l) {
     b.lines.shift();
   }
   trackMembers(b, l);
+  noteSpoke(l);
+  if (b.key === state.current) {
+    schedulePeople();
+  }
 
   const visible = state.current === b.key;
   if (visible) {
@@ -472,6 +503,7 @@ function onBuffer(info) {
   b.topic = info.topic;
   b.joined = info.joined;
   b.members = new Set(info.members);
+  b.modes = new Map(Object.entries(info.modes || {}));
   renderHeader();
 }
 
@@ -527,13 +559,17 @@ const BELL =
 const BELL_OFF =
   '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>';
 
-function renderBell(b) {
-  el.bell.hidden = b.name === '';
+// Each channel in the switcher has its bell at the end of the row.
+function bellButton(b) {
   const muted = isMuted(b);
-  el.bell.replaceChildren(svg(muted ? BELL_OFF : BELL));
-  el.bell.setAttribute('aria-pressed', String(muted));
-  el.bell.setAttribute('aria-label', muted ? 'Unmute channel' : 'Mute channel');
-  el.bell.dataset.tip = muted ? 'Unmute' : 'Mute';
+  const bell = h('button', 'row-bell');
+  bell.type = 'button';
+  bell.setAttribute('aria-pressed', String(muted));
+  bell.setAttribute('aria-label', `${muted ? 'Unmute' : 'Mute'} ${label(b)}`);
+  bell.dataset.tip = muted ? 'Unmute' : 'Mute';
+  bell.append(svg(muted ? BELL_OFF : BELL));
+  bell.addEventListener('click', () => setMuted(b, !muted));
+  return bell;
 }
 
 function setMuted(b, muted) {
@@ -619,11 +655,11 @@ function renderHeader() {
   if (b) {
     icon(b, el.chanIcon);
     el.chanName.textContent = label(b);
-    const who = isPrivate(b) ? 'private' : b.name === '' ? 'server messages' : `${b.members.size} people`;
-    el.chanMeta.textContent = `${b.net} · ${who}${isMuted(b) ? ' · muted' : ''}`;
-    renderBell(b);
+    const who = isPrivate(b) ? ' · private' : b.name === '' ? ' · server messages' : '';
+    el.chanMeta.textContent = `${b.net}${who}${isMuted(b) ? ' · muted' : ''}`;
     el.title.dataset.tip = b.topic || '';
   }
+  schedulePeople();
 
   const others = [...state.buffers.values()].filter((x) => x.key !== state.current && wantsAttention(x));
   const total = others.reduce((n, x) => n + attentionCount(x), 0);
@@ -720,6 +756,9 @@ function select(k) {
   if (!b) {
     return;
   }
+  if (state.current !== k) {
+    closeNicklist();
+  }
   state.current = k;
   try {
     localStorage.setItem(LAST_BUFFER_KEY, k);
@@ -758,6 +797,7 @@ function renderList() {
       net = b.net;
       nodes.push(h('div', 'list-net', net));
     }
+    const row = h('div', 'item-row');
     const item = h('button', 'item');
     item.type = 'button';
     item.setAttribute('role', 'option');
@@ -766,14 +806,15 @@ function renderList() {
     item.classList.toggle('mention', b.mention);
     item.classList.toggle('muted', isMuted(b));
     item.append(icon(b, h('span', 'chan-icon')), h('span', 'name', label(b)));
-    if (isMuted(b)) {
-      item.append(svg(ICONS.bellOff));
-    }
     if (wantsAttention(b)) {
       item.append(h('span', 'count', String(attentionCount(b))));
     }
     item.addEventListener('click', () => pick(b.key));
-    nodes.push(item);
+    row.append(item);
+    if (b.name !== '') {
+      row.append(bellButton(b));
+    }
+    nodes.push(row);
   });
   el.list.replaceChildren(...nodes);
   el.list.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
@@ -793,12 +834,6 @@ function pick(k) {
 }
 
 el.title.addEventListener('click', openSwitcher);
-el.bell.addEventListener('click', () => {
-  const b = state.buffers.get(state.current);
-  if (b) {
-    setMuted(b, !isMuted(b));
-  }
-});
 el.chanIcon.addEventListener('click', (e) => {
   e.stopPropagation();
   const b = state.buffers.get(state.current);
@@ -860,6 +895,7 @@ function renderSettings() {
 }
 
 el.gear.addEventListener('click', () => {
+  el.switcher.close();
   renderSettings();
   el.settings.showModal();
   el.settings.focus();
@@ -1287,10 +1323,10 @@ const ICONS = {
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
   moreV:
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
-  bellOff:
-    '<svg class="muted-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-label="Muted"><path d="M8.7 3.6A6 6 0 0 1 18 8c0 3 .6 5 1.4 6.4M6.3 6.3A6 6 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg>',
   moreH:
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+  close:
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   check:
     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   external:
@@ -1443,6 +1479,320 @@ window.addEventListener('blur', () => {
   hideActions();
   hideTip();
 });
+
+// People in the channel: the most active faces in a pill on the header, and the list it opens.
+// The list puts ops first, then everyone by when they last spoke; picking several people gives
+// or takes op and voice in as few MODE lines as the server allows.
+
+const PILL_FACES = 3;
+const CROWN =
+  '<svg class="crown" width="13" height="10" viewBox="0 0 24 18" role="img" aria-label="op"><path d="M2 5l5.5 4L12 1l4.5 8L22 5l-2.5 12h-15z"/></svg>';
+const VOICE =
+  '<svg class="voiced" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" role="img" aria-label="voice"><path d="M5 9v6M9 6v12M13 9v6M17 4v16"/></svg>';
+const CAN_OP = /[~&@]/;
+const CAN_VOICE = /[~&@%]/;
+
+/** When each nick last said something, per network: `net\nnick` to a timestamp. */
+const spoke = new Map();
+const nicklist = { el: null, menu: null, picked: new Set(), frame: 0 };
+
+function spokeKey(net, nick) {
+  return `${net}\n${nick.toLowerCase()}`;
+}
+
+function noteSpoke(l) {
+  if (!l.nick || !CHAT_KINDS.has(l.kind)) {
+    return;
+  }
+  const k = spokeKey(l.net, l.nick);
+  if ((spoke.get(k) || 0) < l.ts) {
+    spoke.set(k, l.ts);
+  }
+}
+
+function renameSpoke(net, from, to) {
+  const ts = spoke.get(spokeKey(net, from));
+  if (ts) {
+    spoke.set(spokeKey(net, to), ts);
+  }
+}
+
+function spokeIn(net) {
+  return (nick) => spoke.get(spokeKey(net, nick)) || 0;
+}
+
+function channelShown() {
+  const b = state.buffers.get(state.current);
+  return b && b.name !== '' && !isPrivate(b) ? b : null;
+}
+
+// Messages arrive in bursts; the pill and the list redraw once per frame at most.
+function schedulePeople() {
+  if (nicklist.frame) {
+    return;
+  }
+  nicklist.frame = requestAnimationFrame(() => {
+    nicklist.frame = 0;
+    renderPill();
+    renderNicklist();
+  });
+}
+
+function renderPill() {
+  const b = channelShown();
+  el.pill.hidden = !b?.members.size;
+  if (el.pill.hidden) {
+    closeNicklist();
+    return;
+  }
+  const faces = byActivity(b.members, spokeIn(b.net)).slice(0, PILL_FACES);
+  const stack = h('span', 'pill-faces');
+  stack.append(...faces.map((n) => avatar(n, '')));
+  const more = b.members.size - faces.length;
+  el.pill.replaceChildren(stack, ...(more > 0 ? [h('span', 'pill-more', `+${more}`)] : []));
+  const count = `${b.members.size} ${b.members.size === 1 ? 'person' : 'people'}`;
+  el.pill.setAttribute('aria-label', count);
+  el.pill.dataset.tip = count;
+  el.pill.setAttribute('aria-expanded', String(Boolean(nicklist.el)));
+}
+
+function openNicklist() {
+  nicklist.el = h('div', 'glass nicklist');
+  nicklist.el.setAttribute('role', 'dialog');
+  nicklist.el.setAttribute('aria-label', 'People');
+  nicklist.el.addEventListener('pointerdown', (e) => e.stopPropagation());
+  document.body.append(nicklist.el);
+  renderNicklist();
+  renderPill();
+}
+
+function closeNicklist() {
+  closePeopleMenu();
+  nicklist.picked.clear();
+  if (!nicklist.el) {
+    return;
+  }
+  nicklist.el.remove();
+  nicklist.el = null;
+  el.pill.setAttribute('aria-expanded', 'false');
+}
+
+function renderNicklist() {
+  const b = channelShown();
+  if (!nicklist.el || !b) {
+    return;
+  }
+  const now = Date.now();
+  const midnight = new Date(now).setHours(0, 0, 0, 0);
+  for (const n of nicklist.picked) {
+    if (!b.members.has(n)) {
+      nicklist.picked.delete(n);
+    }
+  }
+  const scroll = h('div', 'nl-scroll');
+  for (const g of peopleGroups([...b.members], b.modes, spokeIn(b.net), now, midnight)) {
+    const head = h('div', 'nl-head', g.title);
+    if (g.id === 'now') {
+      head.prepend(h('span', 'live'));
+    }
+    scroll.append(head, ...g.people.map((p) => personRow(p, now)));
+  }
+  const top = nicklist.el.querySelector('.nl-scroll')?.scrollTop ?? 0;
+  const bar = pickedBar(b);
+  nicklist.el.replaceChildren(scroll, ...(bar ? [bar] : []));
+  scroll.scrollTop = top;
+
+  // Under the header on the right, measured against the page like the emoji picker: the
+  // window can be zoomed for text size, so `k` turns measured pixels back into style pixels.
+  const k = nicklist.el.getBoundingClientRect().width / nicklist.el.offsetWidth || 1;
+  nicklist.el.style.top = `${el.pill.getBoundingClientRect().bottom / k + PICKER_GAP}px`;
+}
+
+function personRow(p, now) {
+  const picked = nicklist.picked.has(p.nick);
+  const who = identity(p.nick);
+  const row = h('button', `nl-row${picked ? ' picked' : ''}`);
+  row.type = 'button';
+  row.setAttribute('aria-pressed', String(picked));
+  row.style.setProperty('--fade', fadeFor(p.ts, now));
+  const face = h('span', 'nl-face');
+  const check = h('span', 'nl-check');
+  check.append(svg(ICONS.check));
+  face.append(avatar(p.nick, ''), check);
+  const name = h('span', 'nl-name', who.name);
+  row.append(face, name);
+  if (who.name !== p.nick) {
+    row.dataset.tip = p.nick;
+  }
+  if (p.role === 'op') {
+    row.append(svg(CROWN));
+  } else if (p.role === 'voice') {
+    row.append(svg(VOICE));
+  }
+  row.append(h('span', 'nl-ago', quietFor(p.ts, now)));
+  row.addEventListener('click', () => {
+    if (picked) {
+      nicklist.picked.delete(p.nick);
+    } else {
+      nicklist.picked.add(p.nick);
+    }
+    renderNicklist();
+  });
+  row.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    peopleMenu(p.nick, e.clientX, e.clientY);
+  });
+  return row;
+}
+
+/** What I may do here: give op needs op, give voice needs half-op or more. */
+function myPowers(b) {
+  const mine = b.modes.get(state.me[b.net]) || '';
+  return { op: CAN_OP.test(mine), voice: CAN_VOICE.test(mine) };
+}
+
+function modeLabel(act, word) {
+  return `${act.give ? 'Give' : 'Take'} ${word}`;
+}
+
+function sendModes(b, act, word) {
+  const command = `/${act.give ? '' : 'de'}${word} ${act.nicks.join(' ')}`;
+  invoke('send', { net: b.net, buffer: b.name, text: command }).catch((e) => renderStatus(String(e)));
+  nicklist.picked.clear();
+  closePeopleMenu();
+  renderNicklist();
+}
+
+function message(b, nick) {
+  closeNicklist();
+  select(buffer(b.net, nick).key);
+}
+
+function pickedBar(b) {
+  const picked = [...nicklist.picked];
+  if (!picked.length) {
+    return null;
+  }
+  const bar = h('div', 'nl-bar');
+  const top = h('div', 'nl-bar-top');
+  const clear = h('button', 'icon-btn nl-clear');
+  clear.type = 'button';
+  clear.setAttribute('aria-label', 'Clear picks');
+  clear.dataset.tip = 'Clear';
+  clear.append(svg(ICONS.close));
+  clear.addEventListener('click', () => {
+    nicklist.picked.clear();
+    renderNicklist();
+  });
+  top.append(h('span', 'nl-count', `${picked.length} picked`), clear);
+  const actions = h('div', 'nl-actions');
+  const can = myPowers(b);
+  for (const [word, symbol] of [
+    ['voice', '+'],
+    ['op', '@'],
+  ]) {
+    if (!can[word]) {
+      continue;
+    }
+    const act = modeAction(picked, b.modes, symbol);
+    const btn = h('button', `nl-act ${word}`, modeLabel(act, word));
+    btn.type = 'button';
+    btn.addEventListener('click', () => sendModes(b, act, word));
+    actions.append(btn);
+  }
+  if (picked.length === 1) {
+    const msg = h('button', 'nl-act plain', 'Message');
+    msg.type = 'button';
+    msg.addEventListener('click', () => message(b, picked[0]));
+    actions.append(msg);
+  }
+  bar.append(top, actions);
+  return bar;
+}
+
+// Right-click: acts on everyone picked when the row is one of them, else on that one person.
+function peopleMenu(nick, x, y) {
+  const b = channelShown();
+  if (!b) {
+    return;
+  }
+  closePeopleMenu();
+  const targets = nicklist.picked.has(nick) ? [...nicklist.picked] : [nick];
+  const menu = h('div', 'glass more-menu nl-menu');
+  const item = (label, run) => {
+    const btn = h('button', 'menu-item', label);
+    btn.type = 'button';
+    btn.addEventListener('click', run);
+    menu.append(btn);
+  };
+  const can = myPowers(b);
+  const many = targets.length > 1 ? ` to ${targets.length}` : '';
+  for (const [word, symbol] of [
+    ['voice', '+'],
+    ['op', '@'],
+  ]) {
+    if (can[word]) {
+      const act = modeAction(targets, b.modes, symbol);
+      item(`${modeLabel(act, word)}${act.give ? many : targets.length > 1 ? ` from ${targets.length}` : ''}`, () =>
+        sendModes(b, act, word),
+      );
+    }
+  }
+  if (targets.length === 1) {
+    item('Message', () => message(b, nick));
+    item('Edit person', () => {
+      closeNicklist();
+      openPerson(nick, '');
+    });
+  }
+  if (nicklist.picked.size) {
+    item('Clear picks', () => {
+      nicklist.picked.clear();
+      closePeopleMenu();
+      renderNicklist();
+    });
+  }
+  menu.addEventListener('pointerdown', (e) => e.stopPropagation());
+  document.body.append(menu);
+  // At the pointer, kept inside the page; `k` as in renderNicklist.
+  const k = menu.getBoundingClientRect().width / menu.offsetWidth || 1;
+  const page = document.body.getBoundingClientRect();
+  const left = Math.min(x, page.right - menu.offsetWidth * k - PICKER_GAP);
+  const top = Math.min(y, page.bottom - menu.offsetHeight * k - PICKER_GAP);
+  menu.style.left = `${Math.max(left, PICKER_GAP) / k}px`;
+  menu.style.top = `${Math.max(top, PICKER_GAP) / k}px`;
+  nicklist.menu = menu;
+}
+
+function closePeopleMenu() {
+  nicklist.menu?.remove();
+  nicklist.menu = null;
+}
+
+el.pill.addEventListener('click', () => (nicklist.el ? closeNicklist() : openNicklist()));
+el.pill.addEventListener('pointerdown', (e) => e.stopPropagation());
+document.addEventListener('pointerdown', () => {
+  if (nicklist.menu) {
+    closePeopleMenu();
+    return;
+  }
+  closeNicklist();
+});
+document.addEventListener(
+  'keydown',
+  (e) => {
+    if (e.key !== 'Escape' || !nicklist.el) {
+      return;
+    }
+    e.stopPropagation();
+    if (nicklist.menu) {
+      closePeopleMenu();
+    } else {
+      closeNicklist();
+    }
+  },
+  true,
+);
 
 function note(l) {
   const text = l.kind === 'topic' ? `${l.nick} changed the topic to “${l.text}”` : l.text;

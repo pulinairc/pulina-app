@@ -28,6 +28,7 @@
 - **Grouped, readable chat:** one photo and name per person, their lines stacked under it, link previews, pictures, videos and audio inline
 - **Reactions and replies:** sent as plain IRC (`nick: 😂`, `nick: text`) and shown as reactions and quotes in Lobby
 - **People:** a photo, a colour and any number of nicks per person, matched by pattern or ident and host
+- **Who is here:** the most active faces in the header open the channel's list, ops first, then by who spoke last; pick several to give op or voice in one go
 - **Unread that stays put:** a red New line, jump buttons, and nothing marked read until you say so
 - **Attachments:** paste, drop or pick a file, and its address goes into your message, through a file host of your own
 - **Notifications:** desktop notifications with the sender's photo for mentions and private messages, quiet for muted channels
@@ -126,7 +127,7 @@ The installer builds lobby-server, writes a config and a random token, and sets 
 
 ## Configuration
 
-On first start Lobby opens its connection setup. You can come back to it any time from the gear, Set up the connection. The same three choices are on every device:
+On first start Lobby opens its connection setup. You can come back to it any time from the gear, Set up the connection. The gear is in the channel list, which opens when you click the channel name in the header. The same three choices are on every device:
 
 | Choice | What you fill in | History |
 |--------|------------------|---------|
@@ -176,7 +177,9 @@ Every shortcut can be changed under Settings, Keyboard shortcuts.
 
 **Unread.** A red New line marks where unread messages start. Nothing is marked read on its own: click the checkmark at the end of the New line, the Mark read button at the top, or press `Ctrl+Enter` (`Cmd+Enter` on a Mac).
 
-**People.** Click a name or photo in the chat, or open the gear and People. `Kaisla` also covers `Kaisla_` and `Kaisla-`, `Kaisla*` covers any ending, and `kaisla@*.example.net` matches by ident and host. The colour follows the photo unless you pick one. Click the channel icon in the header to give a channel its own picture or colour, or to mute it. A muted channel adds nothing to unread counts or jumps, except when someone mentions you. `/mute` and `/unmute` work too.
+**People.** Click a name or photo in the chat, or open the gear and People. `Kaisla` also covers `Kaisla_` and `Kaisla-`, `Kaisla*` covers any ending, and `kaisla@*.example.net` matches by ident and host. The colour follows the photo unless you pick one. Click the channel icon in the header to give a channel its own picture or colour, or to mute it. A muted channel adds nothing to unread counts or jumps, except when someone mentions you. `/mute` and `/unmute` work too, and so does the bell beside each channel in the channel list.
+
+**Who is here.** The faces at the right of the header are the people who spoke last. Click them for everyone in the channel: ops first with a crown, then who is talking now, earlier today and away, fading the longer they stay quiet. Voiced people have a small mint mark. Click anywhere on a row to pick it, the photo turns into a checkbox. With people picked, Give voice and Give op go out as one `MODE +vvv` line, or a few when the server takes fewer per line. Right-click a row for the same and to message or edit the person.
 
 **Commands.** Type `/` for the menu. `/me`, `/msg`, `/query`, `/join`, `/part`, `/wc`, `/topic`, `/names`, `/whois`, `/nick`, `/away`, `/notice`, `/invite`, `/kick`, `/op`, `/deop`, `/voice`, `/devoice`, `/clear`, `/say` and `/quote` work as in irssi. Anything else is sent as is. `/quit` is off, because through irssiproxy it would disconnect irssi from the network.
 
