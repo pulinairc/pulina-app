@@ -58,6 +58,8 @@ const BOTTOM_SLACK_PX = 48;
 const LAST_BUFFER_KEY = 'lobby.current';
 const FIRST_PICK_DELAY_MS = 400;
 const QUICK_REACTIONS = ['👍', '😂', '❤️', '🔥', '😮'];
+/** How many of your most used emojis the hover row and the long-press sheet offer. */
+const QUICK_REACTION_COUNT = 3;
 const REACTION_SETTING = 'reactions';
 // Emoji helpers in the message box, on unless turned off.
 const EMOTICON_SETTING = 'emoticons';
@@ -1390,7 +1392,7 @@ function topReactions() {
   const used = Object.entries(counts)
     .sort((a, b) => b[1] - a[1])
     .map(([e]) => e);
-  return [...new Set([...used, ...QUICK_REACTIONS])].slice(0, QUICK_REACTIONS.length);
+  return [...new Set([...used, ...QUICK_REACTIONS])].slice(0, QUICK_REACTION_COUNT);
 }
 
 // Settings live on lobby-server (or locally in direct mode), so every device shares them.
