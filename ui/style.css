@@ -1232,7 +1232,6 @@ dialog:focus { outline: none; }
   right: 0;
   z-index: 6;
   display: flex;
-  justify-content: center;
   gap: 8px;
   padding: 11px 12px 22px;
   background: linear-gradient(var(--bg) 62%, transparent);
@@ -1242,7 +1241,8 @@ dialog:focus { outline: none; }
 #unread-bar .jump { pointer-events: auto; }
 
 #unread-bar .jump { position: static; transform: none; white-space: nowrap; }
-#mark-read { color: var(--strong); }
+/* Jump on the left, Mark read on the right, even when only one shows. */
+#mark-read { margin-left: auto; }
 #mark-read svg { color: var(--ok); }
 
 .jump {
@@ -1266,12 +1266,16 @@ dialog:focus { outline: none; }
 
 .jump:hover { border-color: var(--line-strong); color: var(--strong); }
 .jump[hidden] { display: none; }
-#jump-unread svg { color: var(--accent); }
+#jump-unread { background: var(--new); border-color: var(--new); }
+#jump-unread svg { color: var(--bg); }
+.jump.icon-jump { width: 28px; padding: 0; justify-content: center; }
 #jump-unread.down svg { transform: rotate(180deg); }
 #jump-latest { bottom: 10px; }
 /* Thumb-sized jump buttons on touch screens. */
 @media (pointer: coarse) {
   .jump { height: 40px; padding: 0 16px 0 14px; gap: 7px; font-size: 15px; }
+  .jump.icon-jump { width: 40px; padding: 0; }
+  .jump.icon-jump svg { width: 18px; height: 18px; }
 }
 
 /* Small avatars and channel icons get the true squircle shape. */

@@ -40,8 +40,8 @@ const $ = (id) => document.getElementById(id);
 const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), statusText: $('status-text'), statusAction: $('status-action'), toast: $('toast'), log: $('log'), col: $('col'),
-  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpUnreadLabel: $('jump-unread-label'), jumpLatest: $('jump-latest'), jumpLatestLabel: $('jump-latest-label'),
-  markRead: $('mark-read'), markReadLabel: $('mark-read-label'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), textSize: $('text-size'), textSizeNumber: $('text-size-number'), textSizeReset: $('text-size-reset'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
+  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'), jumpLatestLabel: $('jump-latest-label'),
+  markRead: $('mark-read'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), textSize: $('text-size'), textSizeNumber: $('text-size-number'), textSizeReset: $('text-size-reset'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -1687,7 +1687,6 @@ document.addEventListener('keydown', (e) => {
 
 /** Tooltips that name a shortcut follow the current setting. */
 function refreshShortcutTips() {
-  el.markRead.dataset.tip = shortcutLabel('markRead');
   el.jumpUnread.dataset.tip = `Jump to the first unread (${shortcutLabel('jumpUnread')})`;
   for (const m of document.querySelectorAll('.sep-mark')) m.dataset.tip = `Mark as read (${shortcutLabel('markRead')})`;
 }
@@ -1799,8 +1798,6 @@ function messagesBelow(bottom) {
   return n;
 }
 
-const NARROW = matchMedia('(max-width: 520px)');
-
 function updateJumps() {
   const b = state.buffers.get(state.current);
   const count = b ? unreadCount(b) : 0;
@@ -1812,17 +1809,13 @@ function updateJumps() {
   el.jumpUnread.hidden = !(count && (above || below));
   el.jumpUnread.classList.toggle('down', Boolean(below));
   const messages = count === 1 ? 'message' : 'messages';
-  // A phone has room for the count and the arrow only.
-  const narrow = NARROW.matches;
-  // The count is on Mark read already; this one only says where it goes.
-  el.jumpUnreadLabel.textContent = narrow ? 'First unread' : 'Jump to first unread';
   el.jumpLatest.hidden = atBottom();
   if (!el.jumpLatest.hidden) {
     const more = messagesBelow(log.bottom);
     el.jumpLatestLabel.textContent = more ? `${more} more` : 'Latest';
   }
   el.markRead.hidden = count === 0;
-  el.markReadLabel.textContent = narrow ? 'Mark read' : `Mark ${count} ${messages} read`;
+  el.markRead.dataset.tip = `Mark ${count} ${messages} read (${shortcutLabel('markRead')})`;
 }
 
 el.markRead.addEventListener('click', markCurrentRead);
