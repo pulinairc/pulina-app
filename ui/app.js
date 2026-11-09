@@ -2082,6 +2082,9 @@ const SHORTCUT_ACTIONS = [
   ['channelNumber', 'Channel 1 to 9 (with a number)'],
   ['complete', 'Complete a nick'],
   ['recall', 'Bring back the last message'],
+  ['textLarger', 'Larger text'],
+  ['textSmaller', 'Smaller text'],
+  ['textDefault', 'Default text size'],
 ];
 let recordingShortcut = null;
 
@@ -2109,6 +2112,9 @@ const SHORTCUT_RUN = {
   nextUnreadChannel: () => jumpToUnreadChannel(),
   prevChannel: () => step(-1),
   nextChannel: () => step(1),
+  textLarger: () => applyTextSize(textSize() + TEXT_SIZE_STEP),
+  textSmaller: () => applyTextSize(textSize() - TEXT_SIZE_STEP),
+  textDefault: () => applyTextSize(TEXT_SIZE_DEFAULT),
 };
 
 document.addEventListener(
@@ -3525,6 +3531,8 @@ const TEXT_SIZE_KEY = 'lobby.textSize';
 const TEXT_SIZE_DEFAULT = 100;
 const TEXT_SIZE_MIN = 70;
 const TEXT_SIZE_MAX = 200;
+/** One press of Cmd/Ctrl + or -: two steps of the slider. */
+const TEXT_SIZE_STEP = 10;
 /** On iPhone 100 % is a fifth larger than the page's own pixel sizes. */
 const IOS_TEXT_BASE = 1.2;
 

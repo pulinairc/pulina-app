@@ -244,6 +244,14 @@ test('reads key presses as shortcut combos', () => {
   assert.equal(comboMods('Alt+3'), 'Alt');
   assert.equal(comboLabel('Mod+Enter', true), 'Cmd+Enter');
   assert.equal(comboLabel('Alt+ArrowLeft', false), 'Alt+←');
+  // + is named so it never reads as the separator, with or without Shift, as = or as +.
+  assert.equal(comboOf(key('+', { metaKey: true }), true), 'Mod+Plus');
+  assert.equal(comboOf(key('=', { metaKey: true }), true), 'Mod+Plus');
+  assert.equal(comboOf(key('+', { ctrlKey: true, shiftKey: true }), false), 'Mod+Plus');
+  assert.equal(comboOf(key('-', { ctrlKey: true }), false), 'Mod+-');
+  assert.equal(comboOf(key('0', { metaKey: true, code: 'Digit0' }), true), 'Mod+0');
+  assert.equal(comboLabel('Mod+Plus', true), 'Cmd++');
+  assert.equal(comboLabel('Mod+-', false), 'Ctrl+-');
 });
 
 test('ago says how long since', () => {

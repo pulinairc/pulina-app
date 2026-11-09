@@ -520,6 +520,9 @@ export const DEFAULT_SHORTCUTS = {
   channelNumber: 'Alt',
   complete: 'Tab',
   recall: 'ArrowUp',
+  textLarger: 'Mod+Plus',
+  textSmaller: 'Mod+-',
+  textDefault: 'Mod+0',
 };
 
 const MODIFIER_KEYS = ['Control', 'Meta', 'Alt', 'Shift'];
@@ -529,6 +532,11 @@ export function comboOf(e, mac) {
   if (MODIFIER_KEYS.includes(e.key)) {
     return null;
   }
+  // Letters and digits by position, so Option+A on a Mac still reads as A, not å.
+  const byCode = /^Key([A-Z])$/.exec(e.code || '')?.[1] ?? /^Digit(\d)$/.exec(e.code || '')?.[1];
+  // + is the separator, so it is named; = is the same key without Shift on many layouts.
+  const plus = e.key === '+' || e.key === '=';
+  const key = byCode ?? (plus ? 'Plus' : e.key.length === 1 ? e.key.toUpperCase() : e.key);
   const mods = [];
   if (mac ? e.metaKey : e.ctrlKey) {
     mods.push('Mod');
@@ -539,12 +547,10 @@ export function comboOf(e, mac) {
   if (e.altKey) {
     mods.push('Alt');
   }
-  if (e.shiftKey) {
+  // Some layouts need Shift for +; Cmd++ is the same press either way.
+  if (e.shiftKey && !plus) {
     mods.push('Shift');
   }
-  // Letters and digits by position, so Option+A on a Mac still reads as A, not å.
-  const byCode = /^Key([A-Z])$/.exec(e.code || '')?.[1] ?? /^Digit(\d)$/.exec(e.code || '')?.[1];
-  const key = byCode ?? (e.key.length === 1 ? e.key.toUpperCase() : e.key);
   return [...mods, key].join('+');
 }
 
@@ -553,7 +559,7 @@ export function comboMods(combo) {
   return combo.split('+').slice(0, -1).join('+');
 }
 
-const KEY_NAMES = { ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓', Escape: 'Esc', ' ': 'Space' };
+const KEY_NAMES = { ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓', Escape: 'Esc', ' ': 'Space', Plus: '+' };
 
 /** How a combo reads to a person on this system. */
 export function comboLabel(combo, mac) {
