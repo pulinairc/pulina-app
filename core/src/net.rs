@@ -232,10 +232,13 @@ impl Session {
             "005" => self.on_support(msg),
             "MODE" => {
                 let key = msg.param(0).to_lowercase();
-                if !self.apply_modes(&key, &msg.params[1..]) {
-                    return vec![];
+                let Some(chan) = self.chans.get(&key) else { return vec![] };
+                let name = chan.name.clone();
+                let mut out = vec![Out::Line(self.line(&name, "mode", msg, &msg.params[1..].join(" "), now))];
+                if self.apply_modes(&key, &msg.params[1..]) {
+                    out.push(self.info(&self.chans[&key], true));
                 }
-                vec![self.info(&self.chans[&key], true)]
+                out
             }
             "JOIN" => {
                 let name = msg.param(0).to_string();
@@ -519,7 +522,9 @@ mod tests {
         assert_eq!(modes(&out), pairs(&[("kaisla", "@+"), ("mikko", "@"), ("rolle", "@")]));
 
         // A ban's mask and a limit's number are not nicks.
-        assert!(feed(&mut s, ":rolle!r@h MODE #a +b *!*@mikko").is_empty());
+        let out = feed(&mut s, ":rolle!r@h MODE #a +b *!*@mikko");
+        assert_eq!(lines(&out), vec![("#a".into(), "mode".into(), "rolle".into())]);
+        assert_eq!(out.len(), 1);
         let out = feed(&mut s, ":rolle!r@h MODE #a +lv 10 mikko");
         assert_eq!(modes(&out), pairs(&[("kaisla", "@+"), ("mikko", "@+"), ("rolle", "@")]));
 

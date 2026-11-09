@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
 import {
   APP_ICONS,
+  describeMode,
   byActivity,
   fadeFor,
   modeAction,
@@ -327,7 +328,7 @@ test('every app icon exists for each platform', () => {
 test('people sort by when they last spoke, ops first', () => {
   const now = Date.UTC(2026, 10, 9, 18);
   const dayStart = Date.UTC(2026, 10, 9);
-  const spoke = { veera: now - 2 * 60e3, otso: now - 3600e3, lumi: now - 30 * 60e3, iida: now - 4 * 86400e3 };
+  const spoke = { veera: now - 2 * 60e3, otso: now - 3600e3, lumi: now - 90 * 60e3, iida: now - 4 * 86400e3 };
   const modes = new Map([
     ['otso', '@'],
     ['kaisla', '@+'],
@@ -354,8 +355,8 @@ test('quiet people fade and say for how long', () => {
   assert.equal(quietFor(0, now), '');
   assert.equal(quietFor(now - 20e3, now), 'now');
   assert.equal(quietFor(now - 14 * 60e3, now), '14 min');
-  assert.equal(quietFor(now - 3 * 3600e3, now), '3 h');
-  assert.equal(quietFor(now - 4 * 86400e3, now), '4 d');
+  assert.equal(quietFor(now - 3 * 3600e3, now), '3h');
+  assert.equal(quietFor(now - 4 * 86400e3, now), '4d');
   assert.equal(fadeFor(now - 60e3, now), 1);
   assert.ok(fadeFor(now - 5 * 3600e3, now) < fadeFor(now - 2 * 3600e3, now));
   assert.equal(fadeFor(0, now), fadeFor(now - 30 * 86400e3, now));
@@ -371,4 +372,12 @@ test('op and voice give to whoever lacks it, else take from all', () => {
   ]);
   assert.deepEqual(modeAction(['a', 'b', 'c'], modes, '+'), { give: true, nicks: ['b', 'c'] });
   assert.deepEqual(modeAction(['a'], modes, '+'), { give: false, nicks: ['a'] });
+});
+
+test('mode changes read as words', () => {
+  assert.equal(describeMode('kaisla', '+vv-o lumi aapo otso'), 'kaisla gave voice to lumi and aapo, took op from otso');
+  assert.equal(describeMode('kaisla', '+o rolle'), 'kaisla gave op to rolle');
+  assert.equal(describeMode('irc.example', '+nt'), 'irc.example set +n +t');
+  assert.equal(describeMode('kaisla', '+bl *!*@x 10'), 'kaisla set +b *!*@x +l 10');
+  assert.equal(describeMode('kaisla', '-l+v lumi'), 'kaisla gave voice to lumi, set -l');
 });

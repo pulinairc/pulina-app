@@ -1,7 +1,7 @@
 // Pure helpers for the chat view, kept apart so they can be tested in Node.
 
 export const GROUP_GAP_MS = 5 * 60 * 1000;
-export const EVENT_KINDS = new Set(['join', 'part', 'quit', 'nick', 'kick']);
+export const EVENT_KINDS = new Set(['join', 'part', 'quit', 'nick', 'kick', 'mode']);
 export const CHAT_KINDS = new Set(['msg', 'action', 'notice']);
 
 const NAMES_SHOWN = 3;
@@ -75,6 +75,9 @@ export function summarize(events) {
     if (e.kind === 'kick') {
       extra.push(`${e.nick} was kicked by ${e.text.split(':')[0]}`);
     }
+    if (e.kind === 'mode') {
+      extra.push(describeMode(e.nick, e.text));
+    }
   }
   const parts = [];
   if (by.join.length) {
@@ -92,6 +95,45 @@ export function summarize(events) {
     parts.push(...extra);
   }
   return parts.join(', ');
+}
+
+/** Name prefix modes in words; any other mode is shown as set. */
+const MODE_WORDS = { q: 'owner', a: 'admin', o: 'op', h: 'half-op', v: 'voice' };
+/** Modes that take a parameter always, and those that take one only when set. */
+const MODE_PARAMS = 'qaohvbeIk';
+const MODE_SET_PARAMS = 'l';
+
+/**
+ * "kaisla gave voice to lumi and aapo, took op from otso" from a MODE line's
+ * setter and its text, "+vv-o lumi aapo otso". Other modes read "set +m" or "set +b mask".
+ */
+export function describeMode(setter, text) {
+  const [changes = '', ...args] = text.split(' ');
+  const given = new Map();
+  const plain = [];
+  let sign = '+';
+  for (const mode of changes) {
+    if (mode === '+' || mode === '-') {
+      sign = mode;
+      continue;
+    }
+    const takes = MODE_PARAMS.includes(mode) || (sign === '+' && MODE_SET_PARAMS.includes(mode));
+    const arg = takes ? args.shift() : undefined;
+    if (MODE_WORDS[mode] && arg) {
+      const k = `${sign}${mode}`;
+      given.set(k, [...(given.get(k) || []), arg]);
+    } else {
+      plain.push(arg ? `${sign}${mode} ${arg}` : `${sign}${mode}`);
+    }
+  }
+  const parts = [...given].map(([k, nicks]) => {
+    const list = nicks.length > 1 ? `${nicks.slice(0, -1).join(', ')} and ${nicks.at(-1)}` : nicks[0];
+    return k[0] === '+' ? `gave ${MODE_WORDS[k[1]]} to ${list}` : `took ${MODE_WORDS[k[1]]} from ${list}`;
+  });
+  if (plain.length) {
+    parts.push(`set ${plain.join(' ')}`);
+  }
+  return `${setter} ${parts.join(', ')}`;
 }
 
 export function stripFormatting(text) {
@@ -642,10 +684,10 @@ const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
 /** Spoke this recently: talking now. */
-export const TALKING_MS = 10 * MINUTE_MS;
+export const TALKING_MS = HOUR_MS;
 /** How faint someone gets the longer they stay quiet; anyone quieter than the last step is at the floor. */
 const FADE_STEPS = [
-  [TALKING_MS, 1],
+  [10 * MINUTE_MS, 1],
   [HOUR_MS, 0.9],
   [3 * HOUR_MS, 0.8],
   [DAY_MS, 0.68],
@@ -663,7 +705,7 @@ export function roleOf(held = '') {
   return /[%+]/.test(held) ? 'voice' : '';
 }
 
-/** Short time since someone spoke: now, 12 min, 3 h, 4 d; nothing when never. */
+/** Short time since someone spoke: now, 12 min, 3h, 4d; nothing when never. */
 export function quietFor(ts, now = Date.now()) {
   if (!ts) {
     return '';
@@ -676,9 +718,9 @@ export function quietFor(ts, now = Date.now()) {
     return `${Math.floor(ms / MINUTE_MS)} min`;
   }
   if (ms < DAY_MS) {
-    return `${Math.floor(ms / HOUR_MS)} h`;
+    return `${Math.floor(ms / HOUR_MS)}h`;
   }
-  return `${Math.floor(ms / DAY_MS)} d`;
+  return `${Math.floor(ms / DAY_MS)}d`;
 }
 
 /** Opacity for someone who last spoke at `ts`. */
