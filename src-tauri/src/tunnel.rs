@@ -169,11 +169,10 @@ async fn authenticate(session: &mut Handle<Client>, target: &Target, dir: &Path)
     if let Ok(mut agent) = keys::agent::client::AgentClient::connect_env().await {
         for identity in agent.request_identities().await.unwrap_or_default() {
             let key = identity.public_key().into_owned();
-            if let Ok(result) = session.authenticate_publickey_with(target.user.clone(), key, rsa_hash, &mut agent).await {
-                if result.success() {
+            if let Ok(result) = session.authenticate_publickey_with(target.user.clone(), key, rsa_hash, &mut agent).await
+                && result.success() {
                     return Ok(true);
                 }
-            }
         }
     }
 

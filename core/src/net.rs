@@ -152,11 +152,10 @@ impl Session {
                 line.nick = victim.clone();
                 line.own = same(&victim, &self.me);
                 let mut out = vec![Out::Line(line)];
-                if same(&victim, &self.me) {
-                    if let Some(chan) = self.chans.remove(&key) {
+                if same(&victim, &self.me)
+                    && let Some(chan) = self.chans.remove(&key) {
                         out.push(self.info(&chan, false));
                     }
-                }
                 out
             }
             "QUIT" => {

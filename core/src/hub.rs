@@ -115,12 +115,11 @@ impl Hub {
         if net.name.trim().is_empty() || net.host.trim().is_empty() {
             return Err("A network needs a name and a host".into());
         }
-        if let Some(old) = lock(&self.networks).iter().find(|n| n.name == net.name) {
-            if net.password.is_none() && net.password_file.is_none() {
+        if let Some(old) = lock(&self.networks).iter().find(|n| n.name == net.name)
+            && net.password.is_none() && net.password_file.is_none() {
                 net.password = old.password.clone();
                 net.password_file = old.password_file.clone();
             }
-        }
         self.drop_network(&net.name);
         lock(&self.networks).push(net.clone());
         self.spawn_network(net);
