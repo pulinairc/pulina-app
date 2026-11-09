@@ -1611,6 +1611,12 @@ el.col.addEventListener('pointermove', (e) => {
 for (const type of ['pointerup', 'pointercancel']) {
   el.col.addEventListener(type, cancelPress);
 }
+// iOS starts its own text selection on a long press; never while a hold or the sheet is on.
+document.addEventListener('selectstart', (e) => {
+  if (press.timer || press.sheet) {
+    e.preventDefault();
+  }
+});
 // The system's own long-press menu would cover the sheet.
 el.col.addEventListener('contextmenu', (e) => {
   if (e.target.closest('.text') && matchMedia('(hover: none)').matches) {
@@ -1626,6 +1632,8 @@ function openSheet(row) {
   document.activeElement?.blur?.();
   row.classList.add('pressed');
   press.held = row;
+  // A selection iOS began just as the hold fired, cleared once more after the sheet is up.
+  requestAnimationFrame(() => document.getSelection()?.removeAllRanges());
 
   const line = row.line;
   const sheet = h('div', 'sheet');

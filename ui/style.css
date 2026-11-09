@@ -2985,13 +2985,21 @@ body.docked #status {
 .text.released {
   transition: transform 420ms cubic-bezier(0.18, 1.5, 0.42, 1);
 }
-/* On touch a held message opens the sheet, so iOS must not start selecting text under it. */
+/* On touch a held message opens the sheet, so iOS must not start selecting text under it or in
+   the lifted copy. The whole chat and the sheet, since iOS also selects from the space between. */
 @media (hover: none) {
-  .text {
+  #col,
+  .sheet {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
   }
+}
+.ios #col,
+.ios .sheet {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .sheet {
