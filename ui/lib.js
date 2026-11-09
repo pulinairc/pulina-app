@@ -570,3 +570,62 @@ export function comboLabel(combo, mac) {
     })
     .join('+');
 }
+
+/** Whether the character just typed is a colon that starts a word, which opens the emoji picker. */
+export function colonOpensPicker(value, caret) {
+  return caret > 0 && value[caret - 1] === ':' && (caret === 1 || /\s/.test(value[caret - 2]));
+}
+
+/**
+ * Where a popup of `width` x `height` goes for an anchor `box`: above it when it fits, else below,
+ * right edges lined up, always `gap` inside `page`. All in the same pixels as the rectangles.
+ */
+export function popupSpot(box, page, width, height, gap) {
+  const left = Math.min(Math.max(box.right - width, page.left + gap), page.right - width - gap);
+  const above = box.top - height - gap;
+  const top = above >= page.top + gap ? above : Math.min(box.bottom + gap, page.bottom - height - gap);
+  return { left: Math.max(left, page.left + gap), top: Math.max(top, page.top + gap) };
+}
+
+/**
+ * What to tell the user about macOS notifications, from what macOS reports
+ * ({ state: 'allowed' | 'denied' | 'ask', banners, badge }), or null when all is well.
+ */
+export function notifyAdvice(permission) {
+  if (!permission) {
+    return null;
+  }
+  if (permission.state === 'ask') {
+    return {
+      text: 'macOS asks once whether Lobby may show notifications. Lobby uses them for mentions and private messages.',
+      action: 'Allow notifications',
+    };
+  }
+  if (permission.state === 'denied') {
+    return {
+      text: 'Notifications are off for Lobby in System Settings, so mentions and private messages make no sound or banner.',
+      action: 'Open System Settings',
+    };
+  }
+  const off = [!permission.banners && 'banners', !permission.badge && 'the Dock badge'].filter(Boolean);
+  if (off.length) {
+    return {
+      text: `Lobby may notify, but ${off.join(' and ')} ${off.length > 1 ? 'are' : 'is'} off in System Settings.`,
+      action: 'Open System Settings',
+    };
+  }
+  return null;
+}
+
+/** The app icons, by file name in ui/icons, with their names in Settings. The first is the default. */
+export const APP_ICONS = [
+  ['pendant-lamp', 'Pendant lamp'],
+  ['coffee-chat', 'Coffee chat'],
+  ['teal-night', 'Teal night'],
+  ['neon-night', 'Neon night'],
+  ['sunset', 'Sunset'],
+  ['mint-glass', 'Mint glass'],
+  ['porcelain', 'Porcelain'],
+  ['neon-glow', 'Neon glow'],
+];
+export const DEFAULT_ICON = APP_ICONS[0][0];

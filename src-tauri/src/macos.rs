@@ -83,17 +83,21 @@ fn once<T: Send + 'static>() -> (impl Fn(T) + Send + Sync + 'static, oneshot::Re
     (send, rx)
 }
 
+/// The answer as the page reads it: provisional and ephemeral permission still let Lobby notify.
+fn state_name(status: UNAuthorizationStatus) -> &'static str {
+    match status {
+        UNAuthorizationStatus::NotDetermined => "ask",
+        UNAuthorizationStatus::Denied => "denied",
+        _ => "allowed",
+    }
+}
+
 pub fn permission() -> oneshot::Receiver<Permission> {
     let (send, rx) = once();
     let done = RcBlock::new(move |settings: NonNull<UNNotificationSettings>| {
         let settings = unsafe { settings.as_ref() };
-        let state = match settings.authorizationStatus() {
-            UNAuthorizationStatus::NotDetermined => "ask",
-            UNAuthorizationStatus::Denied => "denied",
-            _ => "allowed",
-        };
         send(Permission {
-            state,
+            state: state_name(settings.authorizationStatus()),
             banners: settings.alertSetting() == UNNotificationSetting::Enabled,
             badge: settings.badgeSetting() == UNNotificationSetting::Enabled,
         });
@@ -137,4 +141,32 @@ pub fn notify(id: &str, title: &str, body: &str, image: Option<&str>) -> oneshot
     let done = RcBlock::new(move |error: *mut NSError| send(unsafe { error.as_ref() }.map(|e| e.localizedDescription().to_string())));
     UNUserNotificationCenter::currentNotificationCenter().addNotificationRequest_withCompletionHandler(&request, Some(&done));
     rx
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn states_read_as_the_page_expects() {
+        assert_eq!(state_name(UNAuthorizationStatus::NotDetermined), "ask");
+        assert_eq!(state_name(UNAuthorizationStatus::Denied), "denied");
+        assert_eq!(state_name(UNAuthorizationStatus::Authorized), "allowed");
+        assert_eq!(state_name(UNAuthorizationStatus::Provisional), "allowed");
+        assert_eq!(state_name(UNAuthorizationStatus::Ephemeral), "allowed");
+    }
+
+    #[test]
+    fn permission_reaches_the_page_with_its_field_names() {
+        let json = serde_json::to_value(Permission { state: "ask", banners: false, badge: true }).unwrap();
+        assert_eq!(json, serde_json::json!({ "state": "ask", "banners": false, "badge": true }));
+    }
+
+    #[test]
+    fn only_the_first_answer_counts() {
+        let (send, mut rx) = once();
+        send(1);
+        send(2);
+        assert_eq!(rx.try_recv(), Ok(1));
+    }
 }

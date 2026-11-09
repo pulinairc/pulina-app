@@ -256,7 +256,7 @@ fn notify_icon(app: tauri::AppHandle, request: tauri::ipc::Request<'_>) -> Resul
 /// Swap the app icon for one of the icons in `ui/icons`: the Dock icon on macOS, the home screen icon on iPhone, the window icon elsewhere.
 #[tauri::command]
 fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> Result<(), String> {
-    if name.is_empty() || !name.chars().all(|c| c.is_ascii_lowercase() || c == '-') {
+    if !icon_name_ok(&name) {
         return Err("Unknown icon".into());
     }
     #[cfg(target_os = "macos")]
@@ -270,7 +270,7 @@ fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> R
     #[cfg(target_os = "ios")]
     {
         let _ = &window;
-        let wanted = (name != DEFAULT_ICON).then(|| format!("AppIcon-{name}"));
+        let wanted = ios_alternate_icon(&name);
         app.run_on_main_thread(move || ios_icon(wanted.as_deref())).map_err(|e| e.to_string())?;
     }
     #[cfg(target_os = "android")]
@@ -284,9 +284,20 @@ fn set_app_icon(app: AppHandle, window: tauri::WebviewWindow, name: String) -> R
     Ok(())
 }
 
+/// Icon names are file names: lower-case letters and dashes, nothing that can leave the icon folder.
+fn icon_name_ok(name: &str) -> bool {
+    !name.is_empty() && name.chars().all(|c| c.is_ascii_lowercase() || c == '-')
+}
+
 /// Pendant lamp is the bundle's own icon on iPhone; the others are alternates in its asset catalog.
-#[cfg(target_os = "ios")]
+#[cfg(any(target_os = "ios", test))]
 const DEFAULT_ICON: &str = "pendant-lamp";
+
+/// The alternate icon set iPhone switches to, as `tools/ios-icons.sh` names it; None is the bundle's own.
+#[cfg(any(target_os = "ios", test))]
+fn ios_alternate_icon(name: &str) -> Option<String> {
+    (name != DEFAULT_ICON).then(|| format!("AppIcon-{name}"))
+}
 
 #[cfg(target_os = "ios")]
 fn ios_icon(wanted: Option<&str>) {
@@ -525,4 +536,32 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn icon_names_cannot_leave_the_icon_folder() {
+        assert!(icon_name_ok("pendant-lamp"));
+        assert!(!icon_name_ok(""));
+        assert!(!icon_name_ok("../secret"));
+        assert!(!icon_name_ok("Sunset"));
+        assert!(!icon_name_ok("a/b"));
+    }
+
+    #[test]
+    fn iphone_switches_to_alternate_sets_except_for_the_default() {
+        assert_eq!(ios_alternate_icon(DEFAULT_ICON), None);
+        assert_eq!(ios_alternate_icon("coffee-chat").as_deref(), Some("AppIcon-coffee-chat"));
+    }
+
+    #[test]
+    fn the_iphone_default_has_its_artwork() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("icons/ios/{DEFAULT_ICON}.png"));
+        assert!(path.is_file(), "missing {}", path.display());
+        let script = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tools/ios-icons.sh")).unwrap();
+        assert!(script.contains(&format!("[ \"$name\" = {DEFAULT_ICON} ]")), "tools/ios-icons.sh must make {DEFAULT_ICON} the app icon");
+    }
 }

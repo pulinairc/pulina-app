@@ -1,5 +1,10 @@
 import {
+  APP_ICONS,
   CHAT_KINDS,
+  DEFAULT_ICON,
+  colonOpensPicker,
+  notifyAdvice,
+  popupSpot,
   EVENT_KINDS,
   clock,
   commandMatches,
@@ -1942,7 +1947,7 @@ let colonAt = null;
 function colonPicker() {
   const caret = el.input.selectionStart ?? 0;
   const value = el.input.value;
-  const fresh = caret > 0 && value[caret - 1] === ':' && (caret === 1 || /\s/.test(value[caret - 2]));
+  const fresh = colonOpensPicker(value, caret);
   if (fresh && settingOn(SHORTCODE_SETTING)) {
     colonAt = caret - 1;
     openPicker(
@@ -3471,15 +3476,9 @@ async function openPicker(anchor, onPick, { focus = true } = {}) {
   // Narrower and shorter on a phone, and above its keyboard.
   p.el.style.maxWidth = `${page.width / k - 2 * PICKER_GAP}px`;
   p.el.style.maxHeight = `${page.height / k - 2 * PICKER_GAP}px`;
-  const box = anchor.getBoundingClientRect();
-  const width = p.el.offsetWidth * k;
-  const height = p.el.offsetHeight * k;
-  const gap = PICKER_GAP * k;
-  const left = Math.min(Math.max(box.right - width, page.left + gap), page.right - width - gap);
-  const above = box.top - height - gap;
-  const top = above >= page.top + gap ? above : Math.min(box.bottom + gap, page.bottom - height - gap);
-  p.el.style.left = `${Math.max(left, page.left + gap) / k}px`;
-  p.el.style.top = `${Math.max(top, page.top + gap) / k}px`;
+  const spot = popupSpot(anchor.getBoundingClientRect(), page, p.el.offsetWidth * k, p.el.offsetHeight * k, PICKER_GAP * k);
+  p.el.style.left = `${spot.left / k}px`;
+  p.el.style.top = `${spot.top / k}px`;
   closePanel();
   if (focus) {
     p.input.focus();
@@ -3569,17 +3568,6 @@ applyTextSize(textSize());
 
 // The app icon, chosen per device: Dock on macOS, window icon elsewhere.
 const ICONS_KEY = 'lobby.icon';
-const APP_ICONS = [
-  ['pendant-lamp', 'Pendant lamp'],
-  ['coffee-chat', 'Coffee chat'],
-  ['teal-night', 'Teal night'],
-  ['neon-night', 'Neon night'],
-  ['sunset', 'Sunset'],
-  ['mint-glass', 'Mint glass'],
-  ['porcelain', 'Porcelain'],
-  ['neon-glow', 'Neon glow'],
-];
-const DEFAULT_ICON = APP_ICONS[0][0];
 
 function chosenIcon() {
   // An icon that has since been removed falls back to the default.
@@ -3693,32 +3681,6 @@ el.notifyTest.addEventListener('click', () => showNotification('Lobby', 'Notific
 // System Settings after a no.
 const GUIDE_SEEN_KEY = 'lobby.notifyGuide';
 
-function notifyFix(p) {
-  if (!p) {
-    return null;
-  }
-  if (p.state === 'ask') {
-    return {
-      text: 'macOS asks once whether Lobby may show notifications. Lobby uses them for mentions and private messages.',
-      action: 'Allow notifications',
-    };
-  }
-  if (p.state === 'denied') {
-    return {
-      text: 'Notifications are off for Lobby in System Settings, so mentions and private messages make no sound or banner.',
-      action: 'Open System Settings',
-    };
-  }
-  const off = [!p.banners && 'banners', !p.badge && 'the Dock badge'].filter(Boolean);
-  if (off.length) {
-    return {
-      text: `Lobby may notify, but ${off.join(' and ')} ${off.length > 1 ? 'are' : 'is'} off in System Settings.`,
-      action: 'Open System Settings',
-    };
-  }
-  return null;
-}
-
 async function notifyPermission() {
   return IS_MAC ? invoke('notify_permission').catch(() => null) : null;
 }
@@ -3734,7 +3696,7 @@ async function fixNotifications() {
 }
 
 async function renderNotifyState() {
-  const fix = notifyFix(await notifyPermission());
+  const fix = notifyAdvice(await notifyPermission());
   el.notifyState.hidden = !fix;
   el.notifyFix.hidden = !fix;
   if (!fix) {
@@ -3756,7 +3718,7 @@ async function offerNotifyGuide() {
   } catch {
     /* ask again next time */
   }
-  const fix = notifyFix(await notifyPermission());
+  const fix = notifyAdvice(await notifyPermission());
   if (!fix) {
     return;
   }

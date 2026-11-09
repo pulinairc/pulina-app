@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readdirSync } from 'node:fs';
 import {
+  APP_ICONS,
+  DEFAULT_ICON,
+  colonOpensPicker,
+  notifyAdvice,
+  popupSpot,
   continues,
   summarize,
   tokenize,
@@ -246,4 +252,60 @@ test('ago says how long since', () => {
   assert.equal(ago(at(25), now), '5 min ago');
   assert.equal(ago(now - 90 * 60_000, now), '1 h 30 min ago');
   assert.equal(ago(now - 3 * 86_400_000, now), '3 d ago');
+});
+
+test('a colon opens the picker only at the start of a word', () => {
+  assert.equal(colonOpensPicker(':', 1), true);
+  assert.equal(colonOpensPicker('hi :', 4), true);
+  assert.equal(colonOpensPicker('hi\n:', 4), true);
+  assert.equal(colonOpensPicker('hi:', 3), false);
+  assert.equal(colonOpensPicker(':D', 2), false);
+  assert.equal(colonOpensPicker('', 0), false);
+  // The caret, not the end of the text, decides.
+  assert.equal(colonOpensPicker('a : b', 3), true);
+});
+
+test('popups sit above their anchor, inside the page', () => {
+  const page = { left: 0, top: 0, right: 400, bottom: 800 };
+  // Room above: right edges line up.
+  assert.deepEqual(popupSpot({ left: 300, right: 380, top: 700, bottom: 740 }, page, 340, 400, 8), { left: 40, top: 292 });
+  // No room above: below instead.
+  assert.deepEqual(popupSpot({ left: 300, right: 380, top: 60, bottom: 100 }, page, 340, 400, 8), { left: 40, top: 108 });
+  // Near the left edge: pushed in by the gap.
+  assert.deepEqual(popupSpot({ left: 0, right: 40, top: 700, bottom: 740 }, page, 340, 400, 8), { left: 8, top: 292 });
+  // Neither above nor below fits: kept inside the bottom, never above the top.
+  assert.deepEqual(popupSpot({ left: 300, right: 380, top: 200, bottom: 240 }, { ...page, bottom: 500 }, 340, 400, 8), {
+    left: 40,
+    top: 92,
+  });
+  assert.deepEqual(popupSpot({ left: 300, right: 380, top: 100, bottom: 140 }, { ...page, bottom: 300 }, 340, 400, 8), {
+    left: 40,
+    top: 8,
+  });
+  // Wider than the page: starts at the gap.
+  assert.deepEqual(popupSpot({ left: 0, right: 300, top: 700, bottom: 740 }, { ...page, right: 300 }, 340, 400, 8), { left: 8, top: 292 });
+});
+
+test('notification advice follows what macOS reports', () => {
+  assert.equal(notifyAdvice(null), null);
+  assert.equal(notifyAdvice({ state: 'allowed', banners: true, badge: true }), null);
+  assert.equal(notifyAdvice({ state: 'ask', banners: false, badge: false }).action, 'Allow notifications');
+  assert.equal(notifyAdvice({ state: 'denied', banners: false, badge: false }).action, 'Open System Settings');
+  assert.match(notifyAdvice({ state: 'allowed', banners: false, badge: true }).text, /but banners is off/);
+  assert.match(notifyAdvice({ state: 'allowed', banners: true, badge: false }).text, /but the Dock badge is off/);
+  assert.match(notifyAdvice({ state: 'allowed', banners: false, badge: false }).text, /banners and the Dock badge are off/);
+});
+
+// Each icon is drawn three times: the window and Settings, the macOS Dock, the iPhone home screen.
+test('every app icon exists for each platform', () => {
+  const pngs = (dir) =>
+    readdirSync(new URL(`../${dir}`, import.meta.url))
+      .filter((f) => f.endsWith('.png'))
+      .map((f) => f.slice(0, -4))
+      .sort();
+  const names = APP_ICONS.map(([name]) => name).sort();
+  assert.equal(DEFAULT_ICON, 'pendant-lamp');
+  assert.deepEqual(pngs('ui/icons'), names);
+  assert.deepEqual(pngs('ui/icons/mac'), names);
+  assert.deepEqual(pngs('src-tauri/icons/ios'), names);
 });
