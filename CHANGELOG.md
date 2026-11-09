@@ -1,6 +1,7 @@
 ### 0.5.10: 2026-11-09
 
 * Fix squircle photos and channel icons
+* Add formatting, lint, tests and CI checks
 
 ### 0.5.9: 2026-11-09
 

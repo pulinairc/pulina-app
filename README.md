@@ -246,9 +246,13 @@ flowchart TB
 - `ui` is the window. It does not know which mode is in use.
 
 ```sh
-cargo test --workspace
-node --test tests/lib.test.mjs
+npm ci
+npm test         # JS and Rust unit tests
+npm run check    # Biome, rustfmt and clippy, as CI runs them
+npm run format   # Biome and rustfmt rewrite the code
 ```
+
+Every push runs the same checks on GitHub Actions, plus the macOS app build, the iPhone lint and the core tests on the iPhone simulator.
 
 Releases are automatic: when a new version heading lands in `CHANGELOG.md` on `main`, GitHub Actions tags it, publishes the release notes and attaches the Linux and macOS builds.
 
