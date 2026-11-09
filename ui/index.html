@@ -84,6 +84,8 @@
         <span>Mentions and private messages</span>
         <input id="notify-toggle" class="switch" type="checkbox" role="switch">
       </label>
+      <p id="notify-state" class="hint" hidden></p>
+      <button id="notify-fix" class="link-btn" type="button" hidden></button>
       <button id="notify-test" class="link-btn" type="button">Send a test notification</button>
     </section>
     <section>
@@ -179,6 +181,17 @@
       </div>
     </form>
   </dialog>
+  <dialog id="notify-guide" tabindex="-1" aria-labelledby="notify-guide-title">
+    <div class="sheet-head">
+      <h2 id="notify-guide-title">Notifications</h2>
+    </div>
+    <p id="notify-guide-text" class="hint"></p>
+    <div class="person-buttons">
+      <button id="notify-guide-later" class="link-btn" type="button">Not now</button>
+      <button id="notify-guide-go" class="primary-btn" type="button"></button>
+    </div>
+  </dialog>
+
   <dialog id="connection" tabindex="-1" aria-labelledby="connection-title">
     <div class="sheet-head">
       <h2 id="connection-title">Connection</h2>

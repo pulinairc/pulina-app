@@ -4,12 +4,15 @@ use block2::RcBlock;
 use objc2::rc::Retained;
 use objc2::runtime::{Bool, NSObject, NSObjectProtocol, ProtocolObject};
 use objc2::{define_class, msg_send, AllocAnyThread, MainThreadMarker};
-use std::sync::OnceLock;
+use std::ptr::NonNull;
+use std::sync::{Mutex, OnceLock};
+use tokio::sync::oneshot;
 use objc2_app_kit::{NSApplication, NSImage};
 use objc2_foundation::{NSArray, NSData, NSError, NSString, NSURL};
 use objc2_user_notifications::{
-    UNAuthorizationOptions, UNMutableNotificationContent, UNNotificationAttachment, UNNotificationRequest,
-    UNNotificationResponse, UNNotificationSound, UNUserNotificationCenter, UNUserNotificationCenterDelegate,
+    UNAuthorizationOptions, UNAuthorizationStatus, UNMutableNotificationContent, UNNotificationAttachment,
+    UNNotificationRequest, UNNotificationResponse, UNNotificationSetting, UNNotificationSettings, UNNotificationSound,
+    UNUserNotificationCenter, UNUserNotificationCenterDelegate,
 };
 
 /// Gets the id of a notification the user clicked.
@@ -59,17 +62,64 @@ pub fn dock_badge(count: u32) {
     NSApplication::sharedApplication(mtm).dockTile().setBadgeLabel(label.as_deref());
 }
 
-/// Ask once to show notifications; macOS remembers the answer.
-pub fn authorize() {
-    let center = UNUserNotificationCenter::currentNotificationCenter();
-    let done = RcBlock::new(|_granted: Bool, _error: *mut NSError| {});
-    center.requestAuthorizationWithOptions_completionHandler(
+/// What macOS lets Lobby do, as System Settings shows it.
+#[derive(serde::Serialize)]
+pub struct Permission {
+    /// "allowed", "denied" or "ask" when macOS has not asked yet.
+    pub state: &'static str,
+    pub banners: bool,
+    pub badge: bool,
+}
+
+/// A completion handler may in principle run more than once; only the first answer counts.
+fn once<T: Send + 'static>() -> (impl Fn(T) + Send + Sync + 'static, oneshot::Receiver<T>) {
+    let (tx, rx) = oneshot::channel();
+    let tx = Mutex::new(Some(tx));
+    let send = move |value: T| {
+        if let Some(tx) = tx.lock().ok().and_then(|mut t| t.take()) {
+            let _ = tx.send(value);
+        }
+    };
+    (send, rx)
+}
+
+pub fn permission() -> oneshot::Receiver<Permission> {
+    let (send, rx) = once();
+    let done = RcBlock::new(move |settings: NonNull<UNNotificationSettings>| {
+        let settings = unsafe { settings.as_ref() };
+        let state = match settings.authorizationStatus() {
+            UNAuthorizationStatus::NotDetermined => "ask",
+            UNAuthorizationStatus::Denied => "denied",
+            _ => "allowed",
+        };
+        send(Permission {
+            state,
+            banners: settings.alertSetting() == UNNotificationSetting::Enabled,
+            badge: settings.badgeSetting() == UNNotificationSetting::Enabled,
+        });
+    });
+    UNUserNotificationCenter::currentNotificationCenter().getNotificationSettingsWithCompletionHandler(&done);
+    rx
+}
+
+/// Shows the system's Allow prompt the first time; later macOS answers from what was chosen.
+pub fn authorize() -> oneshot::Receiver<Result<bool, String>> {
+    let (send, rx) = once();
+    let done = RcBlock::new(move |granted: Bool, error: *mut NSError| {
+        send(match unsafe { error.as_ref() } {
+            Some(e) => Err(e.localizedDescription().to_string()),
+            None => Ok(granted.as_bool()),
+        });
+    });
+    UNUserNotificationCenter::currentNotificationCenter().requestAuthorizationWithOptions_completionHandler(
         UNAuthorizationOptions::Alert | UNAuthorizationOptions::Sound | UNAuthorizationOptions::Badge,
         &done,
     );
+    rx
 }
 
-pub fn notify(id: &str, title: &str, body: &str, image: Option<&str>) {
+/// Answers with the reason when macOS refuses it.
+pub fn notify(id: &str, title: &str, body: &str, image: Option<&str>) -> oneshot::Receiver<Option<String>> {
     let content = UNMutableNotificationContent::new();
     content.setTitle(&NSString::from_str(title));
     content.setBody(&NSString::from_str(body));
@@ -83,5 +133,8 @@ pub fn notify(id: &str, title: &str, body: &str, image: Option<&str>) {
         }
     }
     let request = UNNotificationRequest::requestWithIdentifier_content_trigger(&NSString::from_str(id), &content, None);
-    UNUserNotificationCenter::currentNotificationCenter().addNotificationRequest_withCompletionHandler(&request, None);
+    let (send, rx) = once();
+    let done = RcBlock::new(move |error: *mut NSError| send(unsafe { error.as_ref() }.map(|e| e.localizedDescription().to_string())));
+    UNUserNotificationCenter::currentNotificationCenter().addNotificationRequest_withCompletionHandler(&request, Some(&done));
+    rx
 }

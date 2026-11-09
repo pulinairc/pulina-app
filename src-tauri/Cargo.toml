@@ -33,7 +33,7 @@ objc2 = "0.6.5"
 block2 = "0.6.2"
 objc2-app-kit = { version = "0.3.2", features = ["NSApplication", "NSImage", "NSResponder", "NSDockTile"] }
 objc2-foundation = { version = "0.3.2", features = ["NSData", "NSString", "NSURL", "NSArray", "NSError"] }
-objc2-user-notifications = { version = "0.3.2", features = ["block2", "UNUserNotificationCenter", "UNNotificationContent", "UNNotificationRequest", "UNNotificationTrigger", "UNNotificationSound", "UNNotificationAttachment", "UNNotification", "UNNotificationResponse"] }
+objc2-user-notifications = { version = "0.3.2", features = ["block2", "UNUserNotificationCenter", "UNNotificationContent", "UNNotificationRequest", "UNNotificationTrigger", "UNNotificationSound", "UNNotificationAttachment", "UNNotification", "UNNotificationResponse", "UNNotificationSettings"] }
 
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = "0.6.5"

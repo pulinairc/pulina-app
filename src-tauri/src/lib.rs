@@ -311,23 +311,48 @@ fn set_badge(app: AppHandle, count: u32) -> Result<(), String> {
     Ok(())
 }
 
-/// Ask macOS for permission to notify, once at start, so the first mention is not lost to the prompt.
+/// Whether macOS lets Lobby notify; null elsewhere, where the notification plugin answers.
 #[tauri::command]
-fn allow_notifications() {
+async fn notify_permission() -> Option<serde_json::Value> {
     #[cfg(target_os = "macos")]
-    macos::authorize();
+    {
+        let p = macos::permission().await.ok()?;
+        return serde_json::to_value(p).ok();
+    }
+    #[cfg(not(target_os = "macos"))]
+    None
+}
+
+/// Shows macOS's Allow prompt the first time; true when notifications are allowed.
+#[tauri::command]
+async fn allow_notifications() -> Result<bool, String> {
+    #[cfg(target_os = "macos")]
+    return macos::authorize().await.map_err(|e| e.to_string())?;
+    #[cfg(not(target_os = "macos"))]
+    Ok(false)
+}
+
+/// System Settings, at its Notifications pane.
+#[tauri::command]
+fn open_notify_settings() -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    std::process::Command::new("open")
+        .arg("x-apple.systempreferences:com.apple.Notifications-Settings.extension")
+        .spawn()
+        .map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// macOS notifications go through the system notification centre; the plugin's older route stays silent there.
 #[tauri::command]
-fn notify_mac(id: String, title: String, body: String, image: Option<String>) {
+async fn notify_mac(id: String, title: String, body: String, image: Option<String>) -> Result<(), String> {
     #[cfg(target_os = "macos")]
-    {
-        macos::authorize();
-        macos::notify(&id, &title, &body, image.as_deref());
+    if let Ok(Some(refused)) = macos::notify(&id, &title, &body, image.as_deref()).await {
+        return Err(refused);
     }
     #[cfg(not(target_os = "macos"))]
     let _ = (id, title, body, image);
+    Ok(())
 }
 
 /// How Lobby connects, as the setup screen shows and edits it.
@@ -461,7 +486,7 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon, set_badge, notify_mac, allow_notifications, get_connection, save_connection, server_networks, save_server_network, delete_server_network])
+        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon, set_badge, notify_mac, allow_notifications, notify_permission, open_notify_settings, get_connection, save_connection, server_networks, save_server_network, delete_server_network])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }

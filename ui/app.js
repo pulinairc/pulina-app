@@ -41,7 +41,7 @@ const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), statusText: $('status-text'), statusAction: $('status-action'), toast: $('toast'), log: $('log'), col: $('col'),
   form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
-  markRead: $('mark-read'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), textSize: $('text-size'), textSizeNumber: $('text-size-number'), textSizeReset: $('text-size-reset'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
+  markRead: $('mark-read'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), notifyState: $('notify-state'), notifyFix: $('notify-fix'), notifyGuide: $('notify-guide'), notifyGuideText: $('notify-guide-text'), notifyGuideGo: $('notify-guide-go'), notifyGuideLater: $('notify-guide-later'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), textSize: $('text-size'), textSizeNumber: $('text-size-number'), textSizeReset: $('text-size-reset'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
   peopleClose: $('people-close'), peopleList: $('people-list-view'), peopleItems: $('people-list'), personNew: $('person-new'),
@@ -600,6 +600,7 @@ el.switcher.addEventListener('click', (e) => {
 
 function renderSettings() {
   el.notifyToggle.checked = notifyOn();
+  renderNotifyState();
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
   renderIconChoices();
@@ -1878,7 +1879,7 @@ function applyStatus(st) {
     document.documentElement.classList.toggle('mac', IS_MAC);
     document.documentElement.classList.toggle('ios', st.platform === 'ios');
     applyTextSize(textSize());
-    if (IS_MAC) invoke('allow_notifications').catch(() => {});
+    if (IS_MAC) offerNotifyGuide();
   }
   state.networks = st.networks.map((n) => n.name);
   state.configPath = st.config_path;
@@ -2933,6 +2934,71 @@ function showNotification(title, body, icon, target = null) {
 
 
 el.notifyTest.addEventListener('click', () => showNotification('Lobby', 'Notifications work.', null));
+
+// What macOS lets Lobby do, and the one step that fixes it: its Allow prompt the first time,
+// System Settings after a no.
+const GUIDE_SEEN_KEY = 'lobby.notifyGuide';
+
+function notifyFix(p) {
+  if (!p) return null;
+  if (p.state === 'ask') {
+    return { text: 'macOS asks once whether Lobby may show notifications. Lobby uses them for mentions and private messages.', action: 'Allow notifications' };
+  }
+  if (p.state === 'denied') {
+    return { text: 'Notifications are off for Lobby in System Settings, so mentions and private messages make no sound or banner.', action: 'Open System Settings' };
+  }
+  const off = [!p.banners && 'banners', !p.badge && 'the Dock badge'].filter(Boolean);
+  if (off.length) {
+    return { text: `Lobby may notify, but ${off.join(' and ')} ${off.length > 1 ? 'are' : 'is'} off in System Settings.`, action: 'Open System Settings' };
+  }
+  return null;
+}
+
+async function notifyPermission() {
+  return IS_MAC ? invoke('notify_permission').catch(() => null) : null;
+}
+
+async function fixNotifications() {
+  const p = await notifyPermission();
+  if (p?.state === 'ask') await invoke('allow_notifications').catch((e) => renderStatus(`Notifications: ${e}`));
+  else await invoke('open_notify_settings').catch((e) => renderStatus(`System Settings: ${e}`));
+  renderNotifyState();
+}
+
+async function renderNotifyState() {
+  const fix = notifyFix(await notifyPermission());
+  el.notifyState.hidden = !fix;
+  el.notifyFix.hidden = !fix;
+  if (!fix) return;
+  el.notifyState.textContent = fix.text;
+  el.notifyFix.textContent = fix.action;
+}
+
+/** Once per Mac, the first time notifications are not working: say why and offer the fix. */
+async function offerNotifyGuide() {
+  if (!notifyOn()) return;
+  try { if (localStorage.getItem(GUIDE_SEEN_KEY)) return; } catch { /* ask again next time */ }
+  const fix = notifyFix(await notifyPermission());
+  if (!fix) return;
+  el.notifyGuideText.textContent = fix.text;
+  el.notifyGuideGo.textContent = fix.action;
+  el.notifyGuide.showModal();
+}
+
+el.notifyFix.addEventListener('click', fixNotifications);
+el.notifyGuideGo.addEventListener('click', async () => {
+  el.notifyGuide.close();
+  await fixNotifications();
+});
+el.notifyGuideLater.addEventListener('click', () => el.notifyGuide.close());
+el.notifyGuide.addEventListener('close', () => {
+  try { localStorage.setItem(GUIDE_SEEN_KEY, '1'); } catch { /* asks again next start */ }
+  el.input.focus();
+});
+// Back from System Settings, the settings sheet shows what changed there.
+window.addEventListener('focus', () => {
+  if (el.settings.open) renderNotifyState();
+});
 
 // A photo as a file the notification can show, written once per photo.
 const notifyIcons = new Map();
