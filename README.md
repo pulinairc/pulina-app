@@ -68,8 +68,10 @@ Download the latest build from [Releases](https://github.com/rollecode/lobby/rel
 | Debian, Ubuntu | `.deb`, install with `sudo apt install ./Lobby_*.deb` |
 | Other Linux | `.AppImage`, make it executable and run it |
 | macOS (Apple silicon) | `.dmg` |
+| Windows | `-setup.exe` |
+| Android | `.apk`, open it on the phone and allow installing from your browser |
 
-The macOS build is not signed. After moving Lobby to Applications, run `xattr -dr com.apple.quarantine /Applications/Lobby.app` once, or macOS refuses to open it.
+The macOS build is not signed. After moving Lobby to Applications, run `xattr -dr com.apple.quarantine /Applications/Lobby.app` once, or macOS refuses to open it. The Windows installer is not signed either: on the SmartScreen warning, choose More info, then Run anyway.
 
 <details>
 <summary><strong>Building from source</strong></summary>

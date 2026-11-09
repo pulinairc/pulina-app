@@ -543,6 +543,8 @@ pub fn run() {
 
             let data = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data)?;
+            #[cfg(target_os = "android")]
+            config::use_app_dir(app.path().app_config_dir()?);
 
             let (source, error) = start_source(app.handle(), &data);
 

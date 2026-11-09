@@ -68,7 +68,20 @@ impl ServerLink {
     }
 }
 
+/// Android has no home or config folder of its own, so the app hands over its private one at start.
+#[cfg(target_os = "android")]
+static APP_DIR: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+
+#[cfg(target_os = "android")]
+pub fn use_app_dir(dir: PathBuf) {
+    let _ = APP_DIR.set(dir);
+}
+
 pub fn dir() -> PathBuf {
+    #[cfg(target_os = "android")]
+    if let Some(dir) = APP_DIR.get() {
+        return dir.clone();
+    }
     dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("lobby")
 }
 
