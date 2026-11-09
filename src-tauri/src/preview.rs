@@ -115,16 +115,48 @@ async fn youtube(client: &reqwest::Client, raw: &str) -> Option<Preview> {
     let api = Url::parse_with_params("https://www.youtube.com/oembed", &[("url", raw), ("format", "json")]).ok()?;
     let body = client.get(api).send().await.ok()?.error_for_status().ok()?.bytes().await.ok()?;
     let o: OEmbed = serde_json::from_slice(&body).ok()?;
-    Some(Preview { kind: "page".into(), url: raw.into(), title: o.title, image: o.thumbnail_url, site: "youtube.com".into(), ..Default::default() })
+    Some(Preview {
+        kind: "page".into(),
+        url: raw.into(),
+        title: o.title,
+        image: o.thumbnail_url,
+        site: "youtube.com".into(),
+        ..Default::default()
+    })
 }
 
 /// Named entities that turn up in page titles and descriptions.
 const NAMED: [(&str, &str); 30] = [
-    ("quot", "\""), ("apos", "'"), ("lt", "<"), ("gt", ">"), ("nbsp", " "), ("amp", "&"),
-    ("auml", "ä"), ("ouml", "ö"), ("aring", "å"), ("Auml", "Ä"), ("Ouml", "Ö"), ("Aring", "Å"),
-    ("uuml", "ü"), ("Uuml", "Ü"), ("eacute", "é"), ("Eacute", "É"), ("egrave", "è"), ("aacute", "á"),
-    ("szlig", "ß"), ("ntilde", "ñ"), ("deg", "°"), ("copy", "©"), ("reg", "®"), ("hellip", "…"),
-    ("ndash", "–"), ("mdash", "—"), ("lsquo", "‘"), ("rsquo", "’"), ("ldquo", "“"), ("rdquo", "”"),
+    ("quot", "\""),
+    ("apos", "'"),
+    ("lt", "<"),
+    ("gt", ">"),
+    ("nbsp", " "),
+    ("amp", "&"),
+    ("auml", "ä"),
+    ("ouml", "ö"),
+    ("aring", "å"),
+    ("Auml", "Ä"),
+    ("Ouml", "Ö"),
+    ("Aring", "Å"),
+    ("uuml", "ü"),
+    ("Uuml", "Ü"),
+    ("eacute", "é"),
+    ("Eacute", "É"),
+    ("egrave", "è"),
+    ("aacute", "á"),
+    ("szlig", "ß"),
+    ("ntilde", "ñ"),
+    ("deg", "°"),
+    ("copy", "©"),
+    ("reg", "®"),
+    ("hellip", "…"),
+    ("ndash", "–"),
+    ("mdash", "—"),
+    ("lsquo", "‘"),
+    ("rsquo", "’"),
+    ("ldquo", "“"),
+    ("rdquo", "”"),
 ];
 
 static NAMED_ENTITY: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"&([A-Za-z]+);").unwrap());

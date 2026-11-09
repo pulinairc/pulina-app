@@ -35,7 +35,14 @@ fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
 
 impl Remote {
     pub fn new(link: ServerLink) -> Arc<Self> {
-        Arc::new(Self { link, out: Mutex::default(), pending: Mutex::default(), next_id: AtomicU64::new(1), snapshot: Mutex::default(), task: Mutex::default() })
+        Arc::new(Self {
+            link,
+            out: Mutex::default(),
+            pending: Mutex::default(),
+            next_id: AtomicU64::new(1),
+            snapshot: Mutex::default(),
+            task: Mutex::default(),
+        })
     }
 
     pub fn snapshot(&self) -> Snapshot {

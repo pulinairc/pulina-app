@@ -57,7 +57,8 @@ fn save_networks(path: &Path, networks: &[Network]) -> Result<(), String> {
     let mut table: toml::Table = text.parse().map_err(|e: toml::de::Error| e.to_string())?;
     table.insert("network".into(), toml::Value::try_from(networks).map_err(|e| e.to_string())?);
     let body = toml::to_string(&table).map_err(|e| e.to_string())?;
-    std::fs::write(path, format!("# lobby-server config. Networks can also be changed from Lobby's connection setup.\n{body}")).map_err(|e| e.to_string())
+    std::fs::write(path, format!("# lobby-server config. Networks can also be changed from Lobby's connection setup.\n{body}"))
+        .map_err(|e| e.to_string())
 }
 
 /// Compare without stopping at the first difference, so timing says nothing about the token.
@@ -211,7 +212,8 @@ mod tests {
 
     #[test]
     fn config_defaults_to_localhost() {
-        let config: Config = toml::from_str("nick = \"rolle\"\n[[network]]\nname = \"IRCnet\"\nhost = \"127.0.0.1\"\nport = 45000").unwrap();
+        let config: Config =
+            toml::from_str("nick = \"rolle\"\n[[network]]\nname = \"IRCnet\"\nhost = \"127.0.0.1\"\nport = 45000").unwrap();
         assert_eq!(config.listen, DEFAULT_LISTEN);
         assert_eq!(config.networks.len(), 1);
         assert!(!config.allow_insecure);

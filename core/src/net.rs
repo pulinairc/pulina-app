@@ -153,9 +153,10 @@ impl Session {
                 line.own = same(&victim, &self.me);
                 let mut out = vec![Out::Line(line)];
                 if same(&victim, &self.me)
-                    && let Some(chan) = self.chans.remove(&key) {
-                        out.push(self.info(&chan, false));
-                    }
+                    && let Some(chan) = self.chans.remove(&key)
+                {
+                    out.push(self.info(&chan, false));
+                }
                 out
             }
             "QUIT" => {
@@ -241,7 +242,12 @@ impl Session {
         if msg.command == "318" {
             return self.whois.remove(&key).map(Out::Whois).into_iter().collect();
         }
-        let w = self.whois.entry(key).or_insert_with(|| Whois { net: self.net.clone(), nick: nick.to_string(), found: true, ..Default::default() });
+        let w = self.whois.entry(key).or_insert_with(|| Whois {
+            net: self.net.clone(),
+            nick: nick.to_string(),
+            found: true,
+            ..Default::default()
+        });
         let last = msg.params.last().map(String::as_str).unwrap_or("");
         match msg.command.as_str() {
             "311" => {

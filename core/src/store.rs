@@ -172,24 +172,15 @@ impl Store {
     }
 
     pub fn set_setting(&self, key: &str, value: &str) -> rusqlite::Result<()> {
-        self.conn()
-            .execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)", params![key, value])
-            .map(|_| ())
+        self.conn().execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)", params![key, value]).map(|_| ())
     }
 
     pub fn preview_get(&self, url: &str) -> Option<String> {
-        self.conn()
-            .query_row("SELECT json FROM previews WHERE url = ?1", params![url], |r| r.get(0))
-            .optional()
-            .ok()
-            .flatten()
+        self.conn().query_row("SELECT json FROM previews WHERE url = ?1", params![url], |r| r.get(0)).optional().ok().flatten()
     }
 
     pub fn preview_put(&self, url: &str, json: &str, ts: i64) {
-        let _ = self.conn().execute(
-            "INSERT OR REPLACE INTO previews (url, json, ts) VALUES (?1, ?2, ?3)",
-            params![url, json, ts],
-        );
+        let _ = self.conn().execute("INSERT OR REPLACE INTO previews (url, json, ts) VALUES (?1, ?2, ?3)", params![url, json, ts]);
     }
 }
 

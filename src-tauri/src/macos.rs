@@ -3,17 +3,17 @@
 use block2::RcBlock;
 use objc2::rc::Retained;
 use objc2::runtime::{Bool, NSObject, NSObjectProtocol, ProtocolObject};
-use objc2::{define_class, msg_send, AllocAnyThread, MainThreadMarker};
-use std::ptr::NonNull;
-use std::sync::{Mutex, OnceLock};
-use tokio::sync::oneshot;
+use objc2::{AllocAnyThread, MainThreadMarker, define_class, msg_send};
 use objc2_app_kit::{NSApplication, NSImage};
 use objc2_foundation::{NSArray, NSData, NSError, NSString, NSURL};
 use objc2_user_notifications::{
-    UNAuthorizationOptions, UNAuthorizationStatus, UNMutableNotificationContent, UNNotificationAttachment,
-    UNNotificationRequest, UNNotificationResponse, UNNotificationSetting, UNNotificationSettings, UNNotificationSound,
-    UNUserNotificationCenter, UNUserNotificationCenterDelegate,
+    UNAuthorizationOptions, UNAuthorizationStatus, UNMutableNotificationContent, UNNotificationAttachment, UNNotificationRequest,
+    UNNotificationResponse, UNNotificationSetting, UNNotificationSettings, UNNotificationSound, UNUserNotificationCenter,
+    UNUserNotificationCenterDelegate,
 };
+use std::ptr::NonNull;
+use std::sync::{Mutex, OnceLock};
+use tokio::sync::oneshot;
 
 /// Gets the id of a notification the user clicked.
 static ON_CLICK: OnceLock<Box<dyn Fn(String) + Send + Sync>> = OnceLock::new();

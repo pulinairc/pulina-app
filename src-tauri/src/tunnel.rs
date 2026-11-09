@@ -2,8 +2,8 @@
 //! The SSH client is built in, so it works where there is no `ssh` program, like the iPhone.
 
 use russh::client::{self, Handle};
-use russh::keys::ssh_key::private::Ed25519Keypair;
 use russh::keys::ssh_key::LineEnding;
+use russh::keys::ssh_key::private::Ed25519Keypair;
 use russh::keys::{self, HashAlg, PrivateKey, PrivateKeyWithHashAlg, PublicKeyOrCertificate};
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -60,7 +60,13 @@ pub fn own_key(dir: &Path) -> Result<PrivateKey, String> {
 fn write_private(path: &Path, bytes: &[u8]) -> Result<(), String> {
     use std::io::Write;
     use std::os::unix::fs::OpenOptionsExt;
-    std::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(path).and_then(|mut f| f.write_all(bytes)).map_err(|e| e.to_string())
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
+        .and_then(|mut f| f.write_all(bytes))
+        .map_err(|e| e.to_string())
 }
 
 #[cfg(not(unix))]
@@ -133,12 +139,10 @@ impl Tunnel {
             ..Default::default()
         });
         let handler = Client { host: target.host.clone(), port: target.port, known_hosts: dir.join("known_hosts") };
-        let mut session = client::connect(config, (target.host.as_str(), target.port), handler)
-            .await
-            .map_err(|e| match e {
-                russh::Error::UnknownKey => format!("{}: the server's host key changed or is not trusted", target.host),
-                e => format!("ssh {}: {e}", target.host),
-            })?;
+        let mut session = client::connect(config, (target.host.as_str(), target.port), handler).await.map_err(|e| match e {
+            russh::Error::UnknownKey => format!("{}: the server's host key changed or is not trusted", target.host),
+            e => format!("ssh {}: {e}", target.host),
+        })?;
 
         if !authenticate(&mut session, target, dir).await? {
             return Err(format!("ssh {}@{}: no key was accepted. Add Lobby's key on the server, see Settings.", target.user, target.host));
@@ -152,7 +156,11 @@ impl Tunnel {
             while let Ok((mut socket, from)) = listener.accept().await {
                 let handle = Arc::clone(&handle);
                 tokio::spawn(async move {
-                    let Ok(channel) = handle.channel_open_direct_tcpip("127.0.0.1", remote_port.into(), from.ip().to_string(), from.port().into()).await else { return };
+                    let Ok(channel) =
+                        handle.channel_open_direct_tcpip("127.0.0.1", remote_port.into(), from.ip().to_string(), from.port().into()).await
+                    else {
+                        return;
+                    };
                     let mut stream = channel.into_stream();
                     let _ = tokio::io::copy_bidirectional(&mut socket, &mut stream).await;
                 });
@@ -170,9 +178,10 @@ async fn authenticate(session: &mut Handle<Client>, target: &Target, dir: &Path)
         for identity in agent.request_identities().await.unwrap_or_default() {
             let key = identity.public_key().into_owned();
             if let Ok(result) = session.authenticate_publickey_with(target.user.clone(), key, rsa_hash, &mut agent).await
-                && result.success() {
-                    return Ok(true);
-                }
+                && result.success()
+            {
+                return Ok(true);
+            }
         }
     }
 

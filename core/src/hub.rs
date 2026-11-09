@@ -24,10 +24,21 @@ const DAY_MS: i64 = 86_400_000;
 pub enum Event {
     Line(Line),
     Buffer(BufferInfo),
-    Me { net: String, nick: String },
-    Conn { net: String, state: String },
-    People { people: Vec<Person> },
-    Setting { key: String, value: String },
+    Me {
+        net: String,
+        nick: String,
+    },
+    Conn {
+        net: String,
+        state: String,
+    },
+    People {
+        people: Vec<Person>,
+    },
+    Setting {
+        key: String,
+        value: String,
+    },
     Whois(Whois),
     /// The list of networks changed; clients fetch a fresh snapshot.
     Networks,
@@ -106,7 +117,12 @@ impl Hub {
     pub fn network_views(&self) -> Vec<NetworkView> {
         lock(&self.networks)
             .iter()
-            .map(|n| NetworkView { name: n.name.clone(), host: n.host.clone(), port: n.port, has_password: n.password.is_some() || n.password_file.is_some() })
+            .map(|n| NetworkView {
+                name: n.name.clone(),
+                host: n.host.clone(),
+                port: n.port,
+                has_password: n.password.is_some() || n.password_file.is_some(),
+            })
             .collect()
     }
 
@@ -116,10 +132,12 @@ impl Hub {
             return Err("A network needs a name and a host".into());
         }
         if let Some(old) = lock(&self.networks).iter().find(|n| n.name == net.name)
-            && net.password.is_none() && net.password_file.is_none() {
-                net.password = old.password.clone();
-                net.password_file = old.password_file.clone();
-            }
+            && net.password.is_none()
+            && net.password_file.is_none()
+        {
+            net.password = old.password.clone();
+            net.password_file = old.password_file.clone();
+        }
         self.drop_network(&net.name);
         lock(&self.networks).push(net.clone());
         self.spawn_network(net);
@@ -268,10 +286,8 @@ impl Hub {
     // ponytail: no keepalive, a silently dead socket is only noticed when the OS drops it.
     async fn run(&self, net: &Network) -> Result<(), String> {
         let connect = TcpStream::connect((net.host.as_str(), net.port));
-        let stream = tokio::time::timeout(CONNECT_TIMEOUT, connect)
-            .await
-            .map_err(|_| "timed out".to_string())?
-            .map_err(|e| e.to_string())?;
+        let stream =
+            tokio::time::timeout(CONNECT_TIMEOUT, connect).await.map_err(|_| "timed out".to_string())?.map_err(|e| e.to_string())?;
         let (read, mut write) = stream.into_split();
 
         let (tx, mut rx) = mpsc::unbounded_channel::<String>();

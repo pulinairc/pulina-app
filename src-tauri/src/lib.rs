@@ -7,9 +7,9 @@ mod remote;
 mod tunnel;
 
 use lobby_core::hub::{Event, Hub, Snapshot};
+use lobby_core::now_ms;
 use lobby_core::protocol::ClientMsg;
 use lobby_core::store::{BufferRef, Line, Person, Store};
-use lobby_core::now_ms;
 use remote::Remote;
 use serde::Serialize;
 use std::sync::Arc;
@@ -97,7 +97,12 @@ fn status(state: State<AppState>) -> Status {
         Source::Remote(remote) => remote.snapshot(),
         Source::Unconfigured => Snapshot::default(),
     };
-    Status { snapshot, error: state.error.lock().unwrap_or_else(|e| e.into_inner()).clone(), config_path: config::path().display().to_string(), platform: std::env::consts::OS }
+    Status {
+        snapshot,
+        error: state.error.lock().unwrap_or_else(|e| e.into_inner()).clone(),
+        config_path: config::path().display().to_string(),
+        platform: std::env::consts::OS,
+    }
 }
 
 #[tauri::command]
@@ -304,7 +309,8 @@ fn set_badge(app: AppHandle, count: u32) -> Result<(), String> {
     #[cfg(target_os = "ios")]
     {
         let _ = app;
-        objc2_user_notifications::UNUserNotificationCenter::currentNotificationCenter().setBadgeCount_withCompletionHandler(count as _, None);
+        objc2_user_notifications::UNUserNotificationCenter::currentNotificationCenter()
+            .setBadgeCount_withCompletionHandler(count as _, None);
     }
     #[cfg(not(any(target_os = "macos", target_os = "ios")))]
     let _ = (app, count);
@@ -407,7 +413,14 @@ fn save_connection(app: AppHandle, state: State<AppState>, connection: Connectio
         (Some(connection.token.clone()).filter(|t| !t.is_empty()), None)
     };
     let server = match connection.mode.as_str() {
-        "ssh" => Some(config::ServerLink { ssh: Some(connection.ssh.trim().to_string()), ssh_port: connection.ssh_port, port: connection.port, token, token_file, ..Default::default() }),
+        "ssh" => Some(config::ServerLink {
+            ssh: Some(connection.ssh.trim().to_string()),
+            ssh_port: connection.ssh_port,
+            port: connection.port,
+            token,
+            token_file,
+            ..Default::default()
+        }),
         "url" => Some(config::ServerLink { url: Some(connection.url.trim().to_string()), token, token_file, ..Default::default() }),
         _ => None,
     };
@@ -486,7 +499,30 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![status, recent_buffers, history, send, preview, save_person, delete_person, set_setting, upload, player, notify_icon, set_app_icon, set_badge, notify_mac, allow_notifications, notify_permission, open_notify_settings, get_connection, save_connection, server_networks, save_server_network, delete_server_network])
+        .invoke_handler(tauri::generate_handler![
+            status,
+            recent_buffers,
+            history,
+            send,
+            preview,
+            save_person,
+            delete_person,
+            set_setting,
+            upload,
+            player,
+            notify_icon,
+            set_app_icon,
+            set_badge,
+            notify_mac,
+            allow_notifications,
+            notify_permission,
+            open_notify_settings,
+            get_connection,
+            save_connection,
+            server_networks,
+            save_server_network,
+            delete_server_network
+        ])
         .run(tauri::generate_context!())
         .expect("failed to start Lobby");
 }
