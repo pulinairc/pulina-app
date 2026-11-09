@@ -1,6 +1,7 @@
 ### [Unreleased]
 
 * Add person cards when pointing at the people list
+* Fix name suggestions missing people who just left
 
 ### 0.8.3: 2026-11-09
 

@@ -2648,11 +2648,16 @@ function nickEntries(caret) {
   }
   const me = (state.me[b.net] || '').toLowerCase();
   const spokeAt = spokeIn(b.net);
-  const nicks = nickMatches(
-    q.word,
-    [...b.members].filter((n) => n.toLowerCase() !== me),
-    (n) => -spokeAt(n),
-  );
+  // Who is here, and who spoke here even if they have since left: answering someone who just
+  // quit is common, and their nick usually comes back.
+  const seen = new Map([...b.members].map((n) => [n.toLowerCase(), n]));
+  for (const l of b.lines) {
+    if (CHAT_KINDS.has(l.kind) && l.nick && !seen.has(l.nick.toLowerCase())) {
+      seen.set(l.nick.toLowerCase(), l.nick);
+    }
+  }
+  seen.delete(me);
+  const nicks = nickMatches(q.word, seen.values(), (n) => -spokeAt(n));
   // Already typed out in full: nothing left to suggest.
   if (!q.at && nicks.length === 1 && nicks[0].toLowerCase() === q.word.toLowerCase()) {
     return [];
