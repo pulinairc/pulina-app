@@ -1368,7 +1368,11 @@ function addReaction(target, emoji, nick, own) {
   }
   box.replaceChildren(
     ...[...target.reactions].map(([e, nicks]) => {
-      const chip = h('button', 'react', nicks.size > 1 ? `${e} ${nicks.size}` : e);
+      const chip = h('button', 'react');
+      chip.append(h('span', 'react-emoji', e));
+      if (nicks.size > 1) {
+        chip.append(h('span', 'react-count', String(nicks.size)));
+      }
       chip.type = 'button';
       chip.dataset.tip = [...nicks].join(', ');
       chip.classList.toggle('mine', Boolean(target.mine?.has(e)));

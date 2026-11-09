@@ -1,3 +1,7 @@
+### 0.9.2: 2026-11-09
+
+* Fix uneven padding in reaction chips
+
 ### 0.9.1: 2026-11-09
 
 * Add Windows and Android builds
