@@ -3176,9 +3176,9 @@ body.docked #status {
   border-radius: 14px;
   overflow: hidden;
 }
-@media (min-width: 900px) and (min-height: 700px) {
+@media (min-width: 520px) and (min-height: 560px) {
   .inbox-panel {
-    width: 440px;
+    width: min(440px, calc(100vw - 24px));
     max-height: min(680px, calc(100vh - 80px));
   }
   .inbox-row .av {
