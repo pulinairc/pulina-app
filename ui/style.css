@@ -1205,7 +1205,7 @@ dialog:focus {
 /* macOS keeps its window buttons, drawn over the left end of the header. */
 /* macOS window buttons sit at the header's middle: their centre lands about 2 pt above trafficLightPosition y, so y 30 for the 28 pt centre. */
 .mac #top {
-  padding-left: 96px;
+  padding-left: 88px;
   zoom: var(--chrome-zoom, 1);
 }
 
