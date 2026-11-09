@@ -3,6 +3,8 @@
 * Remove the sweeping light from highlights
 * Add a soft glimmer to your name in highlights
 * Change names of others in messages to bold on a tint of their colour
+* Change the voice mark to sit at the right edge of the people list
+* Remove the people icon from the pill while someone is talking
 
 ### 0.7.0: 2026-11-09
 

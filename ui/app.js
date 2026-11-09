@@ -1773,7 +1773,7 @@ function saveDock(prefs) {
 const PEOPLE_ICON =
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 19c.8-3.4 3.2-5 6-5s5.2 1.6 6 5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c1.8.6 2.8 2.2 3 5"/></svg>';
 
-// The pill shows who is talking now, latest first, and the people icon at its end.
+// The pill shows who is talking now, latest first; nobody talking leaves the people icon.
 function renderPill() {
   const b = channelShown();
   el.pill.hidden = !b?.members.size;
@@ -1786,7 +1786,7 @@ function renderPill() {
   const talking = byActivity(b.members, spokeAt).filter((n) => now - spokeAt(n) < TALKING_MS);
   const faces = h('span', 'pill-faces');
   faces.append(...talking.slice(0, PILL_FACES).map((n) => avatar(n, '')));
-  el.pill.replaceChildren(...(talking.length ? [faces] : []), svg(PEOPLE_ICON));
+  el.pill.replaceChildren(talking.length ? faces : svg(PEOPLE_ICON));
   const count = `${b.members.size} ${b.members.size === 1 ? 'person' : 'people'}, ${talking.length} talking now`;
   el.pill.setAttribute('aria-label', count);
   el.pill.dataset.tip = count;
@@ -1896,13 +1896,16 @@ function personRow(p, now) {
   if (who.name !== p.nick) {
     row.dataset.tip = p.nick;
   }
-  if (p.role === 'voice') {
-    row.append(svg(VOICE));
-  }
   const quiet = quietFor(p.ts, now);
   if (quiet) {
     row.append(h('span', 'nl-ago', quiet));
   }
+  // The voice mark has a column of its own at the right edge, so the times line up.
+  const mark = h('span', 'nl-mark');
+  if (p.role === 'voice') {
+    mark.append(svg(VOICE));
+  }
+  row.append(mark);
   row.addEventListener('click', () => {
     if (picked) {
       nicklist.picked.delete(p.nick);

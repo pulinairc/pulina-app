@@ -2622,6 +2622,9 @@ label.switch-row {
 #pill:not(:has(.pill-faces)) {
   padding: 0 9px;
 }
+#pill:has(.pill-faces) {
+  padding: 0 6px;
+}
 .pill-faces .av {
   margin-left: -7px;
   box-shadow: 0 0 0 2px var(--bg);
@@ -2723,7 +2726,8 @@ body.docked #status {
     padding-left: 4px;
     font-size: 11px;
   }
-  .nicklist.docked .voiced {
+  .nicklist.docked .voiced,
+  .nicklist.docked .nl-mark {
     width: 11px;
   }
 }
@@ -2828,6 +2832,11 @@ body.docked #status {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.nl-mark {
+  display: flex;
+  width: 13px;
+  flex-shrink: 0;
 }
 .nl-row .voiced {
   color: var(--mention);
