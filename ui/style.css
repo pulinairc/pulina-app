@@ -345,11 +345,6 @@ a:focus-visible {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-.text.for-me {
-  position: relative;
-  margin-left: -6px;
-  padding-left: 6px;
-}
 /* Your name in a line meant for you: a soft shine crosses it now and then. */
 .text.for-me .mention {
   background: linear-gradient(110deg, var(--mention-bg) 35%, rgb(95 224 179 / 38%) 50%, var(--mention-bg) 65%) no-repeat;
@@ -370,16 +365,6 @@ a:focus-visible {
   .text.for-me .mention {
     animation: none;
   }
-}
-.text.for-me::before {
-  content: "";
-  position: absolute;
-  left: -4px;
-  top: calc(0.75em - 3px);
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mention);
 }
 .text.notice {
   color: var(--dim);
