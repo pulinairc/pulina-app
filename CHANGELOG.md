@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Add person cards when pointing at the people list
+
 ### 0.8.3: 2026-11-09
 
 * Change quick reactions to your top three emojis

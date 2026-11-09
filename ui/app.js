@@ -1246,7 +1246,7 @@ function knownAbout(net, nick) {
 }
 
 /** The person tooltip: a card in their colour with what is known about them. */
-function personCard(net, nick) {
+function personCard(net, nick, { spoke = true } = {}) {
   const about = knownAbout(net, nick);
   const w = whois.get(key(net, nick))?.w;
   const who = identity(nick, about.mask);
@@ -1278,7 +1278,7 @@ function personCard(net, nick) {
   if (chans) {
     rows.push(['On', chans]);
   }
-  if (about.last) {
+  if (spoke && about.last) {
     rows.push(['Spoke', ago(about.last.ts)]);
   }
   if (w?.idle_secs != null) {
@@ -1928,7 +1928,7 @@ function renderNicklist() {
     if (g.id === 'now') {
       head.prepend(h('span', 'live'));
     }
-    scroll.append(head, ...g.people.map((p) => personRow(p, now)));
+    scroll.append(head, ...g.people.map((p) => personRow(b, p, now)));
   }
   const scrolled = nicklist.el.querySelector('.nl-scroll')?.scrollTop ?? 0;
   const bar = pickedBar(b);
@@ -1943,7 +1943,9 @@ function renderNicklist() {
   nicklist.el.style.top = `${below / k}px`;
 }
 
-function personRow(p, now) {
+const HOVER = matchMedia('(hover: hover)');
+
+function personRow(b, p, now) {
   const picked = nicklist.picked.has(p.nick);
   const who = identity(p.nick);
   const row = h('button', `nl-row${picked ? ' picked' : ''}`);
@@ -1956,8 +1958,11 @@ function personRow(p, now) {
   face.append(avatar(p.nick, ''), check);
   const name = h('span', 'nl-name', who.name);
   row.append(face, name);
-  if (who.name !== p.nick) {
-    row.dataset.tip = p.nick;
+  // Pointing at a row shows the person's card, as names in the chat do; the time is already in
+  // the row. A tap on a touch screen picks the row instead.
+  if (HOVER.matches) {
+    personTip(row, b.net, p.nick);
+    row.dataset.noSpoke = '1';
   }
   const quiet = quietFor(p.ts, now);
   if (quiet) {
@@ -3564,7 +3569,7 @@ function showTip(target, x, { fresh = false } = {}) {
   tipX = x;
   if (target !== tipFor || fresh) {
     if (target.dataset.person) {
-      const card = personCard(target.dataset.net, target.dataset.nick);
+      const card = personCard(target.dataset.net, target.dataset.nick, { spoke: !target.dataset.noSpoke });
       tip.style.setProperty('--tint', card.style.getPropertyValue('--tint'));
       tip.replaceChildren(card);
     } else if (target.dataset.tip) {
