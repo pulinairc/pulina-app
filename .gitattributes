@@ -1,0 +1,5 @@
+# GitHub's language bar: the Rust core, server and app shell. The web front end in ui/
+# and its tests are left out of the count, so the bar shows what Lobby is built on.
+ui/** linguist-detectable=false
+tests/** linguist-detectable=false
+src-tauri/gen/** linguist-generated=true
