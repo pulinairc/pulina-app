@@ -3176,6 +3176,21 @@ body.docked #status {
   border-radius: 14px;
   overflow: hidden;
 }
+@media (min-width: 900px) and (min-height: 700px) {
+  .inbox-panel {
+    width: 440px;
+    max-height: min(680px, calc(100vh - 80px));
+  }
+  .inbox-row .av {
+    --avatar: 32px;
+  }
+  .inbox-text {
+    font-size: 14px;
+  }
+  .inbox-meta {
+    font-size: 12.5px;
+  }
+}
 .inbox-grip {
   display: none;
 }

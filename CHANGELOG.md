@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Change the highlights inbox to a bit larger on big screens
+
 ### 1.0.0: 2026-11-10
 
 * Add a highlights inbox with an archive
