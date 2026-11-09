@@ -329,23 +329,28 @@ fn set_badge(app: AppHandle, count: u32) -> Result<(), String> {
 }
 
 /// Whether macOS lets Lobby notify; null elsewhere, where the notification plugin answers.
+#[cfg(target_os = "macos")]
 #[tauri::command]
 async fn notify_permission() -> Option<serde_json::Value> {
-    #[cfg(target_os = "macos")]
-    {
-        let p = macos::permission().await.ok()?;
-        return serde_json::to_value(p).ok();
-    }
-    #[cfg(not(target_os = "macos"))]
+    serde_json::to_value(macos::permission().await.ok()?).ok()
+}
+
+#[cfg(not(target_os = "macos"))]
+#[tauri::command]
+async fn notify_permission() -> Option<serde_json::Value> {
     None
 }
 
 /// Shows macOS's Allow prompt the first time; true when notifications are allowed.
+#[cfg(target_os = "macos")]
 #[tauri::command]
 async fn allow_notifications() -> Result<bool, String> {
-    #[cfg(target_os = "macos")]
-    return macos::authorize().await.map_err(|e| e.to_string())?;
-    #[cfg(not(target_os = "macos"))]
+    macos::authorize().await.map_err(|e| e.to_string())?
+}
+
+#[cfg(not(target_os = "macos"))]
+#[tauri::command]
+async fn allow_notifications() -> Result<bool, String> {
     Ok(false)
 }
 
