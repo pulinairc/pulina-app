@@ -40,7 +40,7 @@ const $ = (id) => document.getElementById(id);
 const el = {
   title: $('title'), chanIcon: $('chan-icon'), chanName: $('chan-name'), chanMeta: $('chan-meta'),
   unread: $('unread'), gear: $('gear'), bell: $('bell'), status: $('status'), statusText: $('status-text'), statusAction: $('status-action'), toast: $('toast'), log: $('log'), col: $('col'),
-  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'), jumpLatestLabel: $('jump-latest-label'),
+  form: $('composer'), input: $('input'), jumpUnread: $('jump-unread'), jumpLatest: $('jump-latest'),
   markRead: $('mark-read'), notifyToggle: $('notify-toggle'), notifyTest: $('notify-test'), emoticonToggle: $('emoticon-toggle'), shortcodeToggle: $('shortcode-toggle'), iconChoices: $('icon-choices'), textSize: $('text-size'), textSizeNumber: $('text-size-number'), textSizeReset: $('text-size-reset'), shortcutList: $('shortcut-list'), shortcutReset: $('shortcut-reset'), emojiBtn: $('emoji-btn'), attachBtn: $('attach-btn'), attachFile: $('attach-file'), uploadUrl: $('upload-url'),
   slash: $('slash'), replying: $('replying'),
   openPeople: $('open-people'), people: $('people'), peopleTitle: $('people-title'), peopleBack: $('people-back'),
@@ -1812,7 +1812,7 @@ function updateJumps() {
   el.jumpLatest.hidden = atBottom();
   if (!el.jumpLatest.hidden) {
     const more = messagesBelow(log.bottom);
-    el.jumpLatestLabel.textContent = more ? `${more} more` : 'Latest';
+    el.jumpLatest.dataset.tip = more ? `${more} more below` : 'Latest';
   }
   el.markRead.hidden = count === 0;
   el.markRead.dataset.tip = `Mark ${count} ${messages} read (${shortcutLabel('markRead')})`;

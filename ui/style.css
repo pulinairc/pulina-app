@@ -1240,42 +1240,41 @@ dialog:focus { outline: none; }
 #unread-bar:not(:has(.jump:not([hidden]))) { display: none; }
 #unread-bar .jump { pointer-events: auto; }
 
-#unread-bar .jump { position: static; transform: none; white-space: nowrap; }
+#unread-bar .jump { position: static; transform: none; }
 /* Jump on the left, Mark read on the right, even when only one shows. */
-#mark-read { margin-left: auto; }
-#mark-read svg { color: var(--ok); }
+#mark-read { --tint: var(--ok); margin-left: auto; }
 
+/* Round icon buttons: the icon in its colour, filled in on hover or touch. */
 .jump {
+  --tint: var(--new);
   position: absolute;
   left: 50%;
   z-index: 6;
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  display: grid;
+  place-items: center;
+  width: 28px;
   height: 28px;
-  padding: 0 12px 0 10px;
-  line-height: 1;
+  padding: 0;
   border: 1px solid var(--line-strong);
   border-radius: 999px;
   background: var(--raised);
-  color: var(--strong);
-  font-size: 13px;
+  color: var(--tint);
   transform: translateX(-50%);
   box-shadow: 0 6px 18px rgb(0 0 0 / 45%);
 }
 
-.jump:hover { border-color: var(--line-strong); color: var(--strong); }
+.jump:active { background: var(--tint); border-color: var(--tint); color: var(--bg); }
+@media (hover: hover) {
+  .jump:hover { background: var(--tint); border-color: var(--tint); color: var(--bg); }
+}
 .jump[hidden] { display: none; }
-#jump-unread { background: var(--new); border-color: var(--new); }
-#jump-unread svg { color: var(--bg); }
-.jump.icon-jump { width: 28px; padding: 0; justify-content: center; }
 #jump-unread.down svg { transform: rotate(180deg); }
 #jump-latest { bottom: 10px; }
-/* Thumb-sized jump buttons on touch screens. */
+/* Thumb-sized on touch screens. */
 @media (pointer: coarse) {
-  .jump { height: 40px; padding: 0 16px 0 14px; gap: 7px; font-size: 15px; }
-  .jump.icon-jump { width: 40px; padding: 0; }
-  .jump.icon-jump svg { width: 18px; height: 18px; }
+  .jump { width: 40px; height: 40px; }
+  .jump svg { width: 18px; height: 18px; }
+}
 }
 
 /* Small avatars and channel icons get the true squircle shape. */
