@@ -5,7 +5,6 @@ use russh::client::{self, Handle};
 use russh::keys::ssh_key::LineEnding;
 use russh::keys::ssh_key::private::Ed25519Keypair;
 use russh::keys::{self, HashAlg, PrivateKey, PrivateKeyWithHashAlg, PublicKeyOrCertificate};
-use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -47,7 +46,7 @@ pub fn own_key(dir: &Path) -> Result<PrivateKey, String> {
         return keys::decode_secret_key(&text, None).map_err(|e| e.to_string());
     }
     let mut seed = [0u8; 32];
-    std::fs::File::open("/dev/urandom").and_then(|mut f| f.read_exact(&mut seed)).map_err(|e| e.to_string())?;
+    getrandom::fill(&mut seed).map_err(|e| e.to_string())?;
     let mut key = PrivateKey::from(Ed25519Keypair::from_seed(&seed));
     key.set_comment("lobby");
     let text = key.to_openssh(LineEnding::LF).map_err(|e| e.to_string())?;

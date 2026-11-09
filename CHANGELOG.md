@@ -1,6 +1,6 @@
 ### [Unreleased]
 
-- Add Windows and Android builds
+* Add Windows and Android builds
 * Add person cards when pointing at the people list
 * Fix name suggestions missing people who just left
 * Fix Tab to cycle through every matching nick

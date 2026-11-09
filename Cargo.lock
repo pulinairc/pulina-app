@@ -2730,6 +2730,7 @@ dependencies = [
  "block2",
  "dirs",
  "futures-util",
+ "getrandom 0.4.3",
  "lobby-core",
  "objc2",
  "objc2-app-kit",

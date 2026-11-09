@@ -141,9 +141,8 @@ jobs:
       - run: npm ci
 
       - name: Build a debug APK for the emulator
-        env:
-          NDK_HOME: ${{ env.ANDROID_NDK_LATEST_HOME }}
         run: |
+          export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
           npx tauri android init --ci
           npx tauri icon src-tauri/icons/icon.png
           npx tauri android build --ci --debug --apk --target x86_64
