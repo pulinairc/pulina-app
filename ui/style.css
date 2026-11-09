@@ -1387,27 +1387,21 @@ dialog:focus {
 .react {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  min-width: 34px;
+  gap: 4px;
   height: 24px;
-  padding: 0 9px;
+  padding: 0 8px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--raised);
   color: var(--dim);
-  font: inherit;
   font-size: 12px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
-/* Emoji fonts give the glyph a wider box than it draws; a square box keeps it centred. */
 .react-emoji {
-  width: 1.15em;
-  font-size: 15px;
-  text-align: center;
+  font-size: 16px;
 }
-
 .react:hover {
   border-color: var(--line-strong);
 }

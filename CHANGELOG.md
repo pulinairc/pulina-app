@@ -1,6 +1,6 @@
 ### 0.9.2: 2026-11-09
 
-* Fix uneven padding in reaction chips
+* Fix uneven padding in reaction pills
 
 ### 0.9.1: 2026-11-09
 
