@@ -1,4 +1,4 @@
-### [Unreleased]
+### 0.6.0: 2026-11-09
 
 * Fix the missing message count on the jump button
 * Add a build status badge to the README
@@ -10,10 +10,9 @@
 * Fix the emoji picker freezing on macOS
 * Fix Add reaction vanishing as messages arrive
 * Add a people list with op and voice in batches
-* Move settings and mute into the channel list
+* Change settings and mute to sit in the channel list
 * Change touch reactions to a long-press sheet
-* Fix iPhone text selection on long press
-* Show mode changes in the channel
+* Add mode changes to the channel
 * Add keeping the people list beside the chat
 * Add editing a person from the people list
 * Change the message box to a darker shade
