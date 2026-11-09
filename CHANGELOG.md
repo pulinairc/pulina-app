@@ -1,4 +1,4 @@
-### [Unreleased]
+### 0.8.2: 2026-11-09
 
 * Change Mac channel keys to Cmd, so Option+2 types @
 * Add name suggestions with photos as you type, @ optional
