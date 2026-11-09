@@ -93,6 +93,7 @@ const el = {
   input: $('input'),
   jumpUnread: $('jump-unread'),
   jumpLatest: $('jump-latest'),
+  jumpLatestLabel: $('jump-latest-label'),
   markRead: $('mark-read'),
   notifyToggle: $('notify-toggle'),
   notifyTest: $('notify-test'),
@@ -2302,7 +2303,7 @@ function updateJumps() {
   el.jumpLatest.hidden = atBottom();
   if (!el.jumpLatest.hidden) {
     const more = messagesBelow(log.bottom);
-    el.jumpLatest.dataset.tip = more ? `${more} more below` : 'Latest';
+    el.jumpLatestLabel.textContent = more ? `${more} more` : 'Latest';
   }
   el.markRead.hidden = count === 0;
   el.markRead.dataset.tip = `Mark ${count} ${messages} read (${shortcutLabel('markRead')})`;

@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Fix the missing message count on the jump button
+
 ### 0.5.10: 2026-11-09
 
 * Fix squircle photos and channel icons

@@ -1914,9 +1914,16 @@ dialog:focus {
 #jump-unread.down svg {
   transform: rotate(180deg);
 }
+/* The one with words: how many messages are still to read. */
 #jump-latest {
   --tint: var(--strong);
   bottom: 10px;
+  display: flex;
+  gap: 5px;
+  width: auto;
+  padding: 0 12px 0 10px;
+  font-size: 13px;
+  white-space: nowrap;
 }
 /* Thumb-sized on touch screens. */
 @media (pointer: coarse) {
@@ -1927,6 +1934,11 @@ dialog:focus {
   .jump svg {
     width: 18px;
     height: 18px;
+  }
+  #jump-latest {
+    gap: 7px;
+    padding: 0 16px 0 14px;
+    font-size: 15px;
   }
 }
 
