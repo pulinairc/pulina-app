@@ -1015,11 +1015,24 @@ function appendLine(l, live) {
     view.group = null;
   } else if (CHAT_KINDS.has(l.kind)) {
     view.events = null;
-    if (!view.group || !continues(view.group.last, l)) {
-      view.group = newGroup(l);
+    const same = view.group && continues(view.group.last, l);
+    if (l.kind === 'action' && !same) {
+      // A /me on its own: a line of narration with the person's face, outside any group.
+      narration(l);
+      view.group = null;
+    } else {
+      if (!same) {
+        view.group = newGroup(l);
+      }
+      // A /me right after the same person's message: a spark in their colour marks it.
+      const r = row(l);
+      if (l.kind === 'action') {
+        r.classList.add('spark');
+        r.style.setProperty('--tint', identity(l.nick, l.mask).color);
+      }
+      view.group.body.append(r);
+      view.group.last = l;
     }
-    view.group.body.append(row(l));
-    view.group.last = l;
   } else {
     view.events = null;
     view.group = null;
@@ -1053,6 +1066,17 @@ function newGroup(l) {
   return { body, last: l };
 }
 
+function narration(l) {
+  const group = h('div', 'group narration');
+  const av = avatar(l.nick, l.mask);
+  av.dataset.tip = 'Edit person';
+  av.addEventListener('click', () => openPerson(l.nick, l.mask));
+  const body = h('div', 'gb');
+  body.append(row(l));
+  group.append(av, body);
+  el.col.append(group);
+}
+
 function row(l) {
   const r = h('div', `text ${l.kind}`);
   r.classList.toggle('own', l.own || l.nick === state.me[l.net]);
@@ -1063,11 +1087,26 @@ function row(l) {
   let text = l.text;
   const addr = l.kind === 'msg' ? parseAddress(l.text) : null;
   const quoted = (l.own && replyHints.get(l.text)) || (addr && view.lastByNick.get(addr.nick.toLowerCase()));
+  const me = state.me[l.net];
   if (addr && quoted && quoted.line !== l && l.ts - quoted.line.ts < REPLY_WINDOW_MS) {
     r.append(quoteNode(quoted));
     text = addr.rest;
+    // Taking "rolle:" off the front must not hide that the line was for you.
+    if (me && addr.nick.toLowerCase() === me.toLowerCase()) {
+      r.append(h('span', 'mention', me), ' ');
+    }
   }
   replyHints.delete(l.text);
+  // Lines meant for you: a dot in the margin and a light that keeps sweeping across them.
+  r.classList.toggle('for-me', !r.classList.contains('own') && CHAT_KINDS.has(l.kind) && mentions(l.text, me));
+
+  if (l.kind === 'action') {
+    const who = identity(l.nick, l.mask);
+    const name = h('span', 'act-nick', who.name);
+    name.style.color = who.color;
+    personTip(name, l.net, l.nick);
+    r.append(name, ' ');
+  }
 
   let firstUrl = null;
   const members = nicksOf(l);

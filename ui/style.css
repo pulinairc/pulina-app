@@ -331,15 +331,70 @@ a:focus-visible {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
+.text.for-me {
+  position: relative;
+  margin-left: -6px;
+  padding-left: 6px;
+  border-radius: 6px;
+  background: linear-gradient(100deg, transparent 35%, rgb(95 224 179 / 14%) 50%, transparent 65%) no-repeat;
+  background-size: 250% 100%;
+  animation: for-me-sweep 1s linear infinite;
+}
+.text.for-me::before {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: calc(0.75em - 3px);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mention);
+}
+@keyframes for-me-sweep {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .text.for-me {
+    animation: none;
+  }
+}
 .text.notice {
   color: var(--dim);
 }
 .text.own {
   color: #fff;
 }
+/* /me: upright words after the name in its colour; after the person's own message a spark
+   in their colour sits in the margin and the words go a shade quieter. */
 .text.action {
-  font-style: italic;
+  color: var(--text);
+}
+.act-nick {
+  font-weight: 600;
+}
+.text.action.spark {
+  position: relative;
   color: var(--dim);
+}
+.text.action.spark::before {
+  content: "";
+  position: absolute;
+  left: -29px;
+  top: calc(0.75em - 7px);
+  width: 14px;
+  height: 14px;
+  background: var(--tint);
+  -webkit-mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1c.6 5.6 5.4 10.4 11 11-5.6.6-10.4 5.4-11 11-.6-5.6-5.4-10.4-11-11 5.6-.6 10.4-5.4 11-11z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1c.6 5.6 5.4 10.4 11 11-5.6.6-10.4 5.4-11 11-.6-5.6-5.4-10.4-11-11 5.6-.6 10.4-5.4 11-11z'/%3E%3C/svg%3E")
+    center / contain no-repeat;
 }
 
 .mention {
@@ -2650,6 +2705,9 @@ body.docked #status {
     padding: 8px 4px 2px;
     font-size: 11px;
   }
+  .nicklist.docked .nl-head ~ .nl-head {
+    padding-top: 12px;
+  }
   .nicklist.docked .nl-top {
     padding-left: 4px;
     font-size: 11px;
@@ -2674,6 +2732,10 @@ body.docked #status {
   font-size: 12px;
   font-weight: 500;
   color: var(--dim);
+}
+/* Each group after the first gets a little room above its heading. */
+.nicklist .nl-head ~ .nl-head {
+  padding-top: 14px;
 }
 .nl-head .live {
   width: 7px;
