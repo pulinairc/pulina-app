@@ -110,6 +110,7 @@ const el = {
   openInbox: $('open-inbox'),
   views: $('views'),
   shelf: $('shelf'),
+  shelfLatest: $('shelf-latest'),
   windowBar: $('window-bar'),
   windowWhen: $('window-when'),
   windowBack: $('window-back'),
@@ -4813,6 +4814,7 @@ document.addEventListener(
 
 // Shelf: the channel's links, pictures and videos on its own timeline, newest first.
 
+const SHELF_BOTTOM_PX = 40;
 const shelf = { open: false, key: null, lines: [], older: true, loading: false };
 const linkTitles = new IntersectionObserver((entries) => {
   for (const e of entries) {
@@ -4829,6 +4831,7 @@ function setView(name) {
   }
   shelf.open = name === 'shelf';
   el.shelf.hidden = !shelf.open;
+  el.shelfLatest.hidden = true;
   document.body.classList.toggle('shelf-open', shelf.open);
   if (shelf.open) {
     loadShelf();
@@ -4840,6 +4843,13 @@ function closeShelf() {
     setView('chat');
   }
 }
+
+function shelfAtBottom() {
+  return el.shelf.scrollHeight - el.shelf.scrollTop - el.shelf.clientHeight < SHELF_BOTTOM_PX;
+}
+
+el.shelf.addEventListener('scroll', () => (el.shelfLatest.hidden = shelfAtBottom()), { passive: true });
+el.shelfLatest.addEventListener('click', () => el.shelf.scrollTo({ top: el.shelf.scrollHeight, behavior: 'smooth' }));
 
 el.views.addEventListener('click', (e) => {
   const b = e.target.closest('button[data-view]');

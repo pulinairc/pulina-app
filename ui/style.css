@@ -239,6 +239,25 @@ a:focus-visible {
   background: var(--hover);
 }
 
+/* A phone: smaller words, the dot level with the first line. */
+@media (max-width: 600px) {
+  #status {
+    align-items: flex-start;
+    gap: 8px;
+    padding: 6px 8px 6px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .status-dot {
+    margin-top: 5px;
+  }
+  .status-action {
+    align-self: center;
+    padding: 3px 8px;
+    font-size: 12px;
+  }
+}
+
 @keyframes status-pulse {
   50% {
     opacity: 0.35;
@@ -2117,7 +2136,8 @@ dialog:focus {
   transform: rotate(180deg);
 }
 /* The one with words: how many messages are still to read. */
-#jump-latest {
+#jump-latest,
+#shelf-latest {
   --tint: var(--strong);
   bottom: 10px;
   /* Arrow and count side by side; display stays with .jump so [hidden] still hides it. */
@@ -2758,12 +2778,18 @@ body.docked #status {
 /* A phone keeps most of its width for the chat. */
 @media (max-width: 600px) {
   .nicklist.docked {
-    --rail: 132px;
+    --rail: 127px;
   }
   body.docked #logwrap,
   body.docked #composer,
   body.docked #status {
-    margin-right: 132px;
+    margin-right: 127px;
+  }
+  /* Faces and names only: times and voice marks wait for a wider window. */
+  .nicklist.docked .nl-ago,
+  .nicklist.docked .voiced,
+  .nicklist.docked .nl-mark {
+    display: none;
   }
   .nicklist.docked .nl-scroll {
     padding: 0 4px 4px;
@@ -2777,9 +2803,6 @@ body.docked #status {
   .nicklist.docked .nl-face {
     --avatar: 18px;
   }
-  .nicklist.docked .nl-ago {
-    font-size: 11px;
-  }
   .nicklist.docked .nl-head {
     padding: 8px 4px 2px;
     font-size: 11px;
@@ -2790,10 +2813,6 @@ body.docked #status {
   .nicklist.docked .nl-top {
     padding-left: 4px;
     font-size: 11px;
-  }
-  .nicklist.docked .voiced,
-  .nicklist.docked .nl-mark {
-    width: 11px;
   }
 }
 .nl-scroll {
@@ -3454,6 +3473,9 @@ body.docked #status {
   font-weight: 600;
 }
 
+#shelf-latest {
+  z-index: 9;
+}
 .shelf-open #unread-bar,
 .shelf-open #jump-latest,
 .shelf-open .window-bar {

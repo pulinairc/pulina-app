@@ -1,3 +1,8 @@
+### [Unreleased]
+
+* Change the connection notice and docked people list to be more compact on phones
+* Add a Latest button to the shelf
+
 ### 1.0.2: 2026-11-10
 
 * Add page pictures to shelf links
