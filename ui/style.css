@@ -1915,7 +1915,8 @@ dialog:focus {
 #jump-latest {
   --tint: var(--strong);
   bottom: 10px;
-  display: flex;
+  /* Arrow and count side by side; display stays with .jump so [hidden] still hides it. */
+  grid-auto-flow: column;
   gap: 5px;
   width: auto;
   padding: 0 12px 0 10px;
