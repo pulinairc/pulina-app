@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Remove the sweeping light from highlights
+
 ### 0.7.0: 2026-11-09
 
 * Add an About section and Help > About on macOS

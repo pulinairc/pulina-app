@@ -1097,7 +1097,7 @@ function row(l) {
     }
   }
   replyHints.delete(l.text);
-  // Lines meant for you: a dot in the margin and a light that keeps sweeping across them.
+  // Lines meant for you get a dot in the margin.
   r.classList.toggle('for-me', !r.classList.contains('own') && CHAT_KINDS.has(l.kind) && mentions(l.text, me));
 
   if (l.kind === 'action') {
