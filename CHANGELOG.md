@@ -6,6 +6,8 @@
 * Fix text size changing with the window width
 * Add Cmd or Ctrl with plus, minus and 0 for text size, 1 % a press
 * Add a green or red result to the test notification
+* Fix photo notifications failing on macOS
+* Fix the emoji picker freezing on macOS
 
 ### 0.5.10: 2026-11-09
 

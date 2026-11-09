@@ -3270,6 +3270,9 @@ el.people.addEventListener('close', () => el.input.focus());
 
 const PICKER_GAP = 8;
 const PICKER_PREBUILD_MS = 3000;
+const PICKER_COLUMNS = 9;
+const PICKER_CHUNK = PICKER_COLUMNS * 6;
+const PICKER_AHEAD_PX = 300;
 const FREQUENT_COUNT = 18;
 const SEARCH_LIMIT = 120;
 const CATEGORY_ICONS = {
@@ -3311,13 +3314,42 @@ function choose(native) {
   onPick?.(native);
 }
 
-function section(id, title, buttons) {
+function section(id, title, grids) {
   const wrap = h('section', 'picker-section');
   wrap.dataset.cat = id;
-  const grid = h('div', 'picker-grid');
-  grid.append(...buttons);
-  wrap.append(h('h4', '', title), grid);
+  wrap.append(h('h4', '', title), ...grids);
   return wrap;
+}
+
+function grid(buttons) {
+  const g = h('div', 'picker-grid');
+  g.append(...buttons);
+  return g;
+}
+
+// Laying out every emoji at once froze the Mac for seconds, so a category starts as empty
+// blocks of the right height and each fills in as it scrolls into view.
+const unfilled = new WeakMap();
+
+function emptyGrids(emojis, observer) {
+  const grids = [];
+  for (let i = 0; i < emojis.length; i += PICKER_CHUNK) {
+    const part = emojis.slice(i, i + PICKER_CHUNK);
+    const g = h('div', 'picker-grid');
+    g.style.aspectRatio = `${PICKER_COLUMNS} / ${Math.ceil(part.length / PICKER_COLUMNS)}`;
+    unfilled.set(g, part);
+    observer.observe(g);
+    grids.push(g);
+  }
+  return grids;
+}
+
+function fillGrid(g, observer) {
+  observer.unobserve(g);
+  const part = unfilled.get(g);
+  unfilled.delete(g);
+  g.style.aspectRatio = '';
+  g.append(...part.map(([native, words]) => emojiButton(native, words.split(' ')[0])));
 }
 
 function frequentButtons() {
@@ -3346,16 +3378,20 @@ async function buildPicker() {
   );
 
   const scroll = h('div', 'picker-scroll');
-  const results = section('results', 'Search results', []);
-  results.hidden = true;
-  const frequent = section('frequent', 'Frequently used', frequentButtons());
-  const cats = data.map((c) =>
-    section(
-      c.id,
-      c.name,
-      c.emojis.map(([native, words]) => emojiButton(native, words.split(' ')[0])),
-    ),
+  const observer = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        if (e.isIntersecting) {
+          fillGrid(e.target, observer);
+        }
+      }
+    },
+    { root: scroll, rootMargin: `${PICKER_AHEAD_PX}px 0px` },
   );
+  const results = section('results', 'Search results', [grid([])]);
+  results.hidden = true;
+  const frequent = section('frequent', 'Frequently used', [grid(frequentButtons())]);
+  const cats = data.map((c) => section(c.id, c.name, emptyGrids(c.emojis, observer)));
   scroll.append(results, frequent, ...cats);
 
   const tabs = h('nav', 'picker-tabs');
