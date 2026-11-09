@@ -11,7 +11,7 @@ import {
   completeNick,
   continues,
   dayLabel,
-  DEFAULT_SHORTCUTS,
+  defaultShortcuts,
   animalFor,
   colonQuery,
   comboLabel,
@@ -30,6 +30,8 @@ import {
   peopleGroups,
   quietFor,
   botNicks,
+  nickMatches,
+  nickQuery,
   isCommand,
   splitNicks,
   duration,
@@ -2570,6 +2572,7 @@ function renderSlash() {
       item.type = 'button';
       item.setAttribute('role', 'option');
       item.setAttribute('aria-selected', String(i === slashPick));
+      item.classList.toggle('nick-item', Boolean(entry.nick));
       item.append(...entry.parts);
       item.addEventListener('mousedown', (e) => {
         e.preventDefault();
@@ -2591,10 +2594,14 @@ function menuEntries() {
       apply: () => applySlash(c),
     }));
   }
+  const caret = el.input.selectionStart ?? el.input.value.length;
+  const people = nickEntries(caret);
+  if (people.length) {
+    return people;
+  }
   if (!settingOn(SHORTCODE_SETTING)) {
     return [];
   }
-  const caret = el.input.selectionStart ?? el.input.value.length;
   const q = colonQuery(el.input.value.slice(0, caret));
   if (!q) {
     return [];
@@ -2611,6 +2618,50 @@ function menuEntries() {
       apply: () => insertEmoji(hit.native, caret - q.length - 1, caret),
     };
   });
+}
+
+/**
+ * People for the word at the caret, "@mi" or "mi", most recently active first. Picking one writes
+ * "nick: " at the start of a message and "nick " elsewhere; the @ goes, IRC has no use for it.
+ * Enter picks only after an @, so a plain word that happens to match still sends with Enter.
+ */
+function nickEntries(caret) {
+  const b = state.buffers.get(state.current);
+  const q = b && b.name !== '' ? nickQuery(el.input.value.slice(0, caret)) : null;
+  if (!q) {
+    return [];
+  }
+  const me = (state.me[b.net] || '').toLowerCase();
+  const spokeAt = spokeIn(b.net);
+  const nicks = nickMatches(
+    q.word,
+    [...b.members].filter((n) => n.toLowerCase() !== me),
+    (n) => -spokeAt(n),
+  );
+  // Already typed out in full: nothing left to suggest.
+  if (!q.at && nicks.length === 1 && nicks[0].toLowerCase() === q.word.toLowerCase()) {
+    return [];
+  }
+  return nicks.map((nick) => {
+    const who = identity(nick);
+    const name = h('span', 'slash-name', nick);
+    name.style.color = who.color;
+    const parts = [avatar(nick, ''), name];
+    if (who.name !== nick) {
+      parts.push(h('span', 'slash-desc', who.name));
+    }
+    return { parts, nick: true, enter: q.at, apply: () => insertNick(nick, q.start, caret) };
+  });
+}
+
+function insertNick(nick, start, end) {
+  const value = el.input.value;
+  const text = start === 0 ? `${nick}: ` : `${nick} `;
+  el.input.value = `${value.slice(0, start)}${text}${value.slice(end)}`;
+  const caret = start + text.length;
+  el.input.focus();
+  el.input.setSelectionRange(caret, caret);
+  hideSlash();
 }
 
 /** Put an emoji where the colon or shortcode was, with a space after it. */
@@ -2752,7 +2803,7 @@ el.input.addEventListener('keydown', (e) => {
       renderSlash();
       return;
     }
-    if (e.key === 'Tab' || e.key === 'Enter') {
+    if (e.key === 'Tab' || (e.key === 'Enter' && slashItems[slashPick].enter !== false)) {
       e.preventDefault();
       slashItems[slashPick].apply();
       return;
@@ -2807,9 +2858,9 @@ let recordingShortcut = null;
 
 function shortcuts() {
   try {
-    return { ...DEFAULT_SHORTCUTS, ...JSON.parse(state.settings[SHORTCUT_SETTING] || '{}') };
+    return { ...defaultShortcuts(IS_MAC), ...JSON.parse(state.settings[SHORTCUT_SETTING] || '{}') };
   } catch {
-    return { ...DEFAULT_SHORTCUTS };
+    return defaultShortcuts(IS_MAC);
   }
 }
 
@@ -2848,6 +2899,11 @@ document.addEventListener(
     const action = Object.keys(SHORTCUT_RUN).find((a) => keys[a] === combo);
     const number = /^[1-9]$/.test(combo.split('+').pop()) && comboMods(combo) === keys.channelNumber && comboMods(combo) !== '';
     if (!action && !number) {
+      return;
+    }
+    // Cmd+arrows move the cursor while there is a message to edit; channels only when it is empty.
+    const editing = e.target === el.input && el.input.value !== '' && /Arrow/.test(combo) && combo.startsWith('Mod+');
+    if (editing && (action === 'prevChannel' || action === 'nextChannel')) {
       return;
     }
     e.preventDefault();

@@ -32,7 +32,7 @@
 - **Unread that stays put:** a red New line, jump buttons, and nothing marked read until you say so
 - **Attachments:** paste, drop or pick a file, and its address goes into your message, through a file host of your own
 - **Notifications:** desktop notifications with the sender's photo for mentions and private messages, quiet for muted channels
-- **irssi muscle memory:** `/wc`, `/whois`, `/names` and the rest, with a `/` menu, `Alt+1…9` and `Alt+A`
+- **irssi muscle memory:** `/wc`, `/whois`, `/names` and the rest, with a `/` menu, `Alt+1…9` (`Cmd+1…9` on a Mac) and `Alt+A`
 - **Same everywhere:** people, channel pictures, read positions and settings live on your server and follow you between devices
 - **Self-hosted, no bouncer:** irssi stays in charge, Lobby reads through irssiproxy and talks to your own server over SSH
 
@@ -163,12 +163,12 @@ token_file = "~/.config/lobby/server.token"
 | Keys | What they do |
 |------|--------------|
 | `Ctrl+K` (`Cmd+K` on a Mac), or click the channel name | Find and switch channels |
-| `Alt+1` … `Alt+9` | Jump to a channel |
-| `Alt+Left`, `Alt+Right` | Previous and next channel |
+| `Alt+1` … `Alt+9`, `Cmd` on a Mac | Jump to a channel |
+| `Alt+Left`, `Alt+Right`, `Cmd` on a Mac while the message box is empty | Previous and next channel |
 | `Alt+A`, or the unread counter | Next channel with unread, mentions first |
 | `Alt+U`, or the unread pill | Jump to the first unread message in this channel |
 | `Ctrl+Enter` (`Cmd+Enter` on a Mac) | Mark this channel read |
-| `Tab` | Complete a nick |
+| `Tab` | Complete a nick, or pick one from the list that opens as you type a name or `@` |
 | `Up` in an empty input | Bring back the last message |
 
 Every shortcut can be changed under Settings, Keyboard shortcuts.

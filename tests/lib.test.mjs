@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
 import {
   APP_ICONS,
+  defaultShortcuts,
+  nickMatches,
+  nickQuery,
   botNicks,
   isCommand,
   describeMode,
@@ -394,4 +397,24 @@ test('bot commands and bot nicks', () => {
   assert.ok(!isCommand('hello !seen'));
   assert.deepEqual([...botNicks('SeenBot, infobot  ')], ['seenbot', 'infobot']);
   assert.equal(botNicks('').size, 0);
+});
+
+test('nick suggestions find the word at the caret', () => {
+  assert.deepEqual(nickQuery('hi @mi'), { start: 3, at: true, word: 'mi' });
+  assert.deepEqual(nickQuery('@'), { start: 0, at: true, word: '' });
+  assert.deepEqual(nickQuery('mi'), { start: 0, at: false, word: 'mi' });
+  assert.equal(nickQuery('m'), null);
+  assert.equal(nickQuery('hi '), null);
+  assert.equal(nickQuery('mail@ex'), null);
+  const spoke = { milla: 1, mikko: 2 };
+  assert.deepEqual(
+    nickMatches('mi', ['mikko', 'Milla', 'anna', 'milla'], (n) => spoke[n] ?? 9),
+    ['milla', 'mikko', 'Milla'],
+  );
+});
+
+test('channel shortcuts move to Cmd on a Mac, so Option still types', () => {
+  assert.equal(defaultShortcuts(true).channelNumber, 'Mod');
+  assert.equal(defaultShortcuts(true).prevChannel, 'Mod+ArrowLeft');
+  assert.equal(defaultShortcuts(false).channelNumber, 'Alt');
 });

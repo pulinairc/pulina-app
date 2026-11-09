@@ -240,6 +240,31 @@ export function completeNick(prefix, members, previous = '') {
   return matches[(i + 1) % matches.length];
 }
 
+/**
+ * The word being typed at the caret when it could be a nick: "@mi" or "mi" at the end of `before`.
+ * Gives where it starts, whether it began with @, and the part to match. A bare word needs two letters.
+ */
+export function nickQuery(before) {
+  const m = /(^|\s)(@?)([^\s@:,]*)$/u.exec(before);
+  if (!m) {
+    return null;
+  }
+  const at = m[2] === '@';
+  if (!at && m[3].length < 2) {
+    return null;
+  }
+  return { start: m.index + m[1].length, at, word: m[3] };
+}
+
+/** Members whose nick starts with `word`, by `rank` (lower first), at most `limit`. */
+export function nickMatches(word, members, rank, limit = 6) {
+  const w = word.toLowerCase();
+  return [...members]
+    .filter((m) => m.toLowerCase().startsWith(w))
+    .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+    .slice(0, limit);
+}
+
 const REACTION_RE = /^([^\s:,]+)[:,]\s*((?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|️|‍)+)\s*$/u;
 const ADDRESS_RE = /^([^\s:,]+)[:,]\s+([\s\S]+)$/u;
 
@@ -566,6 +591,17 @@ export const DEFAULT_SHORTCUTS = {
   textSmaller: 'Mod+-',
   textDefault: 'Mod+0',
 };
+
+/** On a Mac, Option types characters such as @ (Option+2 on a Nordic layout), so channels move with Cmd. */
+const MAC_SHORTCUTS = {
+  prevChannel: 'Mod+ArrowLeft',
+  nextChannel: 'Mod+ArrowRight',
+  channelNumber: 'Mod',
+};
+
+export function defaultShortcuts(mac) {
+  return mac ? { ...DEFAULT_SHORTCUTS, ...MAC_SHORTCUTS } : { ...DEFAULT_SHORTCUTS };
+}
 
 const MODIFIER_KEYS = ['Control', 'Meta', 'Alt', 'Shift'];
 

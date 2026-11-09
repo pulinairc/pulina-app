@@ -1,3 +1,8 @@
+### [Unreleased]
+
+* Change Mac channel keys to Cmd, so Option+2 types @
+* Add name suggestions with photos as you type, @ optional
+
 ### 0.8.1: 2026-11-09
 
 * Change command cards to the size of reply quotes

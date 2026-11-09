@@ -1546,6 +1546,10 @@ dialog:focus {
   font-size: 14px;
 }
 
+.slash-item.nick-item {
+  --avatar: 20px;
+  align-items: center;
+}
 .slash-item[aria-selected="true"],
 .slash-item:hover {
   background: var(--raised);
