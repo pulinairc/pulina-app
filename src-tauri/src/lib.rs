@@ -493,7 +493,6 @@ fn player() -> String {
     embed::base()
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 /// The version and the commit it was built from, for the About section in Settings.
 #[derive(Serialize)]
 struct AppInfo {
@@ -520,15 +519,23 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     Ok(menu)
 }
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default().plugin(tauri_plugin_opener::init()).plugin(tauri_plugin_notification::init());
-    // Phones have no menu bar.
+    // Phones have no menu bar and one window size.
     #[cfg(desktop)]
-    let builder = builder.on_menu_event(|app, event| {
-        if event.id().0 == ABOUT_MENU_ID {
-            let _ = app.emit("show-about", ());
-        }
-    });
+    let builder = builder
+        .on_menu_event(|app, event| {
+            if event.id().0 == ABOUT_MENU_ID {
+                let _ = app.emit("show-about", ());
+            }
+        })
+        .plugin({
+            use tauri_plugin_window_state::StateFlags;
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
+                .build()
+        });
     builder
         .setup(|app| {
             #[cfg(target_os = "macos")]
