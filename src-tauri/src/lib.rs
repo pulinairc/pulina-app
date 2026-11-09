@@ -354,6 +354,20 @@ async fn allow_notifications() -> Result<bool, String> {
     Ok(false)
 }
 
+/// Whether macOS put the notification with this id in Notification Center.
+#[cfg(target_os = "macos")]
+#[tauri::command]
+async fn notify_delivered(id: String) -> bool {
+    macos::delivered(id).await.unwrap_or(false)
+}
+
+#[cfg(not(target_os = "macos"))]
+#[tauri::command]
+async fn notify_delivered(id: String) -> bool {
+    let _ = id;
+    true
+}
+
 /// System Settings, at its Notifications pane.
 #[tauri::command]
 fn open_notify_settings() -> Result<(), String> {
@@ -532,6 +546,7 @@ pub fn run() {
             notify_mac,
             allow_notifications,
             notify_permission,
+            notify_delivered,
             open_notify_settings,
             get_connection,
             save_connection,

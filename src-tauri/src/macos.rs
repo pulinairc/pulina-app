@@ -120,6 +120,17 @@ pub fn permission() -> oneshot::Receiver<Permission> {
     rx
 }
 
+/// Whether the notification with this id is in Notification Center: macOS can accept one and still drop it.
+pub fn delivered(id: String) -> oneshot::Receiver<bool> {
+    let (send, rx) = once();
+    let done = RcBlock::new(move |list: NonNull<NSArray<UNNotification>>| {
+        let list = unsafe { list.as_ref() };
+        send((0..list.count()).any(|i| list.objectAtIndex(i).request().identifier().to_string() == id));
+    });
+    UNUserNotificationCenter::currentNotificationCenter().getDeliveredNotificationsWithCompletionHandler(&done);
+    rx
+}
+
 /// Shows the system's Allow prompt the first time; later macOS answers from what was chosen.
 pub fn authorize() -> oneshot::Receiver<Result<bool, String>> {
     let (send, rx) = once();
