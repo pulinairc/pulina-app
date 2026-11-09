@@ -1,6 +1,7 @@
 ### 0.5.9: 2026-11-09
 
 * Change jump buttons to matching outline icons
+* Fix freeze when typing a colon
 
 ### 0.5.8: 2026-11-09
 

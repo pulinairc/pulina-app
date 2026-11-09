@@ -1347,6 +1347,8 @@ dialog:focus { outline: none; }
 }
 
 .picker-section[hidden] { display: none; }
+/* Only the sections in view are laid out; laying out every emoji at once froze the Mac. */
+.picker-section { content-visibility: auto; contain-intrinsic-size: auto 400px; }
 
 .picker-grid {
   display: grid;

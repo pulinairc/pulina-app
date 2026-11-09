@@ -2616,7 +2616,7 @@ const CATEGORY_ICONS = {
   flags: '<path d="M5 21V4M5 4h11l-2 4 2 4H5"/>',
 };
 
-const pickerState = { el: null, data: null, onPick: null, sections: [], tabs: [] };
+const pickerState = { el: null, data: null, onPick: null, sections: [], tabs: [], opening: 0 };
 
 async function emojiData() {
   pickerState.data ??= await fetch('vendor/emoji.json').then((r) => r.json());
@@ -2740,7 +2740,10 @@ async function buildPicker() {
 
 /** Open the picker next to `anchor`; `onPick` gets the chosen emoji. */
 async function openPicker(anchor, onPick, { focus = true } = {}) {
+  const opening = ++pickerState.opening;
   if (!pickerState.el) await buildPicker();
+  // Closed again while the emoji were still loading.
+  if (opening !== pickerState.opening) return;
   const p = pickerState;
   p.onPick = onPick;
   p.frequent.querySelector('.picker-grid').replaceChildren(...frequentButtons());
@@ -2761,6 +2764,7 @@ async function openPicker(anchor, onPick, { focus = true } = {}) {
 }
 
 function closePicker() {
+  pickerState.opening += 1;
   pickerState.el?.remove();
   pickerState.onPick = null;
 }
