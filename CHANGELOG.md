@@ -12,6 +12,7 @@
 * Add a people list with op and voice in batches
 * Move settings and mute into the channel list
 * Change touch reactions to a long-press sheet
+* Fix iPhone text selection on long press
 * Show mode changes in the channel
 * Add keeping the people list beside the chat
 * Add editing a person from the people list
