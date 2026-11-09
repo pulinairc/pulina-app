@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/lobby.webp" width="760" alt="Lobby: backlog with photos and link cards, a highlight with its margin dot, a reply that gets reactions, the people list picked into op and voice and kept beside the chat, switching channels and the slash command menu">
+  <img src="docs/lobby.webp" width="760" alt="Lobby: backlog with photos and link cards, a highlight with its margin dot, a reply that gets reactions, the people list picked into op and voice and kept beside the chat, switching channels, a name picked from the suggestions after @ and the slash command menu">
 </p>
 
 ## Features
