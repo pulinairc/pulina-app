@@ -7,9 +7,9 @@ use objc2::{AllocAnyThread, MainThreadMarker, define_class, msg_send};
 use objc2_app_kit::{NSApplication, NSImage};
 use objc2_foundation::{NSArray, NSData, NSError, NSString, NSURL};
 use objc2_user_notifications::{
-    UNAuthorizationOptions, UNAuthorizationStatus, UNMutableNotificationContent, UNNotificationAttachment, UNNotificationRequest,
-    UNNotificationResponse, UNNotificationSetting, UNNotificationSettings, UNNotificationSound, UNUserNotificationCenter,
-    UNUserNotificationCenterDelegate,
+    UNAuthorizationOptions, UNAuthorizationStatus, UNMutableNotificationContent, UNNotification, UNNotificationAttachment,
+    UNNotificationPresentationOptions, UNNotificationRequest, UNNotificationResponse, UNNotificationSetting, UNNotificationSettings,
+    UNNotificationSound, UNUserNotificationCenter, UNUserNotificationCenterDelegate,
 };
 use std::ptr::NonNull;
 use std::sync::{Mutex, OnceLock};
@@ -26,6 +26,20 @@ define_class!(
     unsafe impl NSObjectProtocol for NotificationDelegate {}
 
     unsafe impl UNUserNotificationCenterDelegate for NotificationDelegate {
+        // Without this, macOS silences every notification while Lobby is the front app.
+        #[unsafe(method(userNotificationCenter:willPresentNotification:withCompletionHandler:))]
+        fn will_present(
+            &self,
+            _center: &UNUserNotificationCenter,
+            _notification: &UNNotification,
+            done: &block2::DynBlock<dyn Fn(UNNotificationPresentationOptions)>,
+        ) {
+            done.call((UNNotificationPresentationOptions::Banner
+                | UNNotificationPresentationOptions::List
+                | UNNotificationPresentationOptions::Sound
+                | UNNotificationPresentationOptions::Badge,));
+        }
+
         #[unsafe(method(userNotificationCenter:didReceiveNotificationResponse:withCompletionHandler:))]
         fn did_receive(&self, _center: &UNUserNotificationCenter, response: &UNNotificationResponse, done: &block2::DynBlock<dyn Fn()>) {
             if let Some(on_click) = ON_CLICK.get() {

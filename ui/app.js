@@ -3632,7 +3632,9 @@ async function notify(b, l) {
   const who = identity(l.nick, l.mask);
   const title = isPrivate(b) ? l.nick : `${who.name} in ${label(b)}`;
   const icon = await notifyIcon(who.photo);
-  showNotification(title, stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS), icon, { key: b.key, line: l.id });
+  showNotification(title, stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS), icon, { key: b.key, line: l.id }).catch((e) =>
+    renderStatus(`Notification: ${e}`),
+  );
 }
 
 /** Notification id to the message it was about, so a click can open it. */
@@ -3661,22 +3663,32 @@ function openNotified(id) {
 }
 
 // macOS gets its notifications from the system notification centre, the rest through the plugin.
-function showNotification(title, body, icon, target = null) {
-  if (IS_MAC) {
-    const id = `${Date.now()}`;
-    if (target) {
-      notified.set(id, target);
-      if (notified.size > NOTIFIED_KEEP) {
-        notified.delete(notified.keys().next().value);
-      }
-    }
-    invoke('notify_mac', { id, title, body, image: icon || null }).catch((e) => renderStatus(`Notification: ${e}`));
-  } else {
+// Resolves once the system has the notification; rejects with the reason it refused.
+async function showNotification(title, body, icon, target = null) {
+  if (!IS_MAC) {
     notifier.sendNotification({ title, body, icon });
+    return;
   }
+  const id = `${Date.now()}`;
+  if (target) {
+    notified.set(id, target);
+    if (notified.size > NOTIFIED_KEEP) {
+      notified.delete(notified.keys().next().value);
+    }
+  }
+  await invoke('notify_mac', { id, title, body, image: icon || null });
 }
 
-el.notifyTest.addEventListener('click', () => showNotification('Lobby', 'Notifications work.', null));
+// The answer shows next to the button, so a refusal is never silent.
+el.notifyTest.addEventListener('click', async () => {
+  try {
+    await showNotification('Lobby', 'Notifications work.', null);
+    el.notifyState.textContent = IS_MAC ? 'Sent. macOS took it.' : 'Sent.';
+  } catch (e) {
+    el.notifyState.textContent = `Not sent: ${e}`;
+  }
+  el.notifyState.hidden = false;
+});
 
 // What macOS lets Lobby do, and the one step that fixes it: its Allow prompt the first time,
 // System Settings after a no.
