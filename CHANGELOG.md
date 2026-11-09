@@ -2,6 +2,7 @@
 
 * Change jump buttons to matching outline icons
 * Fix freeze when typing a colon
+* Fix emoji picker overflowing on iPhone
 
 ### 0.5.8: 2026-11-09
 

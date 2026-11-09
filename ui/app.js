@@ -2599,8 +2599,6 @@ el.people.addEventListener('close', () => el.input.focus());
 
 // Emoji picker: search, frequently used, every category, and a bar to jump between them.
 
-const PICKER_WIDTH = 340;
-const PICKER_HEIGHT = 400;
 const PICKER_GAP = 8;
 const FREQUENT_COUNT = 18;
 const SEARCH_LIMIT = 120;
@@ -2752,13 +2750,23 @@ async function openPicker(anchor, onPick, { focus = true } = {}) {
   p.scroll.scrollTop = 0;
   p.tabs.forEach((t, i) => t.classList.toggle('active', i === 0));
 
-  const box = anchor.getBoundingClientRect();
-  const left = Math.min(Math.max(box.right - PICKER_WIDTH, PICKER_GAP), window.innerWidth - PICKER_WIDTH - PICKER_GAP);
-  const above = box.top - PICKER_HEIGHT - PICKER_GAP;
-  const top = above >= PICKER_GAP ? above : Math.min(box.bottom + PICKER_GAP, window.innerHeight - PICKER_HEIGHT - PICKER_GAP);
-  p.el.style.left = `${Math.max(left, PICKER_GAP)}px`;
-  p.el.style.top = `${Math.max(top, PICKER_GAP)}px`;
   document.body.append(p.el);
+  // Measured once placed, against the page rather than the window: the iPhone zooms the page
+  // and shortens it for the keyboard. `k` turns measured pixels back into style pixels.
+  const k = p.el.getBoundingClientRect().width / p.el.offsetWidth || 1;
+  const page = document.body.getBoundingClientRect();
+  // Narrower and shorter on a phone, and above its keyboard.
+  p.el.style.maxWidth = `${page.width / k - 2 * PICKER_GAP}px`;
+  p.el.style.maxHeight = `${page.height / k - 2 * PICKER_GAP}px`;
+  const box = anchor.getBoundingClientRect();
+  const width = p.el.offsetWidth * k;
+  const height = p.el.offsetHeight * k;
+  const gap = PICKER_GAP * k;
+  const left = Math.min(Math.max(box.right - width, page.left + gap), page.right - width - gap);
+  const above = box.top - height - gap;
+  const top = above >= page.top + gap ? above : Math.min(box.bottom + gap, page.bottom - height - gap);
+  p.el.style.left = `${Math.max(left, page.left + gap) / k}px`;
+  p.el.style.top = `${Math.max(top, page.top + gap) / k}px`;
   closePanel();
   if (focus) p.input.focus();
 }
