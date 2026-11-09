@@ -91,11 +91,10 @@ const el = {
   chanIcon: $('chan-icon'),
   chanName: $('chan-name'),
   chanMeta: $('chan-meta'),
+  chanNet: $('chan-net'),
   unread: $('unread'),
   gear: $('gear'),
   pill: $('pill'),
-  topic: $('topic'),
-  topicText: $('topic-text'),
   status: $('status'),
   statusText: $('status-text'),
   statusAction: $('status-action'),
@@ -666,15 +665,12 @@ function renderHeader() {
   if (b) {
     icon(b, el.chanIcon);
     el.chanName.textContent = label(b);
-    const who = isPrivate(b) ? ' · private' : b.name === '' ? ' · server messages' : '';
-    el.chanMeta.textContent = `${b.net}${who}${isMuted(b) ? ' · muted' : ''}`;
+    // First line: the name in full, the network beside it. Second line: the topic.
+    el.chanNet.textContent = `${b.net}${isMuted(b) ? ' · muted' : ''}`;
+    const topic = isPrivate(b) ? 'private' : b.name === '' ? 'server messages' : stripFormatting(b.topic || '');
+    el.chanMeta.textContent = topic;
+    el.chanMeta.hidden = !topic;
     el.title.dataset.tip = b.topic || '';
-    const topic = b.name !== '' && !isPrivate(b) ? stripFormatting(b.topic || '') : '';
-    el.topic.hidden = !topic;
-    el.topicText.textContent = topic;
-    if (topicPop && topicPop.dataset.topic !== topic) {
-      closeTopic();
-    }
   }
   schedulePeople();
 
@@ -850,44 +846,6 @@ function pick(k) {
   el.switcher.close();
   select(k);
 }
-
-// The topic, in a chip in the header when there is room; clicking it shows all of it.
-let topicPop = null;
-
-function openTopic() {
-  const topic = el.topicText.textContent;
-  topicPop = h('div', 'glass topic-pop');
-  topicPop.dataset.topic = topic;
-  for (const t of tokenize(topic, '')) {
-    if (t.type === 'url') {
-      const a = h('a', 'link', shortUrl(t.value));
-      a.href = t.value;
-      topicPop.append(a);
-    } else {
-      topicPop.append(t.value);
-    }
-  }
-  topicPop.addEventListener('pointerdown', (e) => e.stopPropagation());
-  document.body.append(topicPop);
-  const k = topicPop.getBoundingClientRect().width / topicPop.offsetWidth || 1;
-  const chip = el.topic.getBoundingClientRect();
-  const page = document.body.getBoundingClientRect();
-  const left = Math.min(chip.left, page.right - topicPop.offsetWidth * k - PICKER_GAP * k);
-  topicPop.style.left = `${Math.max(left, PICKER_GAP * k) / k}px`;
-  topicPop.style.top = `${(chip.bottom + PICKER_GAP * k) / k}px`;
-  el.topic.setAttribute('aria-expanded', 'true');
-}
-
-function closeTopic() {
-  topicPop?.remove();
-  topicPop = null;
-  el.topic.setAttribute('aria-expanded', 'false');
-}
-
-el.topic.addEventListener('click', () => (topicPop ? closeTopic() : openTopic()));
-el.topic.addEventListener('pointerdown', (e) => e.stopPropagation());
-document.addEventListener('pointerdown', () => topicPop && closeTopic());
-document.addEventListener('keydown', (e) => e.key === 'Escape' && topicPop && closeTopic());
 
 el.title.addEventListener('click', openSwitcher);
 el.chanIcon.addEventListener('click', (e) => {

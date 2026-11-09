@@ -183,7 +183,7 @@ Every shortcut can be changed under Settings, Keyboard shortcuts.
 
 **Bot commands.** A line like `!seen milla` shows as a small card. Name your channel bots in Settings, Bots, and what they say right after a command shows inside its card as the answer.
 
-**Topic.** In a wide window the channel topic sits in the header; click it to read all of it.
+**Topic.** The channel topic sits under the channel name in the header; point at it to read all of it.
 
 **Commands.** Type `/` for the menu. `/me`, `/msg`, `/query`, `/join`, `/part`, `/wc`, `/topic`, `/names`, `/whois`, `/nick`, `/away`, `/notice`, `/invite`, `/kick`, `/op`, `/deop`, `/voice`, `/devoice`, `/clear`, `/say` and `/quote` work as in irssi. Anything else is sent as is. `/quit` is off, because through irssiproxy it would disconnect irssi from the network.
 

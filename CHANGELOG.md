@@ -6,7 +6,7 @@
 * Change the voice mark to sit at the right edge of the people list
 * Remove the people icon from the pill while someone is talking
 * Add bot commands with their answers in one card
-* Add the channel topic to the header when there is room
+* Add the channel topic under the channel name
 
 ### 0.7.0: 2026-11-09
 

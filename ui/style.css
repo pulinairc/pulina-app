@@ -137,9 +137,23 @@ a:focus-visible {
   line-height: 1.25;
 }
 
+.name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+/* The channel name is never cut short for the network or the topic. */
 #chan-name {
+  flex-shrink: 0;
   font-weight: 600;
   color: var(--strong);
+  white-space: nowrap;
+}
+#chan-net {
+  min-width: 0;
+  font-size: 13px;
+  color: var(--faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -147,7 +161,7 @@ a:focus-visible {
 
 #chan-meta {
   font-size: 13px;
-  color: var(--faint);
+  color: var(--dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -3095,56 +3109,4 @@ body.docked #status {
   .sheet-pill > * {
     animation: none;
   }
-}
-
-/* The topic chip: in the free space of the header, gone when the window is narrow. */
-#topic {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 1 520px;
-  min-width: 0;
-  height: 30px;
-  margin: 0 auto;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--panel);
-  color: var(--dim);
-  font-size: 13px;
-}
-#topic svg {
-  flex-shrink: 0;
-  color: var(--faint);
-}
-#topic:hover,
-#topic[aria-expanded="true"] {
-  border-color: var(--line-strong);
-  color: var(--strong);
-}
-#topic-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-#topic[hidden] {
-  display: none;
-}
-@media (max-width: 720px) {
-  #topic {
-    display: none;
-  }
-}
-.topic-pop {
-  position: fixed;
-  z-index: 45;
-  max-width: min(520px, calc(100% - 16px));
-  padding: 10px 14px;
-  border-radius: 12px;
-  background: rgb(22 22 26 / 96%);
-  color: var(--text);
-  font-size: 14px;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
 }
