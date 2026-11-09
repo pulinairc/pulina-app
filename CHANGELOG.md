@@ -12,6 +12,9 @@
 * Add a people list with op and voice in batches
 * Move settings and mute into the channel list
 * Change touch reactions to a long-press sheet
+* Show mode changes in the channel
+* Add keeping the people list beside the chat
+* Change the message box to a darker shade
 
 ### 0.5.10: 2026-11-09
 

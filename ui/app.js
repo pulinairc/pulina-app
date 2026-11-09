@@ -25,6 +25,7 @@ import {
   ago,
   byActivity,
   fadeFor,
+  TALKING_MS,
   modeAction,
   peopleGroups,
   quietFor,
@@ -94,6 +95,7 @@ const el = {
   toast: $('toast'),
   log: $('log'),
   col: $('col'),
+  logwrap: $('logwrap'),
   form: $('composer'),
   input: $('input'),
   jumpUnread: $('jump-unread'),
@@ -758,6 +760,7 @@ function select(k) {
   }
   if (state.current !== k) {
     closeNicklist();
+    nicklist.picked.clear();
   }
   state.current = k;
   try {
@@ -1325,6 +1328,7 @@ const ICONS = {
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
   moreH:
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+  dock: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/></svg>',
   close:
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
   check:
@@ -1621,7 +1625,8 @@ window.addEventListener('blur', () => {
 // The list puts ops first, then everyone by when they last spoke; picking several people gives
 // or takes op and voice in as few MODE lines as the server allows.
 
-const PILL_FACES = 3;
+const PILL_FACES = 5;
+const DOCK_KEY = 'lobby.nicklist';
 const CROWN =
   '<svg class="crown" width="13" height="10" viewBox="0 0 24 18" role="img" aria-label="op"><path d="M2 5l5.5 4L12 1l4.5 8L22 5l-2.5 12h-15z"/></svg>';
 const VOICE =
@@ -1682,35 +1687,65 @@ function schedulePeople() {
   }
 }
 
+// Where the list lives, per device: a drop-down from the pill, or a column beside the chat
+// that stays (`side`), and whether that column is showing (`shown`).
+function dockPrefs() {
+  try {
+    return JSON.parse(localStorage.getItem(DOCK_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDock(prefs) {
+  try {
+    localStorage.setItem(DOCK_KEY, JSON.stringify(prefs));
+  } catch {
+    /* storage may be unavailable */
+  }
+}
+
+const PEOPLE_ICON =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 19c.8-3.4 3.2-5 6-5s5.2 1.6 6 5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c1.8.6 2.8 2.2 3 5"/></svg>';
+
+// The pill shows who is talking now, latest first; nobody talking leaves the people icon.
 function renderPill() {
   const b = channelShown();
   el.pill.hidden = !b?.members.size;
   if (el.pill.hidden) {
-    closeNicklist();
+    hideNicklist();
     return;
   }
-  const faces = byActivity(b.members, spokeIn(b.net)).slice(0, PILL_FACES);
-  const stack = h('span', 'pill-faces');
-  stack.append(...faces.map((n) => avatar(n, '')));
-  const more = b.members.size - faces.length;
-  el.pill.replaceChildren(stack, ...(more > 0 ? [h('span', 'pill-more', `+${more}`)] : []));
-  const count = `${b.members.size} ${b.members.size === 1 ? 'person' : 'people'}`;
+  const spokeAt = spokeIn(b.net);
+  const now = Date.now();
+  const talking = byActivity(b.members, spokeAt).filter((n) => now - spokeAt(n) < TALKING_MS);
+  const faces = h('span', 'pill-faces');
+  faces.append(...talking.slice(0, PILL_FACES).map((n) => avatar(n, '')));
+  el.pill.replaceChildren(talking.length ? faces : svg(PEOPLE_ICON));
+  const count = `${b.members.size} ${b.members.size === 1 ? 'person' : 'people'}, ${talking.length} talking now`;
   el.pill.setAttribute('aria-label', count);
   el.pill.dataset.tip = count;
+  const dock = dockPrefs();
+  if (dock.side && dock.shown && !nicklist.el) {
+    openNicklist();
+  }
   el.pill.setAttribute('aria-expanded', String(Boolean(nicklist.el)));
 }
 
 function openNicklist() {
-  nicklist.el = h('div', 'glass nicklist');
-  nicklist.el.setAttribute('role', 'dialog');
+  const side = Boolean(dockPrefs().side);
+  nicklist.el = h('div', side ? 'nicklist docked' : 'glass nicklist');
+  nicklist.el.setAttribute('role', side ? 'complementary' : 'dialog');
   nicklist.el.setAttribute('aria-label', 'People');
   nicklist.el.addEventListener('pointerdown', (e) => e.stopPropagation());
   document.body.append(nicklist.el);
+  document.body.classList.toggle('docked', side);
   renderNicklist();
   renderPill();
 }
 
-function closeNicklist() {
+/** Take the list off screen without changing where it lives. */
+function hideNicklist() {
   closePeopleMenu();
   nicklist.picked.clear();
   if (!nicklist.el) {
@@ -1718,7 +1753,21 @@ function closeNicklist() {
   }
   nicklist.el.remove();
   nicklist.el = null;
+  document.body.classList.remove('docked');
   el.pill.setAttribute('aria-expanded', 'false');
+}
+
+/** Close the drop-down; a docked column stays. */
+function closeNicklist() {
+  if (nicklist.el && !dockPrefs().side) {
+    hideNicklist();
+  }
+}
+
+function toggleDock() {
+  saveDock({ side: !dockPrefs().side, shown: true });
+  hideNicklist();
+  openNicklist();
 }
 
 function renderNicklist() {
@@ -1734,22 +1783,35 @@ function renderNicklist() {
     }
   }
   const scroll = h('div', 'nl-scroll');
+  const top = h('div', 'nl-top');
+  const side = nicklist.el.classList.contains('docked');
+  const dock = h('button', 'icon-btn nl-dock');
+  dock.type = 'button';
+  dock.setAttribute('aria-pressed', String(side));
+  dock.setAttribute('aria-label', side ? 'Show as a drop-down' : 'Keep beside the chat');
+  dock.dataset.tip = side ? 'Show as a drop-down' : 'Keep beside the chat';
+  dock.append(svg(ICONS.dock));
+  dock.addEventListener('click', toggleDock);
+  top.append(h('span', 'nl-total', `${b.members.size} ${b.members.size === 1 ? 'person' : 'people'}`), dock);
+  scroll.append(top);
   for (const g of peopleGroups([...b.members], b.modes, spokeIn(b.net), now, midnight)) {
-    const head = h('div', 'nl-head', g.title);
+    const head = h('div', 'nl-head', `${g.title} · ${g.people.length}`);
     if (g.id === 'now') {
       head.prepend(h('span', 'live'));
     }
     scroll.append(head, ...g.people.map((p) => personRow(p, now)));
   }
-  const top = nicklist.el.querySelector('.nl-scroll')?.scrollTop ?? 0;
+  const scrolled = nicklist.el.querySelector('.nl-scroll')?.scrollTop ?? 0;
   const bar = pickedBar(b);
   nicklist.el.replaceChildren(scroll, ...(bar ? [bar] : []));
-  scroll.scrollTop = top;
+  scroll.scrollTop = scrolled;
 
-  // Under the header on the right, measured against the page like the emoji picker: the
-  // window can be zoomed for text size, so `k` turns measured pixels back into style pixels.
+  // Under the pill, or the full height beside the chat. Measured against the page like the
+  // emoji picker: the window can be zoomed for text size, so `k` turns measured pixels back
+  // into style pixels.
   const k = nicklist.el.getBoundingClientRect().width / nicklist.el.offsetWidth || 1;
-  nicklist.el.style.top = `${el.pill.getBoundingClientRect().bottom / k + PICKER_GAP}px`;
+  const below = side ? el.logwrap.getBoundingClientRect().top : el.pill.getBoundingClientRect().bottom + PICKER_GAP * k;
+  nicklist.el.style.top = `${below / k}px`;
 }
 
 function personRow(p, now) {
@@ -1773,7 +1835,10 @@ function personRow(p, now) {
   } else if (p.role === 'voice') {
     row.append(svg(VOICE));
   }
-  row.append(h('span', 'nl-ago', quietFor(p.ts, now)));
+  const quiet = quietFor(p.ts, now);
+  if (quiet) {
+    row.append(h('span', 'nl-ago', quiet));
+  }
   row.addEventListener('click', () => {
     if (picked) {
       nicklist.picked.delete(p.nick);
@@ -1913,7 +1978,17 @@ function closePeopleMenu() {
   nicklist.menu = null;
 }
 
-el.pill.addEventListener('click', () => (nicklist.el ? closeNicklist() : openNicklist()));
+el.pill.addEventListener('click', () => {
+  const dock = dockPrefs();
+  if (dock.side) {
+    saveDock({ side: true, shown: !nicklist.el });
+  }
+  if (nicklist.el) {
+    hideNicklist();
+  } else {
+    openNicklist();
+  }
+});
 el.pill.addEventListener('pointerdown', (e) => e.stopPropagation());
 document.addEventListener('pointerdown', () => {
   if (nicklist.menu) {
@@ -1925,7 +2000,7 @@ document.addEventListener('pointerdown', () => {
 document.addEventListener(
   'keydown',
   (e) => {
-    if (e.key !== 'Escape' || !nicklist.el) {
+    if (e.key !== 'Escape' || !nicklist.el || (dockPrefs().side && !nicklist.menu)) {
       return;
     }
     e.stopPropagation();
