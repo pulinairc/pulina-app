@@ -4082,3 +4082,6 @@ body.docked #status {
   color: var(--new);
   font-weight: 600;
 }
+.nl-standing {
+  text-wrap: pretty;
+}

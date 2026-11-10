@@ -6241,7 +6241,7 @@ function todayRanking(b) {
   const out = [standing(list, place)];
   const usual = nicklist.today.usual;
   if (usual !== undefined) {
-    out[0].append(h('div', 'nl-usual', usualLine(place === -1 ? 0 : list[place].words, usual)));
+    out[0].append(h('div', 'nl-usual', keepLastTwo(usualLine(place === -1 ? 0 : list[place].words, usual))));
   }
   const most = list[0].words;
   list.forEach((x, i) => {
@@ -6283,7 +6283,8 @@ function standing(list, place) {
     line.textContent = 'You have not said anything here today.';
     return line;
   }
-  line.append('You are ', h('b', null, ordinal(place + 1)), ` with ${list[place].words.toLocaleString('fi-FI')} words.`);
+  // The count and "words." stay together, so "words." never wraps onto a line of its own.
+  line.append('You are ', h('b', null, ordinal(place + 1)), ` with ${list[place].words.toLocaleString('fi-FI')}\u00a0words.`);
   return line;
 }
 
@@ -6321,6 +6322,12 @@ function usualLine(words, usual) {
     return 'About as much as usual by this time.';
   }
   return `${Math.abs(percent)}% ${percent > 0 ? 'more' : 'less'} than usual by this time.`;
+}
+
+/** Joins the last two words, so the last one never ends up alone on a line. */
+function keepLastTwo(text) {
+  const at = text.lastIndexOf(' ');
+  return at === -1 ? text : `${text.slice(0, at)}\u00a0${text.slice(at + 1)}`;
 }
 
 function ordinal(n) {
