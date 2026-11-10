@@ -566,7 +566,7 @@ function onLine(l) {
   if (mentioned) {
     b.mention = true;
   }
-  if (mentioned && !(visible && document.hasFocus())) {
+  if (mentioned && !isHidden(b) && !(visible && document.hasFocus())) {
     notify(b, l);
   }
   headerSoon();
@@ -593,7 +593,12 @@ function onBuffer(info) {
   renderHeader();
 }
 
+/** Channels in list order, without hidden ones: what the keys step through and number. */
 function ordered() {
+  return sortedBuffers().filter((b) => !isHidden(b));
+}
+
+function sortedBuffers() {
   const kind = (b) => (b.name === '' ? 2 : isPrivate(b) ? 1 : 0);
   const netIndex = (b) => {
     const i = state.networks.indexOf(b.net);
@@ -606,6 +611,33 @@ function ordered() {
 
 const CHANNELS_SETTING = 'channels';
 const MUTED_SETTING = 'muted';
+const HIDDEN_SETTING = 'hidden';
+
+/** Hidden channels are left out of everything but the Hidden group at the end of the channel list. */
+function hiddenKeys() {
+  try {
+    return new Set(JSON.parse(state.settings[HIDDEN_SETTING] || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function isHidden(b) {
+  return hiddenKeys().has(b.key);
+}
+
+function setHidden(b, hidden) {
+  const keys = hiddenKeys();
+  if (hidden) {
+    keys.add(b.key);
+  } else {
+    keys.delete(b.key);
+  }
+  saveSetting(HIDDEN_SETTING, JSON.stringify([...keys]));
+  renderHeader();
+  renderList();
+  renderInbox();
+}
 
 /** Muted channels add nothing to unread counts or jumps, except mentions. */
 function mutedKeys() {
@@ -627,7 +659,7 @@ function wantsAttention(b) {
 
 /** What a channel adds to the unread count: everything, or for a muted one only what names you. */
 function attentionCount(b) {
-  if (!b.unread) {
+  if (!b.unread || isHidden(b)) {
     return 0;
   }
   if (!isMuted(b)) {
@@ -656,6 +688,23 @@ function bellButton(b) {
   bell.append(svg(muted ? BELL_OFF : BELL));
   bell.addEventListener('click', () => setMuted(b, !muted));
   return bell;
+}
+
+const EYE =
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF =
+  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.9 5.2A10.4 10.4 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-2.2 3.2M6.6 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7c1.9 0 3.6-.6 5-1.5"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/><path d="m2 2 20 20"/></svg>';
+
+function eyeButton(b) {
+  const hidden = isHidden(b);
+  const eye = h('button', 'row-bell row-eye');
+  eye.type = 'button';
+  eye.setAttribute('aria-pressed', String(hidden));
+  eye.setAttribute('aria-label', `${hidden ? 'Show' : 'Hide'} ${label(b)}`);
+  eye.dataset.tip = hidden ? 'Show in the list' : 'Hide from the list';
+  eye.append(svg(hidden ? EYE_OFF : EYE));
+  eye.addEventListener('click', () => setHidden(b, !hidden));
+  return eye;
 }
 
 function setMuted(b, muted) {
@@ -881,9 +930,14 @@ function step(offset) {
 
 // Switcher
 
+let showHidden = false;
+
+/** The list: channels, then hidden ones when opened or searched for. */
 function matches() {
   const q = el.filter.value.trim().toLowerCase();
-  return ordered().filter((b) => !q || label(b).toLowerCase().includes(q) || b.net.toLowerCase().includes(q));
+  const hit = (b) => !q || label(b).toLowerCase().includes(q) || b.net.toLowerCase().includes(q);
+  const hidden = sortedBuffers().filter((b) => isHidden(b) && hit(b));
+  return [...ordered().filter(hit), ...(showHidden || q ? hidden : [])];
 }
 
 function renderList() {
@@ -891,7 +945,13 @@ function renderList() {
   picked = Math.min(picked, Math.max(list.length - 1, 0));
   const nodes = [];
   let net = null;
+  let hiddenShown = false;
   list.forEach((b, i) => {
+    if (isHidden(b) && !hiddenShown) {
+      hiddenShown = true;
+      net = null;
+      nodes.push(hiddenToggle());
+    }
     if (b.net !== net) {
       net = b.net;
       nodes.push(h('div', 'list-net', net));
@@ -903,7 +963,7 @@ function renderList() {
     item.setAttribute('aria-selected', String(i === picked));
     item.classList.toggle('current', b.key === state.current);
     item.classList.toggle('mention', b.mention);
-    item.classList.toggle('muted', isMuted(b));
+    item.classList.toggle('muted', isMuted(b) || isHidden(b));
     item.append(icon(b, h('span', 'chan-icon')), h('span', 'name', label(b)));
     if (wantsAttention(b)) {
       item.append(h('span', 'count', String(attentionCount(b))));
@@ -911,15 +971,33 @@ function renderList() {
     item.addEventListener('click', () => pick(b.key));
     row.append(item);
     if (b.name !== '') {
-      row.append(bellButton(b));
+      row.append(eyeButton(b), bellButton(b));
     }
     nodes.push(row);
   });
+  const hiddenCount = sortedBuffers().filter(isHidden).length;
+  if (hiddenCount && !hiddenShown && !el.filter.value.trim()) {
+    nodes.push(hiddenToggle());
+  }
   el.list.replaceChildren(...nodes);
   el.list.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: 'nearest' });
 }
 
+/** "Hidden · 3" at the end of the list opens and closes the hidden channels. */
+function hiddenToggle() {
+  const n = sortedBuffers().filter(isHidden).length;
+  const b = h('button', 'list-hidden', `Hidden · ${n}`);
+  b.type = 'button';
+  b.setAttribute('aria-expanded', String(showHidden));
+  b.addEventListener('click', () => {
+    showHidden = !showHidden;
+    renderList();
+  });
+  return b;
+}
+
 function openSwitcher() {
+  showHidden = false;
   el.filter.value = '';
   picked = 0;
   renderList();
@@ -3807,8 +3885,11 @@ async function start() {
     if (e.payload.key === SHORTCUT_SETTING) {
       refreshShortcutTips();
     }
-    if (e.payload.key === MUTED_SETTING || e.payload.key === CHANNELS_SETTING) {
+    if ([MUTED_SETTING, CHANNELS_SETTING, HIDDEN_SETTING].includes(e.payload.key)) {
       renderHeader();
+    }
+    if (e.payload.key === HIDDEN_SETTING) {
+      renderInbox();
     }
     if ([UPLOAD_SETTING, UPLOAD_VIA_SETTING, UPLOAD_S3_SETTING, UPLOAD_SFTP_SETTING].includes(e.payload.key)) {
       renderAttach();
@@ -5020,7 +5101,14 @@ function shortWhen(ts) {
 }
 
 function isHighlight(l) {
-  return Boolean(l.id) && !l.own && CHAT_KINDS.has(l.kind) && isChannel(l.buffer) && mentions(l.text, myWords(l.net));
+  return (
+    !hiddenKeys().has(key(l.net, l.buffer)) &&
+    Boolean(l.id) &&
+    !l.own &&
+    CHAT_KINDS.has(l.kind) &&
+    isChannel(l.buffer) &&
+    mentions(l.text, myWords(l.net))
+  );
 }
 
 function highlightMarks() {
@@ -5075,7 +5163,9 @@ async function loadHighlights(before) {
 
 function inboxParts() {
   const m = highlightMarks();
-  return inboxSplit(inbox.lines.values(), m.upTo, m.done);
+  const hidden = hiddenKeys();
+  const shown = [...inbox.lines.values()].filter((l) => !hidden.has(key(l.net, l.buffer)));
+  return inboxSplit(shown, m.upTo, m.done);
 }
 
 function renderInbox() {

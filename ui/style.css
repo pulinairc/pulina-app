@@ -875,6 +875,23 @@ dialog:focus {
   scrollbar-color: var(--line) transparent;
 }
 
+.list-hidden {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 10px 10px 4px;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--faint);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.list-hidden:hover {
+  color: var(--text);
+}
 .list-net {
   padding: 10px 10px 4px;
   font-size: 13px;

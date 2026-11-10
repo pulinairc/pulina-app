@@ -9,6 +9,7 @@
 * Fix missing space under the last setting of each tab
 * Change the Files heading to File storage
 * Change the Settings tabs to a column on the left
+* Add hiding channels from the list with an eye button
 
 ### 1.1.0: 2026-11-10
 
