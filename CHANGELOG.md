@@ -3,6 +3,7 @@
 * Fix the gaps between the README features
 * Fix the Today tab staying blank on an older lobby-server
 * Change the now playing Send button to the accent colour
+* Add a Save button and a Saved note to Settings
 
 ### 1.5.0: 2026-11-10
 

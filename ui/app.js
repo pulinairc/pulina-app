@@ -171,6 +171,8 @@ const el = {
   sftpKey: $('sftp-key'),
   sftpCopy: $('sftp-copy'),
   settingsTabs: $('settings-tabs'),
+  settingsSave: $('settings-save'),
+  settingsSaved: $('settings-saved'),
   slash: $('slash'),
   replying: $('replying'),
   openPeople: $('open-people'),
@@ -1163,6 +1165,23 @@ function showAbout() {
 }
 
 el.settingsClose.addEventListener('click', () => el.settings.close());
+
+// Settings save as they change; Save finishes the field being typed in, and either way "Saved" shows.
+const SAVED_SHOWN_MS = 1800;
+let savedTimer = 0;
+
+function flashSaved() {
+  el.settingsSaved.hidden = false;
+  clearTimeout(savedTimer);
+  savedTimer = setTimeout(() => {
+    el.settingsSaved.hidden = true;
+  }, SAVED_SHOWN_MS);
+}
+
+el.settingsSave.addEventListener('click', () => {
+  document.activeElement?.blur();
+  flashSaved();
+});
 el.settings.addEventListener('click', (e) => {
   if (e.target === el.settings) {
     el.settings.close();
@@ -1742,7 +1761,9 @@ function myWords(net) {
 
 function saveSetting(key, value) {
   state.settings[key] = value;
-  invoke('set_setting', { key, value }).catch((e) => renderStatus(String(e)));
+  invoke('set_setting', { key, value })
+    .then(() => el.settings.open && flashSaved())
+    .catch((e) => renderStatus(String(e)));
 }
 
 function countReaction(emoji) {

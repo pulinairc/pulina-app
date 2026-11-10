@@ -136,9 +136,13 @@
   <dialog id="settings" tabindex="-1" aria-labelledby="settings-title">
     <div class="sheet-head">
       <h2 id="settings-title">Settings</h2>
-      <button id="settings-close" type="button" aria-label="Close">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
+      <span class="settings-actions">
+        <span id="settings-saved" class="saved" role="status" hidden>Saved</span>
+        <button id="settings-save" class="primary-btn" type="button">Save</button>
+        <button id="settings-close" type="button" aria-label="Close">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </span>
     </div>
     <div id="settings-tabs" class="settings-tabs" role="tablist" aria-label="Settings">
       <button class="inbox-tab" type="button" role="tab" data-tab="general">General</button>
