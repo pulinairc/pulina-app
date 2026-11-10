@@ -943,6 +943,10 @@ dialog:focus {
   justify-content: center;
   opacity: 0;
 }
+.row-gap {
+  width: 34px;
+  flex-shrink: 0;
+}
 .row-bell svg {
   width: 16px;
   height: 16px;

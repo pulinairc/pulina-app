@@ -1017,9 +1017,8 @@ function renderList() {
     }
     item.addEventListener('click', () => pick(b.key));
     row.append(item);
-    if (b.name !== '') {
-      row.append(eyeButton(b), bellButton(b));
-    }
+    // A server window can be hidden too; it has no bell, so a gap keeps the eyes in line.
+    row.append(eyeButton(b), b.name === '' ? h('span', 'row-gap') : bellButton(b));
     nodes.push(row);
   });
   const hiddenCount = sortedBuffers().filter(isHidden).length;
