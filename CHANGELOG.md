@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.5.1: 2026-11-10
 
 * Fix the gaps between the README features
 * Fix the Today tab staying blank on an older lobby-server
