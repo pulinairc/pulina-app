@@ -4042,3 +4042,13 @@ body.docked #status {
 .nl-standing b {
   color: var(--strong);
 }
+.crown {
+  display: inline-flex;
+  color: #f5c542;
+}
+.nl-place .crown {
+  justify-content: flex-end;
+}
+.podium-spot .crown {
+  margin-bottom: -2px;
+}

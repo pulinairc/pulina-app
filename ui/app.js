@@ -6048,6 +6048,16 @@ for (const [field, key] of [
 // a card shows yesterday's top three; the people list ranks today so far.
 
 const PODIUM_STEP_PX = [64, 46, 32];
+const CROWN =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 7.5l4.5 4 4.5-6.5 4.5 6.5 4.5-4-2 11.5H5z"/></svg>';
+
+/** The most active one's crown. */
+function crown() {
+  const c = h('span', 'crown');
+  c.innerHTML = CROWN;
+  c.setAttribute('aria-label', 'Most active');
+  return c;
+}
 const recaps = new Map();
 
 /** Midnight of the day `daysBack` days ago, in local time. */
@@ -6106,7 +6116,13 @@ function recapCard(b, list) {
     const step = h('div', 'podium-step', String(place + 1));
     step.style.height = `${PODIUM_STEP_PX[place]}px`;
     step.dataset.place = String(place + 1);
-    spot.append(avatar(t.nick, ''), name, h('span', 'podium-count', t.words.toLocaleString('fi-FI')), step);
+    spot.append(
+      ...(place === 0 ? [crown()] : []),
+      avatar(t.nick, ''),
+      name,
+      h('span', 'podium-count', t.words.toLocaleString('fi-FI')),
+      step,
+    );
     personTip(name, b.net, t.nick);
     podium.append(spot);
   }
@@ -6179,7 +6195,12 @@ function todayRanking(b) {
     bar.append(fill);
     const name = h('span', 'nl-name', identity(x.nick).name);
     personTip(name, b.net, x.nick);
-    row.append(h('span', 'nl-place', String(i + 1)), avatar(x.nick, ''), name, h('span', 'nl-words', x.words.toLocaleString('fi-FI')), bar);
+    // The first place shows a crown in place of its number.
+    const placeMark = h('span', 'nl-place', i === 0 ? '' : String(i + 1));
+    if (i === 0) {
+      placeMark.append(crown());
+    }
+    row.append(placeMark, avatar(x.nick, ''), name, h('span', 'nl-words', x.words.toLocaleString('fi-FI')), bar);
     out.push(row);
   });
   return out;
