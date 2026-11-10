@@ -1,11 +1,11 @@
-### [Unreleased]
+### 1.1.0: 2026-11-10
 
 * Change the connection notice and docked people list to be more compact on phones
 * Add a Latest button to the shelf
 * Change the shelf to separate Links and Pictures tabs
 * Fix the keyboard opening over the highlights on iPhone
 * Fix scrolling past the lines around an old highlight
-* Move the more emojis button last on phones
+* Change the more emojis button to come last on phones
 * Add a quick glide and fade for new messages
 * Add highlight words in Settings
 * Add uploads to S3, R2, SFTP, catbox and lobby-server
