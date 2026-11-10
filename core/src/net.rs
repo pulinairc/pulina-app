@@ -538,7 +538,6 @@ mod tests {
         let out = feed(&mut s, ":mikko!m@h PRIVMSG #a :\u{1}ACTION waves\u{1}");
         assert_eq!(lines(&out), vec![("#a".into(), "action".into(), "mikko".into())]);
 
-
         let out = feed(&mut s, ":irc.example NOTICE * :Looking up your hostname");
         assert_eq!(lines(&out), vec![("".into(), "notice".into(), "irc.example".into())]);
     }
@@ -628,7 +627,10 @@ mod tests {
             [Out::Line(l)] => (l.buffer.clone(), l.kind.clone(), l.text.clone()),
             _ => panic!("expected one line"),
         };
-        assert_eq!(text(feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}VERSION\u{1}")), ("mikko".into(), "ctcp".into(), "asked for your VERSION".into()));
+        assert_eq!(
+            text(feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}VERSION\u{1}")),
+            ("mikko".into(), "ctcp".into(), "asked for your VERSION".into())
+        );
         assert_eq!(
             text(feed(&mut s, ":mikko!m@h NOTICE rolle :\u{1}VERSION irssi 1.4.5\u{1}")),
             ("".into(), "ctcp".into(), "answered VERSION: irssi 1.4.5".into())
@@ -637,8 +639,14 @@ mod tests {
             text(feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}DCC SEND \"loma kuva.jpg\" 3232235777 5000 2621440\u{1}")),
             ("mikko".into(), "dcc".into(), "offers a file: loma kuva.jpg (2,5 MB). Take it in irssi with /dcc get mikko".into())
         );
-        assert_eq!(text(feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}DCC CHAT chat 3232235777 5001\u{1}")).2, "asks for a DCC chat. Answer it in irssi with /dcc chat mikko");
-        assert_eq!(text(feed(&mut s, ":mikko!m@h PRIVMSG #a :\u{1}PING 123\u{1}")), ("#a".into(), "ctcp".into(), "asked the channel for PING".into()));
+        assert_eq!(
+            text(feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}DCC CHAT chat 3232235777 5001\u{1}")).2,
+            "asks for a DCC chat. Answer it in irssi with /dcc chat mikko"
+        );
+        assert_eq!(
+            text(feed(&mut s, ":mikko!m@h PRIVMSG #a :\u{1}PING 123\u{1}")),
+            ("#a".into(), "ctcp".into(), "asked the channel for PING".into())
+        );
     }
 
     /// Servers split a long channel list over several 319 lines.
