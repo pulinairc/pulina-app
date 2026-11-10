@@ -5972,9 +5972,7 @@ function fillNp() {
   el.npTitle.textContent = nowPlaying.title;
   el.npArtist.textContent = [nowPlaying.artist, nowPlaying.album].filter(Boolean).join(' · ');
   el.npCover.hidden = !nowPlaying.image;
-  if (nowPlaying.image) {
-    el.npCover.src = nowPlaying.image;
-  }
+  el.npCover.style.backgroundImage = nowPlaying.image ? `url("${CSS.escape(nowPlaying.image)}")` : '';
   el.npLine.textContent = npText();
   el.npSend.textContent = b ? `Send to ${label(b)}` : 'Send';
   el.npSend.disabled = !b;

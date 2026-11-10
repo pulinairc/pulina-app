@@ -3827,7 +3827,7 @@ body.docked #status {
   height: 52px;
   flex: none;
   border-radius: 8px;
-  object-fit: cover;
+  background: var(--raised) center / cover no-repeat;
 }
 .np-text {
   min-width: 0;
