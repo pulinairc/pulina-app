@@ -3865,3 +3865,92 @@ body.docked #status {
 .np-actions .wide-btn {
   text-align: center;
 }
+
+/* Yesterday's most active, where today starts in the chat. */
+.recap {
+  align-self: center;
+  width: 100%;
+  max-width: 440px;
+  margin: 2px auto 6px;
+  padding: 14px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+}
+.recap-title {
+  color: var(--strong);
+  font-size: 14px;
+  font-weight: 600;
+}
+.recap-sub {
+  color: var(--faint);
+  font-size: 12.5px;
+}
+.podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.podium-spot {
+  width: 108px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.podium-spot .av {
+  --avatar: 30px;
+}
+.podium-name {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+.podium-name.me {
+  color: var(--mention);
+}
+.podium-count {
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.podium-step {
+  width: 100%;
+  margin-top: 3px;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--mention) 50%, var(--panel));
+}
+.podium-step[data-place="1"] {
+  background: var(--mention);
+}
+.podium-step[data-place="2"] {
+  background: color-mix(in srgb, var(--mention) 72%, var(--panel));
+}
+.recap-more {
+  margin-top: 10px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+}
+.recap-more:hover {
+  border-color: var(--line-strong);
+}

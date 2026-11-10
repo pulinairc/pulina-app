@@ -13,6 +13,7 @@
 * Add channel numbers in the list while the number key is held
 * Add Last.fm now playing to the message box
 * Fix the person card to list every channel from WHOIS
+* Add yesterday's most active three where today starts
 
 ### 1.1.0: 2026-11-10
 

@@ -1220,6 +1220,9 @@ function renderLog() {
     toBottom();
   }
   updateJumps();
+  if (!b.window) {
+    addRecap(b);
+  }
 }
 
 function toSeparator() {
@@ -6034,4 +6037,87 @@ for (const [field, key] of [
     saveSetting(key, field.value.trim());
     pollNowPlaying();
   });
+}
+
+// Most active, like toptod: words said per person in a channel. Where today starts in the chat,
+// a card shows yesterday's top three; the people list ranks today so far.
+
+const PODIUM_STEP_PX = [64, 46, 32];
+const recaps = new Map();
+
+/** Midnight of the day `daysBack` days ago, in local time. */
+function dayStart(daysBack = 0) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - daysBack);
+  return d.getTime();
+}
+
+/** Words per person between two times, without the bots from Settings. */
+async function talkers(b, since, until) {
+  const bots = botNicks(state.settings[BOTS_SETTING]);
+  const list = await invoke('talkers', { net: b.net, buffer: b.name, since, until }).catch(() => []);
+  return list.filter((t) => !bots.has(t.nick.toLowerCase()));
+}
+
+async function addRecap(b) {
+  if (!isChannel(b.name)) {
+    return;
+  }
+  const today = dayStart();
+  const line = [...el.col.querySelectorAll(':scope > .day')].find((d) => d.textContent === dayLabel(today));
+  if (!line) {
+    return;
+  }
+  const cached = `${b.key}|${today}`;
+  if (!recaps.has(cached)) {
+    recaps.set(cached, await talkers(b, dayStart(1), today));
+  }
+  const list = recaps.get(cached);
+  if (!list.length || state.current !== b.key || !line.isConnected || line.nextElementSibling?.classList.contains('recap')) {
+    return;
+  }
+  line.after(recapCard(b, list));
+}
+
+function recapCard(b, list) {
+  const card = h('div', 'recap');
+  const words = list.reduce((n, t) => n + t.words, 0);
+  const people = list.length === 1 ? 'person' : 'people';
+  card.append(
+    h('div', 'recap-title', `Yesterday in ${label(b)}`),
+    h('div', 'recap-sub', `${list.length} ${people} said ${words.toLocaleString('fi-FI')} words`),
+  );
+  const podium = h('div', 'podium');
+  // Second, first, third, as on a podium.
+  for (const place of [1, 0, 2]) {
+    const t = list[place];
+    if (!t) {
+      continue;
+    }
+    const spot = h('div', 'podium-spot');
+    const name = h('span', 'podium-name', identity(t.nick).name);
+    name.classList.toggle('me', t.nick.toLowerCase() === (state.me[b.net] || '').toLowerCase());
+    const step = h('div', 'podium-step', String(place + 1));
+    step.style.height = `${PODIUM_STEP_PX[place]}px`;
+    step.dataset.place = String(place + 1);
+    spot.append(avatar(t.nick, ''), name, h('span', 'podium-count', t.words.toLocaleString('fi-FI')), step);
+    personTip(name, b.net, t.nick);
+    podium.append(spot);
+  }
+  const more = h('button', 'recap-more', 'Today so far');
+  more.type = 'button';
+  more.addEventListener('click', () => openToday());
+  card.append(podium, more);
+  return card;
+}
+
+/** The people list, on its Today ranking. */
+function openToday() {
+  nicklist.tab = 'today';
+  if (nicklist.el) {
+    renderNicklist();
+  } else {
+    openNicklist();
+  }
 }
