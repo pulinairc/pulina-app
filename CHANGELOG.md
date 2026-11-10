@@ -5,6 +5,7 @@
 * Fix uploads hanging when lobby-server has no place for files
 * Add a filter to the highlights inbox
 * Fix "N more" in an earlier view to count to the newest
+* Change bots and highlight words to read comma separated
 
 ### 1.1.0: 2026-11-10
 

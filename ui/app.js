@@ -978,8 +978,9 @@ function renderSettings() {
   el.notifyToggle.checked = notifyOn();
   renderNotifyState();
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
-  el.botsField.value = state.settings[BOTS_SETTING] || '';
-  el.highlightField.value = state.settings[HIGHLIGHT_WORDS_SETTING] || '';
+  // Both lists read the same way, separated by commas, however they were typed.
+  el.botsField.value = commaList(state.settings[BOTS_SETTING]);
+  el.highlightField.value = commaList(state.settings[HIGHLIGHT_WORDS_SETTING]);
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
   renderIconChoices();
   renderShortcuts();
@@ -1602,6 +1603,10 @@ function topReactions() {
 }
 
 // Settings live on lobby-server (or locally in direct mode), so every device shares them.
+function commaList(value) {
+  return wordList(value).join(', ');
+}
+
 function highlightWords() {
   return wordList(state.settings[HIGHLIGHT_WORDS_SETTING]);
 }
@@ -3812,7 +3817,7 @@ async function start() {
       renderInbox();
     }
     if (e.payload.key === HIGHLIGHT_WORDS_SETTING) {
-      el.highlightField.value = e.payload.value;
+      el.highlightField.value = commaList(e.payload.value);
       renderLog();
       loadHighlightsSoon();
     }
@@ -5769,13 +5774,15 @@ document.addEventListener('drop', (e) => {
   uploadFiles(files);
 });
 el.highlightField.addEventListener('change', () => {
-  saveSetting(HIGHLIGHT_WORDS_SETTING, el.highlightField.value.trim());
+  el.highlightField.value = commaList(el.highlightField.value);
+  saveSetting(HIGHLIGHT_WORDS_SETTING, el.highlightField.value);
   renderLog();
   loadHighlightsSoon();
 });
 
 el.botsField.addEventListener('change', () => {
-  saveSetting(BOTS_SETTING, el.botsField.value.trim());
+  el.botsField.value = commaList(el.botsField.value);
+  saveSetting(BOTS_SETTING, el.botsField.value);
   renderLog();
 });
 el.uploadUrl.addEventListener('change', () => {
