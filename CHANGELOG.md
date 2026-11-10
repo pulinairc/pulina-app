@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.5.7: 2026-11-10
 
 * Add Cmd/Ctrl+Up and Down to scroll the chat
 
