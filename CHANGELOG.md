@@ -6,6 +6,7 @@
 * Add a filter to the highlights inbox
 * Fix "N more" in an earlier view to count to the newest
 * Change bots and highlight words to read comma separated
+* Fix missing space under the last setting of each tab
 
 ### 1.1.0: 2026-11-10
 

@@ -972,6 +972,7 @@ dialog:focus {
 #settings[open] {
   display: flex;
   flex-direction: column;
+  padding-bottom: 20px;
 }
 
 .sheet-head {
@@ -1002,9 +1003,6 @@ dialog:focus {
 #settings section {
   padding: 0 18px;
   margin-top: 20px;
-}
-#settings section:last-child {
-  margin-bottom: 20px;
 }
 #settings h3 {
   margin: 0 0 12px;
