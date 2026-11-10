@@ -84,6 +84,10 @@ Hide announcement channels from the list and the channel keys. A search still fi
 
 `/wc`, `/whois`, `/names` and the rest, a `/` menu, numbered channels and jump keys.
 
+### 🎹 Full keyboard support
+
+Channels, highlights, the shelf, people, settings and replies all have keys, and the arrows move through lists and tabs. Keys can be changed in Settings.
+
 ### 📨 Notices, CTCP and DCC
 
 Private messages, notices, CTCP requests and DCC offers all show up.
@@ -236,6 +240,14 @@ token_file = "~/.config/lobby/server.token"
 | `Ctrl+Enter` (`Cmd+Enter` on a Mac) | Mark this channel read |
 | `Tab` | Complete a nick, or pick one from the list that opens as you type a name or `@` |
 | `Up` in an empty input | Bring back the last message |
+| `Ctrl+Shift+R` (`Cmd+Shift+R` on a Mac) | Reply to the last message |
+| `Ctrl+Down` (`Cmd+Down` on a Mac) | Back to the newest message |
+| `PageUp`, `PageDown` | Scroll the chat a page at a time |
+| `Ctrl+Shift+H` (`Cmd+Shift+H` on a Mac) | Open highlights. `Down` and `Up` move between them, `Enter` opens one, `Delete` marks it done |
+| `Ctrl+Shift+S` (`Cmd+Shift+S` on a Mac) | Switch between the chat and the shelf |
+| `Ctrl+Shift+P` (`Cmd+Shift+P` on a Mac) | People on this channel |
+| `Ctrl+,` (`Cmd+,` on a Mac) | Settings. `Up` and `Down` move between its tabs |
+| `Esc` | Close what is open |
 
 Every shortcut can be changed under Settings, Keyboard shortcuts.
 
