@@ -2028,6 +2028,7 @@ el.col.addEventListener('pointerdown', (e) => {
   press.y = e.clientY;
   press.timer = setTimeout(() => {
     press.timer = 0;
+    window.__TAURI__.haptics?.impactFeedback('medium').catch(() => {});
     openSheet(r);
   }, HOLD_MS);
 });

@@ -594,6 +594,8 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let builder = tauri::Builder::default().plugin(tauri_plugin_opener::init()).plugin(tauri_plugin_notification::init());
+    #[cfg(mobile)]
+    let builder = builder.plugin(tauri_plugin_haptics::init());
     // Phones have no menu bar and one window size.
     #[cfg(desktop)]
     let builder = builder

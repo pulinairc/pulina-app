@@ -1,0 +1,6 @@
+{
+  "identifier": "mobile",
+  "platforms": ["iOS", "android"],
+  "windows": ["main"],
+  "permissions": ["haptics:allow-impact-feedback"]
+}

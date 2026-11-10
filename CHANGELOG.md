@@ -1,6 +1,7 @@
 ### [Unreleased]
 
 * Fix a blank chat while lobby-server is unreachable
+* Add a light tap on long press on phones
 
 ### 1.6.0: 2026-11-10
 
