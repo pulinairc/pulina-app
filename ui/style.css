@@ -3954,3 +3954,84 @@ body.docked #status {
 .recap-more:hover {
   border-color: var(--line-strong);
 }
+
+/* People | Today at the top of the people list. */
+.nl-tabs {
+  display: flex;
+  gap: 2px;
+  margin: 8px 8px 4px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--bg);
+}
+.nl-tabs button {
+  flex: 1;
+  padding: 4px 0;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  font-size: 12.5px;
+}
+.nl-tabs button[aria-pressed="true"] {
+  background: var(--raised);
+  color: var(--strong);
+  font-weight: 600;
+}
+.nl-standing {
+  margin: 6px 8px 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--mention) 14%, transparent);
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.nl-empty {
+  padding: 18px 10px;
+  color: var(--faint);
+  font-size: 12.5px;
+  text-align: center;
+}
+.nl-rank {
+  display: grid;
+  grid-template-columns: 16px auto 1fr auto;
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 4px;
+  padding: 5px 8px;
+}
+.nl-rank .av {
+  --avatar: 22px;
+}
+.nl-place {
+  color: var(--faint);
+  font-size: 11.5px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.nl-rank .nl-name {
+  min-width: 0;
+}
+.nl-rank.me .nl-name {
+  color: var(--mention);
+}
+.nl-words {
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.nl-meter {
+  grid-column: 3 / 5;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.nl-meter i {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--mention) 75%, transparent);
+}

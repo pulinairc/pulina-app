@@ -33,6 +33,7 @@
 - **Channel shelf:** switch a channel from Chat to Shelf to see every link, picture and video posted there, by day, each one a jump back into the conversation
 - **Unread that stays put:** a red New line, jump buttons, and nothing marked read until you say so
 - **Attachments:** paste, drop or pick a file, and its address goes into your message, through a file host of your own
+- **Most active:** the people list ranks today's talkers by words, and where a new day starts the chat shows yesterday's top three, bots left out
 - **Now playing:** with a Last.fm username and API key in Settings, bars by the emoji button show what you play; send it as `np. Artist - Song` or add to it first
 - **Notifications:** desktop notifications with the sender's photo for mentions and private messages, quiet for muted channels
 - **irssi muscle memory:** `/wc`, `/whois`, `/names` and the rest, with a `/` menu, `Alt+1…9` (`Cmd+1…9` on a Mac) and `Alt+A`

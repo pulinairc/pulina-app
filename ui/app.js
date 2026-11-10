@@ -2107,7 +2107,7 @@ const CAN_VOICE = /[~&@%]/;
 
 /** When each nick last said something, per network: `net\nnick` to a timestamp. */
 const spoke = new Map();
-const nicklist = { el: null, menu: null, picked: new Set(), frame: 0, timer: 0 };
+const nicklist = { el: null, menu: null, picked: new Set(), frame: 0, timer: 0, tab: 'people', today: null };
 
 function spokeKey(net, nick) {
   return `${net}\n${nick.toLowerCase()}`;
@@ -2266,16 +2266,20 @@ function renderNicklist() {
   dock.append(svg(ICONS.dock));
   dock.addEventListener('click', toggleDock);
   top.append(h('span', 'nl-total', `${b.members.size} ${b.members.size === 1 ? 'person' : 'people'}`), dock);
-  scroll.append(top);
-  for (const g of peopleGroups([...b.members], b.modes, spokeIn(b.net), now, midnight)) {
-    const head = h('div', 'nl-head', `${g.title} · ${g.people.length}`);
-    if (g.id === 'now') {
-      head.prepend(h('span', 'live'));
+  scroll.append(top, peopleTabs());
+  if (nicklist.tab === 'today') {
+    scroll.append(...todayRanking(b));
+  } else {
+    for (const g of peopleGroups([...b.members], b.modes, spokeIn(b.net), now, midnight)) {
+      const head = h('div', 'nl-head', `${g.title} · ${g.people.length}`);
+      if (g.id === 'now') {
+        head.prepend(h('span', 'live'));
+      }
+      scroll.append(head, ...g.people.map((p) => personRow(b, p, now)));
     }
-    scroll.append(head, ...g.people.map((p) => personRow(b, p, now)));
   }
   const scrolled = nicklist.el.querySelector('.nl-scroll')?.scrollTop ?? 0;
-  const bar = pickedBar(b);
+  const bar = nicklist.tab === 'people' ? pickedBar(b) : null;
   nicklist.el.replaceChildren(scroll, ...(bar ? [bar] : []));
   scroll.scrollTop = scrolled;
 
@@ -6120,4 +6124,87 @@ function openToday() {
   } else {
     openNicklist();
   }
+}
+
+// The people list's Today ranking: words said in the channel since midnight, fetched again when
+// older than TODAY_FRESH_MS, so a busy channel does not ask on every line.
+
+const TODAY_FRESH_MS = 30_000;
+
+function peopleTabs() {
+  const tabs = h('div', 'nl-tabs');
+  for (const [id, name] of [
+    ['people', 'People'],
+    ['today', 'Today'],
+  ]) {
+    const t = h('button', null, name);
+    t.type = 'button';
+    t.setAttribute('aria-pressed', String(nicklist.tab === id));
+    t.addEventListener('click', () => {
+      nicklist.tab = id;
+      renderNicklist();
+    });
+    tabs.append(t);
+  }
+  return tabs;
+}
+
+function todayRanking(b) {
+  const t = nicklist.today;
+  if (!t || t.key !== b.key || Date.now() - t.at > TODAY_FRESH_MS) {
+    refreshToday(b);
+  }
+  const list = t?.key === b.key ? t.list : null;
+  if (!list) {
+    return [];
+  }
+  if (!list.length) {
+    return [h('div', 'nl-empty', 'Nobody has said anything here today.')];
+  }
+  const me = (state.me[b.net] || '').toLowerCase();
+  const place = list.findIndex((x) => x.nick.toLowerCase() === me);
+  const out = [h('div', 'nl-standing', standing(list, place))];
+  const most = list[0].words;
+  list.forEach((x, i) => {
+    const row = h('div', 'nl-rank');
+    row.classList.toggle('me', i === place);
+    const bar = h('span', 'nl-meter');
+    const fill = h('i');
+    fill.style.width = `${(x.words / most) * 100}%`;
+    bar.append(fill);
+    const name = h('span', 'nl-name', identity(x.nick).name);
+    personTip(name, b.net, x.nick);
+    row.append(h('span', 'nl-place', String(i + 1)), avatar(x.nick, ''), name, h('span', 'nl-words', x.words.toLocaleString('fi-FI')), bar);
+    out.push(row);
+  });
+  return out;
+}
+
+async function refreshToday(b) {
+  if (nicklist.today?.loading === b.key) {
+    return;
+  }
+  nicklist.today = { ...nicklist.today, loading: b.key };
+  const list = await talkers(b, dayStart(), Date.now() + 1);
+  nicklist.today = { key: b.key, at: Date.now(), list, loading: null };
+  if (nicklist.el && nicklist.tab === 'today' && channelShown()?.key === b.key) {
+    renderNicklist();
+  }
+}
+
+/** "You are 3rd with 272 words, 3 ahead of samiy." */
+function standing(list, place) {
+  if (place === -1) {
+    return 'You have not said anything here today.';
+  }
+  const mine = list[place];
+  const next = list[place + 1];
+  const ahead = next ? `, ${mine.words - next.words} ahead of ${identity(next.nick).name}` : '';
+  return `You are ${ordinal(place + 1)} with ${mine.words.toLocaleString('fi-FI')} words${ahead}.`;
+}
+
+function ordinal(n) {
+  const teen = n % 100 >= 11 && n % 100 <= 13;
+  const end = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th');
+  return `${n}${end}`;
 }

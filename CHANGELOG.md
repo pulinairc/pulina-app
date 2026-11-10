@@ -14,6 +14,7 @@
 * Add Last.fm now playing to the message box
 * Fix the person card to list every channel from WHOIS
 * Add yesterday's most active three where today starts
+* Add a Today ranking to the people list
 
 ### 1.1.0: 2026-11-10
 
