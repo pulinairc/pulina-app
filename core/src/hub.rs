@@ -71,6 +71,9 @@ pub struct Snapshot {
     pub people: Vec<Person>,
     #[serde(default)]
     pub settings: HashMap<String, String>,
+    /// lobby-server has a place for attachments (its `[upload]`); older servers leave it out.
+    #[serde(default)]
+    pub uploads: bool,
 }
 
 pub struct Hub {
@@ -213,7 +216,7 @@ impl Hub {
         let channels = lock(&self.channels).values().cloned().collect();
         let people = self.store.people().unwrap_or_default();
         let settings = self.store.settings().unwrap_or_default();
-        Snapshot { networks, channels, people, settings }
+        Snapshot { networks, channels, people, settings, uploads: false }
     }
 
     pub fn history(&self, net: &str, buffer: &str, before: Option<i64>) -> Result<Vec<Line>, String> {

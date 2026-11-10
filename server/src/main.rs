@@ -192,7 +192,8 @@ async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str, path: &Path, uploa
 
     // Subscribe before the snapshot, so nothing falls between them.
     let mut events = hub.subscribe();
-    sink.send(send(ServerMsg::Welcome { snapshot: hub.snapshot() })).await.map_err(|e| e.to_string())?;
+    let snapshot = || lobby_core::hub::Snapshot { uploads: uploads.is_some(), ..hub.snapshot() };
+    sink.send(send(ServerMsg::Welcome { snapshot: snapshot() })).await.map_err(|e| e.to_string())?;
     let mut ping = tokio::time::interval(PING_EVERY);
     let (stored, mut stored_rx) = tokio::sync::mpsc::unbounded_channel::<ServerMsg>();
 
@@ -200,7 +201,7 @@ async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str, path: &Path, uploa
         tokio::select! {
             event = events.recv() => match event {
                 // A changed network list goes out as a fresh snapshot, which the app takes in whole.
-                Ok(Event::Networks) => sink.send(send(ServerMsg::Welcome { snapshot: hub.snapshot() })).await.map_err(|e| e.to_string())?,
+                Ok(Event::Networks) => sink.send(send(ServerMsg::Welcome { snapshot: snapshot() })).await.map_err(|e| e.to_string())?,
                 Ok(event) => sink.send(send(ServerMsg::Event { event })).await.map_err(|e| e.to_string())?,
                 Err(RecvError::Lagged(_)) => return Err("client fell behind, it will reconnect".into()),
                 Err(RecvError::Closed) => return Ok(()),

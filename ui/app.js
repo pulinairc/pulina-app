@@ -3474,6 +3474,7 @@ function applyStatus(st) {
   }
   state.networks = st.networks.map((n) => n.name);
   state.configPath = st.config_path;
+  state.serverUploads = Boolean(st.uploads);
   for (const n of st.networks) {
     state.conn[n.name] = n.state;
     if (n.nick) {
@@ -5572,17 +5573,6 @@ function jsonSetting(key) {
   }
 }
 
-let viaServer = null;
-
-/** Whether this app talks to a lobby-server, asked once. */
-async function hasServer() {
-  if (viaServer === null) {
-    const c = await invoke('get_connection').catch(() => null);
-    viaServer = Boolean(c) && c.mode !== 'irc';
-  }
-  return viaServer;
-}
-
 /** Where to try sending a file, in order. Automatic: lobby-server, your own file host, catbox.moe. */
 async function uploadTargets() {
   const host = uploadHost();
@@ -5599,7 +5589,8 @@ async function uploadTargets() {
       return [{ kind: 'catbox' }];
   }
   const targets = [];
-  if (await hasServer()) {
+  // Only a lobby-server that says it has a place for files: an older one would never answer.
+  if (state.serverUploads) {
     targets.push({ kind: 'server' });
   }
   if (host) {
