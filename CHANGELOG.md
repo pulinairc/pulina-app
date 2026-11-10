@@ -1,3 +1,10 @@
+### 1.6.0: 2026-11-10
+
+* Fix the phone chat scrolling sideways beside people
+* Change the docked people list to end at the message box
+* Change the shelf to put a short picture row on top
+* Change small text to larger sizes throughout
+
 ### 1.5.8: 2026-11-10
 
 * Fix iPhone never asking to allow notifications
