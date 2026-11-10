@@ -364,6 +364,7 @@ function flushRead() {
 }
 
 function markRead(b) {
+  b.unreadGap = 0;
   const last = lastId(b);
   if (last > (readMap[b.key] || 0)) {
     readMap[b.key] = last;
@@ -384,7 +385,7 @@ function recountUnread(b) {
   }
   const seen = readMap[b.key];
   const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own);
-  b.unread = fresh.length;
+  b.unread = (b.unreadGap || 0) + fresh.length;
   b.mention = fresh.length > 0 && (isPrivate(b) || fresh.some((l) => mentions(l.text, myWords(l.net))));
 }
 
@@ -453,19 +454,42 @@ async function loadHistory(b) {
   for (const l of fresh) {
     noteSpoke(l);
   }
-  if (!fresh.length) {
-    return;
+  // A full page may leave a hole between it and older lines held, like after events were missed,
+  // so older lines go: they are still in the history, and counted while unread.
+  const full = lines.length >= HISTORY_PAGE;
+  const held = b.lines.length;
+  if (full) {
+    b.lines = b.lines.filter((l) => !l.id || l.id >= lines[0].id);
   }
-  for (const l of fresh) {
-    b.ids.add(l.id);
-  }
+  const dropped = b.lines.length !== held;
   b.lines = [...b.lines, ...fresh].sort((x, y) => (x.id || Infinity) - (y.id || Infinity)).slice(-MAX_LINES);
-  if (state.current === b.key) {
+  b.ids = new Set(b.lines.map((l) => l.id).filter(Boolean));
+  await countGap(b, full);
+  recountUnread(b);
+  if (state.current !== b.key) {
+    renderHeader();
+  } else if (fresh.length || dropped) {
     renderLog();
+  } else {
+    updateJumps();
+  }
+}
+
+/** lobby-server's history page (`HISTORY_PAGE` in core/src/hub.rs). */
+const HISTORY_PAGE = 300;
+
+/**
+ * Unread lines older than what is loaded: thousands of them can wait while only the newest
+ * page is held, and the counts and the jump to the first unread still have to know.
+ */
+async function countGap(b, more) {
+  const seen = readMap[b.key];
+  const first = b.lines.find((l) => l.id)?.id;
+  b.unreadGap = 0;
+  if (!more || seen === undefined || !first || seen >= first) {
     return;
   }
-  recountUnread(b);
-  renderHeader();
+  b.unreadGap = await invoke('count_unread', { net: b.net, buffer: b.name, after: seen, before: first }).catch(() => 0);
 }
 
 function trackMembers(b, l) {
@@ -505,7 +529,10 @@ function onLine(l) {
   }
   b.lines.push(l);
   if (b.lines.length > MAX_LINES) {
-    b.lines.shift();
+    const gone = b.lines.shift();
+    if (gone.id > (readMap[b.key] ?? Infinity) && CHAT_KINDS.has(gone.kind) && !gone.own) {
+      b.unreadGap = (b.unreadGap || 0) + 1;
+    }
   }
   trackMembers(b, l);
   noteSpoke(l);
@@ -515,8 +542,7 @@ function onLine(l) {
 
   const visible = state.current === b.key;
   if (visible && !b.window) {
-    appendLine(l, true);
-    updateJumps();
+    queueLive(l);
   }
   // Nothing is marked read on its own: only the Mark as read button does that.
   if (!CHAT_KINDS.has(l.kind) || l.own) {
@@ -535,7 +561,19 @@ function onLine(l) {
   if (mentioned && !(visible && document.hasFocus())) {
     notify(b, l);
   }
-  renderHeader();
+  headerSoon();
+}
+
+let headerFrame = 0;
+
+function headerSoon() {
+  if (headerFrame) {
+    return;
+  }
+  headerFrame = requestAnimationFrame(() => {
+    headerFrame = 0;
+    renderHeader();
+  });
 }
 
 function onBuffer(info) {
@@ -806,6 +844,7 @@ function select(k) {
     const was = state.buffers.get(state.current);
     if (was) {
       was.window = null;
+      was.windowSeparator = null;
     }
   }
   state.current = k;
@@ -1025,22 +1064,28 @@ function following() {
 
 function renderLog() {
   stopGlide();
+  dropLive();
   el.col.replaceChildren();
   view = { lastLine: null, group: null, events: null, command: null, lastByNick: new Map(), separator: null, separatorAfter: null };
   const b = state.buffers.get(state.current);
   if (!b) {
     return updateJumps();
   }
-  view.separatorAfter = b.window ? null : (readMap[b.key] ?? lastId(b));
+  // With unread lines older than what is loaded, the true New line is not here to show.
+  view.separatorAfter = b.window ? (b.windowSeparator ?? null) : b.unreadGap ? null : (readMap[b.key] ?? lastId(b));
   for (const l of b.window ?? b.lines) {
-    appendLine(l, false);
+    appendLine(l);
   }
   el.windowBar.hidden = !b.window;
   document.body.classList.toggle('windowed', Boolean(b.window));
   if (b.window) {
     stuck = false;
     el.windowWhen.textContent = `Earlier: ${dayLabel(b.window.find((l) => l.id === b.windowAt)?.ts ?? b.window[0].ts)}`;
-    centerLine(b.windowAt);
+    if (view.separator) {
+      toSeparator();
+    } else {
+      centerLine(b.windowAt);
+    }
   } else if (view.separator) {
     toSeparator();
   } else {
@@ -1054,10 +1099,9 @@ function toSeparator() {
   el.log.scrollTop = Math.max(0, top - SEPARATOR_MARGIN_PX);
 }
 
-function appendLine(l, live) {
-  const pinned = following();
+/** Draw one line at the end of the chat; returns a row it added inside an existing group, if any. */
+function appendLine(l) {
   const prev = view.lastLine;
-  const tail = el.col.lastElementChild;
   let fresh = null;
 
   // "nick: 😂" becomes a reaction under that nick's last message.
@@ -1065,10 +1109,7 @@ function appendLine(l, live) {
   const reacted = reaction && view.lastByNick.get(reaction.nick.toLowerCase());
   if (reacted) {
     addReaction(reacted, reaction.emoji, l.nick, l.own);
-    if (live && pinned) {
-      toBottom();
-    }
-    return;
+    return null;
   }
 
   if (!prev || !sameDay(prev.ts, l.ts)) {
@@ -1131,14 +1172,47 @@ function appendLine(l, live) {
   }
 
   view.lastLine = l;
-  // Your own message always brings the view down to it; a reaction stays put.
-  if (!live) {
+  return fresh;
+}
+
+// Live lines are drawn once per frame, however many arrive: a burst of thousands costs one
+// layout, not one per line.
+let liveQueue = [];
+let liveFrame = 0;
+
+function queueLive(l) {
+  liveQueue.push(l);
+  liveFrame ||= requestAnimationFrame(flushLive);
+}
+
+function dropLive() {
+  cancelAnimationFrame(liveFrame);
+  liveFrame = 0;
+  liveQueue = [];
+}
+
+function flushLive() {
+  liveFrame = 0;
+  const lines = liveQueue;
+  liveQueue = [];
+  if (!view || !lines.length) {
     return;
   }
-  fadeIn(tail, fresh);
-  if (pinned || l.own || l.nick === state.me[l.net]) {
+  const pinned = following();
+  const tail = el.col.lastElementChild;
+  const fresh = [];
+  for (const l of lines) {
+    const row = appendLine(l);
+    if (row) {
+      fresh.push(row);
+    }
+  }
+  fadeIn(tail, fresh, lines.length);
+  // Your own message always brings the view down to it.
+  if (pinned || lines.some((l) => l.own || l.nick === state.me[l.net])) {
     glideDown();
   }
+  updateJumps();
 }
 
 // A new message fades in while the chat glides up to it. The glide moves the scroll position
@@ -1147,29 +1221,19 @@ const ARRIVE_MS = 180;
 const ARRIVALS_PER_FRAME = 4;
 const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)');
 let glide = 0;
-let arrivals = 0;
 
 function calm() {
   return REDUCED_MOTION.matches || document.hidden;
 }
 
-function fadeIn(tail, fresh) {
+function fadeIn(tail, fresh, count) {
   // A burst, like a backlog after reconnecting, just appears.
-  if (arrivals === 0) {
-    requestAnimationFrame(() => {
-      arrivals = 0;
-    });
-  }
-  arrivals += 1;
-  if (calm() || arrivals > ARRIVALS_PER_FRAME) {
+  if (calm() || count > ARRIVALS_PER_FRAME) {
     return;
   }
-  const added = [];
+  const added = [...fresh];
   for (let n = tail ? tail.nextElementSibling : el.col.firstElementChild; n; n = n.nextElementSibling) {
     added.push(n);
-  }
-  if (!added.length && fresh) {
-    added.push(fresh);
   }
   for (const n of added) {
     n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ARRIVE_MS, easing: 'ease-out' });
@@ -3189,7 +3253,7 @@ function unreadCount(b) {
   if (seen === undefined) {
     return 0;
   }
-  return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own).length;
+  return (b.unreadGap || 0) + b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own).length;
 }
 
 function markCurrentRead() {
@@ -3254,7 +3318,9 @@ function updateJumps() {
   const log = el.log.getBoundingClientRect();
   const above = sep && sep.bottom < log.top;
   const below = sep && sep.top > log.bottom;
-  el.jumpUnread.hidden = !(count && (above || below));
+  // Unread lines older than what is loaded: the way to them is up.
+  const unloaded = Boolean(b?.unreadGap) && !view?.separator;
+  el.jumpUnread.hidden = !(count && (above || below || unloaded));
   el.jumpUnread.classList.toggle('down', Boolean(below));
   const messages = count === 1 ? 'message' : 'messages';
   el.jumpLatest.hidden = atBottom() || glide !== 0;
@@ -3283,8 +3349,35 @@ el.emojiBtn.addEventListener('click', (e) => {
   });
 });
 
+/** Further than this the jump is instant: a long smooth scroll drags everything on the way past. */
+const SMOOTH_JUMP_SCREENS = 2;
+
 function jumpToUnread() {
-  view?.separator?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const b = state.buffers.get(state.current);
+  const sep = view?.separator;
+  if (sep) {
+    const far = Math.abs(sep.getBoundingClientRect().top - el.log.getBoundingClientRect().top) > el.log.clientHeight * SMOOTH_JUMP_SCREENS;
+    sep.scrollIntoView({ block: 'center', behavior: far ? 'auto' : 'smooth' });
+    return;
+  }
+  if (b?.unreadGap) {
+    openUnread(b);
+  }
+}
+
+/** The first unread line is not loaded: show the lines around the read marker, with the New line. */
+async function openUnread(b) {
+  const seen = readMap[b.key];
+  const lines = await invoke('around', { net: b.net, buffer: b.name, line: seen }).catch(() => []);
+  const first = lines.find((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own);
+  if (!first || state.current !== b.key) {
+    return;
+  }
+  b.window = lines;
+  b.windowAt = first.id;
+  b.windowEnd = null;
+  b.windowSeparator = seen;
+  renderLog();
 }
 
 el.jumpUnread.addEventListener('click', jumpToUnread);
@@ -4726,6 +4819,7 @@ async function openLine(l) {
   b.window = lines.length ? lines : null;
   b.windowAt = l.id;
   b.windowEnd = null;
+  b.windowSeparator = null;
   if (state.current === b.key) {
     renderLog();
   } else {
@@ -4739,6 +4833,7 @@ function leaveWindow() {
     return;
   }
   b.window = null;
+  b.windowSeparator = null;
   renderLog();
 }
 
@@ -4792,7 +4887,7 @@ async function growWindow(b, side) {
   // New lines go under what is shown, so nothing on screen moves.
   b.window = [...b.window, ...lines];
   for (const l of lines) {
-    appendLine(l, false);
+    appendLine(l);
   }
   const newest = b.window[b.window.length - 1].id;
   if (!lines.length || (b.lines.length && newest >= b.lines[0].id)) {
@@ -4808,7 +4903,7 @@ function prependLines(lines) {
   el.col = h('div');
   view = { lastLine: null, group: null, events: null, command: null, lastByNick: new Map(), separator: null, separatorAfter: null };
   for (const l of lines) {
-    appendLine(l, false);
+    appendLine(l);
   }
   const fresh = el.col;
   const lastTs = view.lastLine?.ts;
@@ -4827,7 +4922,7 @@ function joinLatest(b, newest) {
   const shown = new Set(b.window.map((l) => l.id));
   for (const l of b.lines) {
     if (l.id > newest && !shown.has(l.id)) {
-      appendLine(l, false);
+      appendLine(l);
     }
   }
   for (const l of b.window) {
@@ -4837,6 +4932,11 @@ function joinLatest(b, newest) {
   b.lines = [...b.window.filter((l) => !known.has(l.id)), ...b.lines].sort((x, y) => x.id - y.id);
   b.window = null;
   b.windowEnd = null;
+  b.windowSeparator = null;
+  // Everything from the read marker on is loaded now.
+  if (b.lines[0]?.id <= (readMap[b.key] ?? 0)) {
+    b.unreadGap = 0;
+  }
   el.windowBar.hidden = true;
   document.body.classList.remove('windowed');
   updateJumps();

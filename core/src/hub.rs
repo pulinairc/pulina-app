@@ -220,6 +220,10 @@ impl Hub {
         self.store.history(net, buffer, before.unwrap_or(i64::MAX), HISTORY_PAGE).map_err(|e| e.to_string())
     }
 
+    pub fn count_unread(&self, net: &str, buffer: &str, after: i64, before: i64) -> Result<i64, String> {
+        self.store.count_unread(net, buffer, after, before).map_err(|e| e.to_string())
+    }
+
     pub fn around(&self, net: &str, buffer: &str, line: i64) -> Result<Vec<Line>, String> {
         self.store.around(net, buffer, line, AROUND_LINES).map_err(|e| e.to_string())
     }

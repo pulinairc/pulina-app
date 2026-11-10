@@ -134,6 +134,15 @@ async fn around(state: State<'_, AppState>, net: String, buffer: String, line: i
 }
 
 #[tauri::command]
+async fn count_unread(state: State<'_, AppState>, net: String, buffer: String, after: i64, before: i64) -> Result<i64, String> {
+    match state.source() {
+        Source::Local(hub) => hub.count_unread(&net, &buffer, after, before),
+        Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::CountUnread { id, net, buffer, after, before }).await?),
+        Source::Unconfigured => Ok(0),
+    }
+}
+
+#[tauri::command]
 async fn mentions(state: State<'_, AppState>, words: Vec<String>, before: Option<i64>) -> Result<Vec<Line>, String> {
     match state.source() {
         Source::Local(hub) => hub.mentions(&words, before),
@@ -614,6 +623,7 @@ pub fn run() {
             history,
             around,
             mentions,
+            count_unread,
             links,
             send,
             preview,

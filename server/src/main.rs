@@ -148,6 +148,7 @@ fn answer(hub: &Arc<Hub>, path: &Path, msg: ClientMsg) -> Option<ServerMsg> {
         ClientMsg::History { id, net, buffer, before } => reply(id, to_json(hub.history(&net, &buffer, before))),
         ClientMsg::Recent { id } => reply(id, to_json(hub.recent_buffers())),
         ClientMsg::Around { id, net, buffer, line } => reply(id, to_json(hub.around(&net, &buffer, line))),
+        ClientMsg::CountUnread { id, net, buffer, after, before } => reply(id, to_json(hub.count_unread(&net, &buffer, after, before))),
         ClientMsg::Mentions { id, words, before } => reply(id, to_json(hub.mentions(&words, before))),
         ClientMsg::Links { id, net, buffer, before } => reply(id, to_json(hub.links(&net, &buffer, before))),
         ClientMsg::Send { id, net, buffer, text } => reply(id, to_json(hub.send(&net, &buffer, &text))),

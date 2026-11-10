@@ -134,6 +134,17 @@ impl Store {
         Ok(lines)
     }
 
+    /// Chat lines by others between two line ids, for unread counts beyond what an app has loaded.
+    pub fn count_unread(&self, net: &str, buffer: &str, after: i64, before: i64) -> rusqlite::Result<i64> {
+        self.conn().query_row(
+            &format!(
+                "SELECT COUNT(*) FROM lines WHERE net = ?1 AND buffer = ?2 COLLATE NOCASE AND id > ?3 AND id < ?4 AND own = 0 AND kind IN {CHAT_KINDS}"
+            ),
+            params![net, buffer, after, before],
+            |r| r.get(0),
+        )
+    }
+
     /// Newest chat lines by others that contain any of `words`, newest first. Callers check word edges.
     pub fn containing(&self, words: &[String], before: i64, limit: i64) -> rusqlite::Result<Vec<Line>> {
         let words: Vec<String> = words.iter().filter(|w| !w.is_empty()).map(|w| format!("%{}%", like_escape(w))).collect();
@@ -257,6 +268,19 @@ mod tests {
         }
         let texts: Vec<_> = store.around("n", "#a", 5, 1).unwrap().into_iter().map(|l| l.text).collect();
         assert_eq!(texts, vec!["2", "4", "6"]);
+    }
+
+    #[test]
+    fn counts_unread_between_two_lines() {
+        let store = Store::open(Path::new(":memory:")).unwrap();
+        for i in 0..10 {
+            store.insert(&line("#a", "msg", &i.to_string(), i == 3)).unwrap();
+        }
+        store.insert(&line("#a", "join", "x", false)).unwrap();
+        store.insert(&line("#b", "msg", "x", false)).unwrap();
+        // Ids 1..=12: after 1 and before 11 are ids 2..=10, less id 4 (own).
+        assert_eq!(store.count_unread("n", "#A", 1, 11).unwrap(), 8);
+        assert_eq!(store.count_unread("n", "#a", 10, i64::MAX).unwrap(), 0);
     }
 
     #[test]

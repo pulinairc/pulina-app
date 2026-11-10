@@ -10,6 +10,7 @@
 * Add highlight words in Settings
 * Add uploads to S3, R2, SFTP, catbox and lobby-server
 * Add tabs to Settings
+* Fix the jump to the first unread with thousands unread
 
 ### 1.0.2: 2026-11-10
 
