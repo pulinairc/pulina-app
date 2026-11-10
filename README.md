@@ -26,81 +26,81 @@
 
 ### 🗂️ Full backlog
 
-lobby-server sits next to irssi and keeps every line, also while Lobby is closed. Lobby opens with everything you missed, and you can scroll back as far as the history goes.
+lobby-server runs next to irssi and keeps all lines, also while Lobby is closed. Scroll back as far as the history goes.
 
-### 💬 Calm, grouped chat
+### 💬 Grouped chat
 
-One face and name per person, with their lines stacked under it. Links become cards, and pictures, videos and audio play inline.
+One face and name per person, their lines stacked under it. Links become cards; pictures, videos and audio play inline.
 
 ### 😂 Reactions and replies
 
-Reactions and replies are sent as plain IRC, `nick: 😂` and `nick: text`, so everyone on IRC sees them. Lobby shows them as reactions under the message and as quotes.
+Sent as plain IRC, `nick: 😂` and `nick: text`, and shown as reactions and quotes.
 
 ### 🧑 People
 
-Give anyone a photo, a colour and any number of nicks. Nicks are matched by pattern or by ident and host, so a person stays the same person when they change nick.
+A photo, a colour and any number of nicks per person, matched by pattern or by ident and host.
 
-### 👥 Who is here
+### 👥 People list
 
-The faces in the header open the channel's people, ops first, then by who spoke last. Keep the list beside the chat, or pick several people to give op or voice in one go.
+The faces in the header open the channel's people, ops first, then by who spoke last. Keep it beside the chat, or pick several people to give op or voice at once.
 
 ### 📥 Highlights inbox
 
-Every line that names you, from every channel, in one list. Mark them done one by one or all at once, filter by nick, channel or words, and jump to where each was said.
+Lines that name you, from all channels, in one list. Mark them done, filter them, and jump to where each was said.
 
 ### 🔔 Highlight words
 
-Besides your nick, any words you choose highlight a message. Only whole words count, so `kai` never lights up `kaikki`.
+Your own words besides your nick. Only whole words count, so `kai` never lights up `kaikki`.
 
 ### 🗃️ Channel shelf
 
-Switch a channel from Chat to Shelf to see every link and picture posted there. Each one jumps back to its place in the conversation.
+The links and pictures posted in a channel, each a jump back into the conversation.
 
-### 📍 Unread that stays put
+### 📍 Unread
 
-A New line marks where you left off, and nothing is marked read until you say so. The jump to the first unread works however far back it is.
+A New line where you left off, nothing read until you say so, and a jump to the first unread however far back.
 
 ### 📎 Attachments
 
-Paste, drop or pick a file and its address goes into your message. Files go to your own file host, S3 or Cloudflare R2, SFTP, lobby-server or catbox.moe, whichever you choose.
+Paste, drop or pick a file and its address goes into your message. Files go to your own file host, S3 or Cloudflare R2, SFTP, lobby-server or catbox.moe.
 
 ### 👑 Most active
 
-The people list ranks today's talkers by words, with a crown for the first and how you compare with your usual day. Where a new day starts, the chat shows yesterday's top three.
+Today's talkers by words, with a crown for the first and your day against your usual. Yesterday's top three where a new day starts.
 
 ### 🎵 Now playing
 
-Add your Last.fm username and API key, and bars by the emoji button show what you play. One click sends `np. Artist - Song`, or puts it in the message box to add to.
+With a Last.fm username and API key, bars by the emoji button show what you play. One click sends `np. Artist - Song`.
 
 ### 📏 Message length
 
-A count of what is left of the IRC line shows as you type. Too long turns it red, and nothing is sent until you shorten it.
+A count of what is left of the IRC line. Over it turns red, and nothing is sent until you shorten the message.
 
 ### 🙈 Hidden channels
 
-Hide announcement channels from the list and the channel keys with the eye button. They stay a search away in the channel list.
+Hide announcement channels from the list and the channel keys. A search still finds them.
 
-### ⌨️ irssi muscle memory
+### ⌨️ irssi commands and keys
 
-`/wc`, `/whois`, `/names` and the rest work, with a `/` menu as you type. Numbered channels and jump keys get you around without the mouse.
+`/wc`, `/whois`, `/names` and the rest, a `/` menu, numbered channels and jump keys.
 
-### 📨 Everything that arrives
+### 📨 Notices, CTCP and DCC
 
-Private messages, notices, CTCP requests and DCC offers show where you can see them.
+Private messages, notices, CTCP requests and DCC offers all show up.
 
-### ☁️ Same everywhere
+### ☁️ Synced
 
-People, channel pictures, read positions and settings live on your server. They follow you between your computers and your phone.
+People, channel pictures, read positions and settings live on your server and follow you between devices.
 
 ### 🏠 Self-hosted, no bouncer
 
-irssi stays in charge. Lobby reads through irssiproxy and talks to your own server over SSH, so nothing new is opened to the internet.
+irssi stays in charge. Lobby reads through irssiproxy and reaches your server over SSH, so nothing new faces the internet.
 
-### 📱 Every system
+### 📱 Platforms
 
-Lobby runs on Linux, macOS, Windows, Android and iPhone.
+Linux, macOS, Windows, Android and iPhone.
 
-## How it works
+## Architecture
 
 irssi already sees every message, but irssiproxy only hands over what happens after you connect. lobby-server fills that gap: it runs on the same machine as irssi, connects to irssiproxy like any client, and writes every line to SQLite. Lobby connects to lobby-server, loads the history, then follows the live chat.
 
@@ -111,7 +111,7 @@ flowchart TB
         irssi --- proxy[irssiproxy]
         proxy --> server[lobby-server<br/>SQLite history]
     end
-    server -->|WebSocket over SSH| app[Lobby<br/>Linux and macOS]
+    server -->|WebSocket over SSH| app[Lobby<br/>desktop and phone]
 ```
 
 Lobby can also connect straight to irssiproxy or any IRC server. That works without a server of your own, but only shows what arrived while Lobby was open.

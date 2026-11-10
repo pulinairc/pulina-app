@@ -4,7 +4,7 @@ lobby-server keeps your IRC history so the Lobby app can show it every time it s
 
 It does not connect to IRC networks itself. irssi stays in charge, and you can keep using irssi over SSH as before.
 
-## What you need
+## Requirements
 
 - A Linux machine with systemd where irssi runs all the time
 - irssi with its proxy module (`irssiproxy`) turned on

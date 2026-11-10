@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Change the README to shorter features and plain headings
+
 ### 1.5.2: 2026-11-10
 
 * Add a count of what is left of the IRC line while typing
