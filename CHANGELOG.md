@@ -2,6 +2,7 @@
 
 * Fix the chat climbing on Mac channel switches
 * Add hiding for server windows
+* Fix a thin middle bar in now playing
 
 ### 1.5.5: 2026-11-10
 

@@ -3768,26 +3768,22 @@ body.docked #status {
 .np-btn[aria-expanded="true"] {
   color: var(--accent);
 }
+/* One drawing, so the bars scale together; boxes of their own snap to unequal widths at some zooms. */
 .eq {
-  display: inline-flex;
-  align-items: flex-end;
-  gap: 2px;
+  width: 13px;
   height: 13px;
 }
-.eq i {
-  display: block;
-  flex: none;
-  width: 3px;
-  height: 100%;
-  border-radius: 1px;
-  background: currentColor;
+.eq rect {
+  fill: currentColor;
+  rx: 1px;
+  transform-box: fill-box;
   transform-origin: bottom;
   animation: eq 0.7s ease-in-out infinite;
 }
-.eq i:nth-child(1) {
+.eq rect:nth-child(1) {
   animation-delay: -0.23s;
 }
-.eq i:nth-child(2) {
+.eq rect:nth-child(2) {
   animation-delay: -0.47s;
 }
 @keyframes eq {
@@ -3800,7 +3796,7 @@ body.docked #status {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .eq i {
+  .eq rect {
     animation: none;
     transform: scaleY(0.7);
   }
