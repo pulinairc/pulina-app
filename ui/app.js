@@ -916,6 +916,7 @@ function select(k) {
     nicklist.picked.clear();
     const was = state.buffers.get(state.current);
     if (was) {
+      was.spot = was.window ? null : readingSpot();
       was.window = null;
       was.windowSeparator = null;
     }
@@ -1236,15 +1237,40 @@ function renderLog() {
     } else {
       centerLine(b.windowAt);
     }
-  } else if (view.separator) {
-    toSeparator();
   } else {
-    toBottom();
+    if (!backToSpot(b)) {
+      view.separator ? toSeparator() : toBottom();
+    }
+    // Pictures loading next must not move the chat before the first scroll event says where it is.
+    stuck = atBottom();
+    noteAnchor();
   }
   updateJumps();
   if (!b.window) {
     addRecap(b);
   }
+}
+
+/** The line at the top of the chat when it is scrolled up, so coming back opens there. */
+function readingSpot() {
+  // A glide is on its way to the newest message.
+  if (atBottom() || glide) {
+    return null;
+  }
+  const top = el.log.getBoundingClientRect().top;
+  const row = [...el.col.querySelectorAll('.text')].find((r) => r.getBoundingClientRect().bottom > top);
+  return row?.line ? { id: row.line.id, offset: row.getBoundingClientRect().top - top } : null;
+}
+
+function backToSpot(b) {
+  const spot = b.spot;
+  b.spot = null;
+  const row = spot && [...el.col.querySelectorAll('.text')].find((r) => r.line?.id === spot.id);
+  if (!row) {
+    return false;
+  }
+  el.log.scrollTop += row.getBoundingClientRect().top - el.log.getBoundingClientRect().top - spot.offset;
+  return true;
 }
 
 function toSeparator() {
@@ -3596,7 +3622,8 @@ el.jumpLatest.addEventListener('click', () => {
   if (state.buffers.get(state.current)?.window) {
     return leaveWindow();
   }
-  el.log.scrollTo({ top: el.log.scrollHeight, behavior: 'smooth' });
+  // Our own glide, which a channel switch stops; a native smooth scroll would carry on into the next channel.
+  glideDown();
 });
 
 let jumpFrame = 0;
