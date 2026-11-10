@@ -1706,10 +1706,10 @@ function openSheet(row) {
     b.addEventListener('click', pick(run));
     pill.append(b);
   };
-  tool('More emojis', ICONS.moreH, () => openPicker(row, (e) => react(line, e)));
   tool('Reply', ICONS.reply, () => startReply(line));
   // Text cannot be selected on touch, so the sheet copies it.
   tool('Copy', ICONS.copy, () => navigator.clipboard?.writeText(stripFormatting(line.text)));
+  tool('More emojis', ICONS.moreH, () => openPicker(row, (e) => react(line, e)));
   dim.addEventListener('click', closeSheet);
   sheet.addEventListener('pointerdown', (e) => e.stopPropagation());
   sheet.addEventListener('touchmove', (e) => e.target === dim && e.preventDefault(), { passive: false });

@@ -5,6 +5,7 @@
 * Change the shelf to separate Links and Pictures tabs
 * Fix the keyboard opening over the highlights on iPhone
 * Fix scrolling past the lines around an old highlight
+* Move the more emojis button last on phones
 
 ### 1.0.2: 2026-11-10
 
