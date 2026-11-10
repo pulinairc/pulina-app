@@ -3196,7 +3196,37 @@ let jumpFrame = 0;
 // A resize of the chat or of what is in it (a photo loading) keeps the latest message in view
 // when it was in view before.
 let stuck = true;
-const stayDown = new ResizeObserver(() => stuck && !actionPanel && toBottom());
+// Away from the bottom, a picture or card loading above what you read must not push it away:
+// WebKit has no scroll anchoring of its own, so the line at the top of the view is held in place.
+let anchor = null;
+
+function noteAnchor() {
+  const box = el.log.getBoundingClientRect();
+  const node = document.elementFromPoint(box.left + box.width / 2, box.top + ANCHOR_PROBE_PX)?.closest('#col > *');
+  anchor = node ? { node, top: node.getBoundingClientRect().top - box.top } : null;
+}
+
+function holdAnchor() {
+  if (!anchor?.node.isConnected) {
+    return;
+  }
+  const moved = anchor.node.getBoundingClientRect().top - el.log.getBoundingClientRect().top - anchor.top;
+  if (Math.abs(moved) >= 1) {
+    el.log.scrollTop += moved;
+  }
+}
+
+const ANCHOR_PROBE_PX = 8;
+const stayDown = new ResizeObserver(() => {
+  if (actionPanel) {
+    return;
+  }
+  if (stuck) {
+    toBottom();
+  } else {
+    holdAnchor();
+  }
+});
 stayDown.observe(el.log);
 stayDown.observe(el.col);
 
@@ -3204,6 +3234,7 @@ el.log.addEventListener(
   'scroll',
   () => {
     stuck = atBottom();
+    noteAnchor();
     cancelAnimationFrame(jumpFrame);
     jumpFrame = requestAnimationFrame(() => {
       updateJumps();
@@ -4578,6 +4609,7 @@ async function openLine(l) {
   const lines = await invoke('around', { net: l.net, buffer: l.buffer, line: l.id }).catch(() => []);
   b.window = lines.length ? lines : null;
   b.windowAt = l.id;
+  b.windowEnd = null;
   if (state.current === b.key) {
     renderLog();
   } else {
@@ -4595,6 +4627,104 @@ function leaveWindow() {
 }
 
 el.windowBack.addEventListener('click', leaveWindow);
+
+// The earlier view grows as you scroll past either end, and becomes the live chat once it reaches it.
+const WINDOW_EDGE_PX = 400;
+let windowLoading = false;
+
+el.log.addEventListener(
+  'scroll',
+  () => {
+    const b = state.buffers.get(state.current);
+    if (!b?.window || windowLoading) {
+      return;
+    }
+    if (el.log.scrollTop < WINDOW_EDGE_PX) {
+      growWindow(b, 'up');
+    } else if (el.log.scrollHeight - el.log.scrollTop - el.log.clientHeight < WINDOW_EDGE_PX) {
+      growWindow(b, 'down');
+    }
+  },
+  { passive: true },
+);
+
+async function growWindow(b, side) {
+  b.windowEnd ??= {};
+  if (b.windowEnd[side]) {
+    return;
+  }
+  windowLoading = true;
+  const first = b.window[0].id;
+  const last = b.window[b.window.length - 1].id;
+  const lines =
+    side === 'up'
+      ? await invoke('history', { net: b.net, buffer: b.name, before: first }).catch(() => [])
+      : (await invoke('around', { net: b.net, buffer: b.name, line: last }).catch(() => [])).filter((l) => l.id > last);
+  windowLoading = false;
+  if (state.current !== b.key || !b.window) {
+    return;
+  }
+  if (side === 'up') {
+    if (!lines.length) {
+      b.windowEnd.up = true;
+      return;
+    }
+    b.window = [...lines, ...b.window];
+    prependLines(lines);
+    return;
+  }
+  // New lines go under what is shown, so nothing on screen moves.
+  b.window = [...b.window, ...lines];
+  for (const l of lines) {
+    appendLine(l, false);
+  }
+  const newest = b.window[b.window.length - 1].id;
+  if (!lines.length || (b.lines.length && newest >= b.lines[0].id)) {
+    joinLatest(b, newest);
+  }
+}
+
+/** Older lines above the view: drawn on their own, put in front, and the scroll moved by their height. */
+function prependLines(lines) {
+  const col = el.col;
+  const kept = view;
+  const firstDay = col.firstElementChild?.classList.contains('day') ? col.firstElementChild : null;
+  el.col = h('div');
+  view = { lastLine: null, group: null, events: null, command: null, lastByNick: new Map(), separator: null, separatorAfter: null };
+  for (const l of lines) {
+    appendLine(l, false);
+  }
+  const fresh = el.col;
+  const lastTs = view.lastLine?.ts;
+  el.col = col;
+  view = kept;
+  if (firstDay && lastTs && firstDay.textContent === dayLabel(lastTs)) {
+    firstDay.remove();
+  }
+  const before = el.log.scrollHeight;
+  col.prepend(...fresh.childNodes);
+  el.log.scrollTop += el.log.scrollHeight - before;
+}
+
+/** The earlier view met the live chat: from here on it is the live chat, nothing redrawn. */
+function joinLatest(b, newest) {
+  const shown = new Set(b.window.map((l) => l.id));
+  for (const l of b.lines) {
+    if (l.id > newest && !shown.has(l.id)) {
+      appendLine(l, false);
+    }
+  }
+  for (const l of b.window) {
+    b.ids.add(l.id);
+  }
+  const known = new Set(b.lines.map((l) => l.id));
+  b.lines = [...b.window.filter((l) => !known.has(l.id)), ...b.lines].sort((x, y) => x.id - y.id);
+  b.window = null;
+  b.windowEnd = null;
+  el.windowBar.hidden = true;
+  document.body.classList.remove('windowed');
+  updateJumps();
+}
 
 // Highlights inbox: every line that names you, until you mark it done. The rest is the archive.
 

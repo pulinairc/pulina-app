@@ -4,6 +4,7 @@
 * Add a Latest button to the shelf
 * Change the shelf to separate Links and Pictures tabs
 * Fix the keyboard opening over the highlights on iPhone
+* Fix scrolling past the lines around an old highlight
 
 ### 1.0.2: 2026-11-10
 
