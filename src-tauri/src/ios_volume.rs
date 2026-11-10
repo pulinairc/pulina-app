@@ -127,7 +127,8 @@ fn activate(session: &AnyObject) -> Result<(), Retained<NSError>> {
     }
     // Ambient and mixing: other apps' music keeps playing.
     let category: &AnyObject = unsafe { &**(ambient as *const *const AnyObject) };
-    unsafe { msg_send![session, setCategory: category, withOptions: MIX_WITH_OTHERS, error: _] }?;
+    let set: Result<(), Retained<NSError>> = unsafe { msg_send![session, setCategory: category, withOptions: MIX_WITH_OTHERS, error: _] };
+    set?;
     unsafe { msg_send![session, setActive: true, error: _] }
 }
 
