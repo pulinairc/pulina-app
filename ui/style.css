@@ -4035,3 +4035,7 @@ body.docked #status {
   border-radius: 2px;
   background: color-mix(in srgb, var(--mention) 75%, transparent);
 }
+.nl-usual {
+  margin-top: 3px;
+  color: var(--dim);
+}

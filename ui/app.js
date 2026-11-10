@@ -6165,6 +6165,10 @@ function todayRanking(b) {
   const me = (state.me[b.net] || '').toLowerCase();
   const place = list.findIndex((x) => x.nick.toLowerCase() === me);
   const out = [h('div', 'nl-standing', standing(list, place))];
+  const usual = nicklist.today.usual;
+  if (usual !== undefined) {
+    out[0].append(h('div', 'nl-usual', usualLine(place === -1 ? 0 : list[place].words, usual)));
+  }
   const most = list[0].words;
   list.forEach((x, i) => {
     const row = h('div', 'nl-rank');
@@ -6186,8 +6190,8 @@ async function refreshToday(b) {
     return;
   }
   nicklist.today = { ...nicklist.today, loading: b.key };
-  const list = await talkers(b, dayStart(), Date.now() + 1);
-  nicklist.today = { key: b.key, at: Date.now(), list, loading: null };
+  const [list, usual] = await Promise.all([talkers(b, dayStart(), Date.now() + 1), usualWords(b)]);
+  nicklist.today = { key: b.key, at: Date.now(), list, usual, loading: null };
   if (nicklist.el && nicklist.tab === 'today' && channelShown()?.key === b.key) {
     renderNicklist();
   }
@@ -6202,6 +6206,42 @@ function standing(list, place) {
   const next = list[place + 1];
   const ahead = next ? `, ${mine.words - next.words} ahead of ${identity(next.nick).name}` : '';
   return `You are ${ordinal(place + 1)} with ${mine.words.toLocaleString('fi-FI')} words${ahead}.`;
+}
+
+// "Usual" is your average by this time of day over the earlier days the channel was talked on,
+// once there are USUAL_MIN_DAYS of them; it is worked out again after USUAL_FRESH_MS.
+const USUAL_DAYS = 14;
+const USUAL_MIN_DAYS = 3;
+const USUAL_FRESH_MS = 600_000;
+const ABOUT_SAME_PERCENT = 5;
+const usuals = new Map();
+
+async function usualWords(b) {
+  const known = usuals.get(b.key);
+  if (known && Date.now() - known.at < USUAL_FRESH_MS) {
+    return known.value;
+  }
+  const me = (state.me[b.net] || '').toLowerCase();
+  const sinceMidnight = Date.now() - dayStart();
+  const back = Array.from({ length: USUAL_DAYS }, (_, i) => i + 1);
+  const days = await Promise.all(back.map((d) => talkers(b, dayStart(d), dayStart(d) + sinceMidnight)));
+  const talked = days.filter((list) => list.length);
+  const mine = talked.map((list) => list.find((t) => t.nick.toLowerCase() === me)?.words || 0);
+  const value = talked.length >= USUAL_MIN_DAYS ? mine.reduce((n, w) => n + w, 0) / talked.length : undefined;
+  usuals.set(b.key, { at: Date.now(), value });
+  return value;
+}
+
+/** "23% more than usual by this time." */
+function usualLine(words, usual) {
+  if (!usual) {
+    return words ? 'More than usual by this time.' : 'Quiet as usual by this time.';
+  }
+  const percent = Math.round((words / usual - 1) * 100);
+  if (Math.abs(percent) < ABOUT_SAME_PERCENT) {
+    return 'About as much as usual by this time.';
+  }
+  return `${Math.abs(percent)}% ${percent > 0 ? 'more' : 'less'} than usual by this time.`;
 }
 
 function ordinal(n) {
