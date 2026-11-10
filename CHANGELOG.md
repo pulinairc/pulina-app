@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.5.0: 2026-11-10
 
 * Add endless scrolling back through the chat history
 * Fix Load older showing when all highlights are loaded
