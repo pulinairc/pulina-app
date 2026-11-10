@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.5.8: 2026-11-10
 
 * Fix iPhone never asking to allow notifications
 
