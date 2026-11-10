@@ -4095,15 +4095,24 @@ body.docked #status {
 }
 
 /* What is left of the IRC line, by the emoji button. */
+/* The first line's height in the message box's own font, for the smaller count. */
+@property --first-line {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+.composer-box {
+  --first-line: calc(1.45em + 20px);
+}
 .room {
   align-self: flex-end;
   flex: none;
   height: 34px;
   line-height: 34px;
-  margin-bottom: calc((1.45em + 20px - 34px) / 2);
+  margin-bottom: calc((var(--first-line) - 34px) / 2);
   padding: 0 4px;
   color: var(--faint);
-  font-size: 12px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 .room.over {
