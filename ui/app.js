@@ -3644,6 +3644,8 @@ el.log.addEventListener(
 // Start
 
 function applyStatus(st) {
+  // Settings can arrive later than the app starts (lobby-server connecting), so polling starts here.
+  queueMicrotask(pollNowPlaying);
   // A network removed from the server takes its windows with it.
   const nets = new Set(st.networks.map((n) => n.name));
   if (nets.size) {
@@ -4027,7 +4029,6 @@ async function start() {
   });
 
   applyStatus(await invoke('status'));
-  pollNowPlaying();
 
   for (const r of await invoke('recent_buffers').catch(() => [])) {
     buffer(r.net, r.buffer);
@@ -6008,7 +6009,11 @@ async function pollNowPlaying() {
   }
   // Only asked while the window is in use; coming back asks at once.
   if (!document.hidden) {
-    setNowPlaying(await invoke('now_playing', { user, key }).catch(() => null));
+    // A failed request keeps what was showing; the next one corrects it.
+    const track = await invoke('now_playing', { user, key }).catch(() => undefined);
+    if (track !== undefined) {
+      setNowPlaying(track);
+    }
   }
   npTimer = setTimeout(pollNowPlaying, NP_POLL_MS);
 }
