@@ -24,21 +24,75 @@
 
 ## Features
 
-- **Your history, every time:** lobby-server sits next to irssi and keeps every line, so Lobby opens with everything you missed
-- **Grouped, readable chat:** one photo and name per person, their lines stacked under it, link previews, pictures, videos and audio inline
-- **Reactions and replies:** sent as plain IRC (`nick: 😂`, `nick: text`) and shown as reactions and quotes in Lobby
-- **People:** a photo, a colour and any number of nicks per person, matched by pattern or ident and host
-- **Who is here:** the most active faces in the header open the channel's list, ops first, then by who spoke last; pick several to give op or voice in one go
-- **Highlights inbox:** every line that names you, from every channel, in one list: mark them done one by one or all at once, look back in the archive, and jump to where each was said
-- **Channel shelf:** switch a channel from Chat to Shelf to see every link, picture and video posted there, by day, each one a jump back into the conversation
-- **Unread that stays put:** a red New line, jump buttons, and nothing marked read until you say so
-- **Attachments:** paste, drop or pick a file, and its address goes into your message, through a file host of your own
-- **Most active:** the people list ranks today's talkers by words, and where a new day starts the chat shows yesterday's top three, bots left out
-- **Now playing:** with a Last.fm username and API key in Settings, bars by the emoji button show what you play; send it as `np. Artist - Song` or add to it first
-- **Notifications:** desktop notifications with the sender's photo for mentions and private messages, quiet for muted channels
-- **irssi muscle memory:** `/wc`, `/whois`, `/names` and the rest, with a `/` menu, `Alt+1…9` (`Cmd+1…9` on a Mac) and `Alt+A`
-- **Same everywhere:** people, channel pictures, read positions and settings live on your server and follow you between devices
-- **Self-hosted, no bouncer:** irssi stays in charge, Lobby reads through irssiproxy and talks to your own server over SSH
+🗂️ Your whole history: lobby-server keeps every line next to irssi, and you can scroll back as far as it goes
+
+<br><br>
+
+💬 Calm, grouped chat: one face and name per person, their lines stacked, links, pictures, videos and audio inline
+
+<br><br>
+
+😂 Reactions and replies, sent as plain IRC (`nick: 😂`, `nick: text`) and shown as reactions and quotes
+
+<br><br>
+
+🧑 People with a photo, a colour and any number of nicks, matched by pattern or ident and host
+
+<br><br>
+
+👥 Who is here: the faces in the header open the channel's people, ops first, then by who spoke last
+
+<br><br>
+
+📥 Highlights inbox: every line that names you, from every channel, to mark done, filter and jump back to
+
+<br><br>
+
+🔔 Highlight words besides your nick, whole words only, so `kai` never lights up `kaikki`
+
+<br><br>
+
+🗃️ Channel shelf: every link and picture posted in a channel, each one a jump back into the conversation
+
+<br><br>
+
+📍 Unread that stays put: a New line, a jump to the first unread however far back, nothing read until you say so
+
+<br><br>
+
+📎 Attachments by paste or drop, to your own file host, S3 or Cloudflare R2, SFTP, lobby-server or catbox.moe
+
+<br><br>
+
+👑 Most active: today's ranking by words, how you compare with your usual day, and yesterday's top three
+
+<br><br>
+
+🎵 Now playing from Last.fm, sent as `np. Artist - Song` with one click
+
+<br><br>
+
+🙈 Hide announcement channels from the list and the keys, still a search away
+
+<br><br>
+
+⌨️ irssi muscle memory: `/wc`, `/whois` and the rest, a `/` menu, numbered channels and jump keys
+
+<br><br>
+
+📨 Private messages, notices, CTCPs and DCC offers where you can see them
+
+<br><br>
+
+☁️ Same everywhere: people, pictures, read positions and settings follow you between devices
+
+<br><br>
+
+🏠 Self-hosted, no bouncer: irssi stays in charge, Lobby talks to your own server over SSH
+
+<br><br>
+
+📱 Linux, macOS, Windows, Android and iPhone
 
 ## How it works
 

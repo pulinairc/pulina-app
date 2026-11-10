@@ -19,6 +19,7 @@
 * Add how much you chatted compared to usual
 * Change the Today place to bold, without who is next
 * Add a crown for the most active
+* Change the README features to one line each
 
 ### 1.1.0: 2026-11-10
 
