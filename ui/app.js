@@ -33,6 +33,7 @@ import {
   nickMatches,
   looseMatch,
   npLine,
+  messageRoom,
   nickQuery,
   isCommand,
   splitNicks,
@@ -157,6 +158,7 @@ const el = {
   attachFile: $('attach-file'),
   uploadUrl: $('upload-url'),
   npBtn: $('np-btn'),
+  room: $('room'),
   npCard: $('np-card'),
   npCover: $('np-cover'),
   npTitle: $('np-title'),
@@ -930,6 +932,7 @@ function select(k) {
   if (shelf.open) {
     loadShelf();
   }
+  renderRoom();
   el.input.focus();
 }
 
@@ -2871,6 +2874,14 @@ async function send() {
   if (!text.trim() || !b) {
     return;
   }
+  // Too long for one IRC line: nothing goes until it is shortened.
+  if ((roomLeft() ?? 0) < 0) {
+    el.room.animate(
+      [{ transform: 'translateX(0)' }, { transform: 'translateX(-3px)' }, { transform: 'translateX(3px)' }, { transform: 'translateX(0)' }],
+      { duration: 220 },
+    );
+    return;
+  }
   hideSlash();
   try {
     if (text.startsWith('/') && !text.startsWith('//')) {
@@ -3098,6 +3109,24 @@ el.input.addEventListener('input', () => {
   fitInput();
 });
 
+/** What is left of IRC's line limit, counting down as you type; red and below zero when too long. */
+function roomLeft() {
+  const b = state.buffers.get(state.current);
+  if (!b || b.name === '' || !el.input.value) {
+    return null;
+  }
+  return messageRoom(el.input.value, state.me[b.net] || '', b.name);
+}
+
+function renderRoom() {
+  const room = roomLeft();
+  el.room.hidden = room === null;
+  el.room.textContent = room === null ? '' : String(room);
+  el.room.classList.toggle('over', room !== null && room < 0);
+  el.room.dataset.tip =
+    room !== null && room < 0 ? 'Too long for one IRC message: shorten it, or send it in two' : 'Characters left in this IRC message';
+}
+
 // ":D " becomes 😀 the moment a space lands after it; sending converts a last one too.
 function emoticonsAsTyped() {
   if (!settingOn(EMOTICON_SETTING)) {
@@ -3186,6 +3215,7 @@ function fitInput() {
   if (pinned) {
     toBottom();
   }
+  renderRoom();
 }
 
 // Text set from code (sending, replies, history) resizes the box too.

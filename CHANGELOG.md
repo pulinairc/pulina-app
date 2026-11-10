@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Add a count of what is left of the IRC line while typing
+
 ### 1.5.1: 2026-11-10
 
 * Fix the gaps between the README features

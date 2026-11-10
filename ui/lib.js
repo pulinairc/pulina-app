@@ -891,3 +891,32 @@ export const NP_FORMAT = 'np. {artist} - {title}';
 export function npLine(format, track) {
   return (format || NP_FORMAT).replace(/\{(artist|title|album)\}/g, (_, k) => track[k] || '').trim();
 }
+
+// An IRC line is at most 512 bytes with its CR-LF. When the server passes a message on, it puts
+// ":nick!ident@host" in front, so that counts too. The ident and host are not known here, so the
+// longest ones are assumed. MESSAGE_BYTES matches MAX_TEXT_BYTES in core/src/irc.rs, where longer
+// lines are split.
+const LINE_BYTES = 510;
+const IDENT_BYTES = 10;
+const HOST_BYTES = 63;
+const MESSAGE_BYTES = 400;
+const ACTION_BYTES = '\u0001ACTION \u0001'.length;
+const bytes = (text) => new TextEncoder().encode(text).length;
+
+/** Bytes left in the longest line of a message, below zero when too long; null for a command. */
+export function messageRoom(text, nick, target) {
+  let body = text;
+  let extra = 0;
+  if (text.startsWith('/') && !text.startsWith('//')) {
+    const me = /^\/me(?:\s|$)/i.exec(text);
+    if (!me) {
+      return null;
+    }
+    body = text.slice(me[0].length);
+    extra = ACTION_BYTES;
+  }
+  const around = bytes(`:${nick}!@ PRIVMSG ${target} :`) + IDENT_BYTES + HOST_BYTES;
+  const room = Math.min(MESSAGE_BYTES, LINE_BYTES - around) - extra;
+  const longest = Math.max(0, ...body.split('\n').map(bytes));
+  return room - longest;
+}

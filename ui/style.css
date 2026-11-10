@@ -4065,3 +4065,20 @@ body.docked #status {
   color: var(--mention);
   font-size: 13px;
 }
+
+/* What is left of the IRC line, by the emoji button. */
+.room {
+  align-self: flex-end;
+  flex: none;
+  height: 34px;
+  line-height: 34px;
+  margin-bottom: calc((1.45em + 20px - 34px) / 2);
+  padding: 0 4px;
+  color: var(--faint);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.room.over {
+  color: var(--new);
+  font-weight: 600;
+}
