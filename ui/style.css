@@ -407,7 +407,7 @@ a:focus-visible {
 .text.action.spark::before {
   content: "";
   position: absolute;
-  left: -29px;
+  left: -20px;
   top: calc(0.75em - 7px);
   width: 14px;
   height: 14px;

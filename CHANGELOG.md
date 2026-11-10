@@ -3,6 +3,7 @@
 * Fix a blank chat while lobby-server is unreachable
 * Add a light tap on long press on phones
 * Add text size steps on iPhone volume buttons
+* Change the /me spark to sit by the name
 
 ### 1.6.0: 2026-11-10
 
