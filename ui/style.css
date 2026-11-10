@@ -4014,6 +4014,7 @@ body.docked #status {
 }
 .nl-rank {
   display: grid;
+  font-size: 14px;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   column-gap: 8px;

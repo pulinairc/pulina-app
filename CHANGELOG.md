@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Fix oversized names in the Today list
+
 ### 1.6.0: 2026-11-10
 
 * Fix the phone chat scrolling sideways beside people
