@@ -4073,6 +4073,8 @@ async function start() {
   await listen('whois', (e) => onWhois(e.payload));
   await listen('notification-click', (e) => openNotified(e.payload));
   await listen('show-about', showAbout);
+  // iPhone: the volume buttons step the text size.
+  await listen('volume-key', (e) => applyTextSize(textSize() + e.payload * TEXT_SIZE_STEP));
   showVersion();
   await listen('setting', (e) => {
     state.settings[e.payload.key] = e.payload.value;

@@ -46,6 +46,7 @@ objc2-user-notifications = { version = "0.3.2", features = ["block2", "UNUserNot
 
 [target.'cfg(target_os = "ios")'.dependencies]
 objc2 = "0.6.5"
-objc2-foundation = { version = "0.3.2", features = ["NSString", "NSError"] }
+objc2-core-foundation = { version = "0.3.2", features = ["CFCGTypes", "objc2"] }
+objc2-foundation = { version = "0.3.2", features = ["NSString", "NSError", "NSArray"] }
 objc2-ui-kit = { version = "0.3.2", features = ["block2", "UIApplication", "UIResponder"] }
 objc2-user-notifications = { version = "0.3.2", features = ["block2", "UNUserNotificationCenter"] }

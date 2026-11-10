@@ -1,5 +1,7 @@
 mod config;
 mod embed;
+#[cfg(target_os = "ios")]
+mod ios_volume;
 mod lastfm;
 #[cfg(target_os = "macos")]
 mod macos;
@@ -638,6 +640,8 @@ pub fn run() {
                     let _ = handle.emit("notification-click", id);
                 });
             }
+            #[cfg(target_os = "ios")]
+            ios_volume::start(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -671,8 +675,14 @@ pub fn run() {
             delete_server_network,
             app_info
         ])
-        .run(tauri::generate_context!())
-        .expect("failed to start Lobby");
+        .build(tauri::generate_context!())
+        .expect("failed to start Lobby")
+        .run(|_app, _event| {
+            #[cfg(target_os = "ios")]
+            if let tauri::RunEvent::Resumed = _event {
+                ios_volume::resumed(_app);
+            }
+        });
 }
 
 #[cfg(test)]
