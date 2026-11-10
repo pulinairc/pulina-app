@@ -399,7 +399,12 @@ impl Session {
                 w.idle_secs = msg.param(2).parse().ok();
                 w.signon = msg.param(3).parse().ok();
             }
-            "319" => w.channels = last.trim().to_string(),
+            "319" => {
+                if !w.channels.is_empty() {
+                    w.channels.push(' ');
+                }
+                w.channels.push_str(last.trim());
+            }
             "330" => w.account = msg.param(2).to_string(),
             "301" => w.away = last.to_string(),
             "671" => w.secure = true,
@@ -569,5 +574,16 @@ mod tests {
         assert_eq!((w.user.as_str(), w.host.as_str(), w.realname.as_str()), ("ka", "example.net", "Kaisla Example"));
         assert_eq!((w.channels.as_str(), w.idle_secs, w.found), ("@#rust #tea", Some(300), true));
         assert!(feed(&mut s, ":srv 301 me kaisla :away from a message").iter().all(|o| matches!(o, Out::Line(_))));
+    }
+    /// Servers split a long channel list over several 319 lines.
+    #[test]
+    fn keeps_every_whois_channel_line() {
+        let mut s = Session::new("Net", "me");
+        feed(&mut s, ":srv 311 me kaisla ka example.net * :Kaisla");
+        feed(&mut s, ":srv 319 me kaisla :@#rust #tea");
+        feed(&mut s, ":srv 319 me kaisla :#pulina +#linux");
+        let out = feed(&mut s, ":srv 318 me kaisla :End of /WHOIS list.");
+        let Out::Whois(w) = &out[0] else { panic!("no whois") };
+        assert_eq!(w.channels, "@#rust #tea #pulina +#linux");
     }
 }

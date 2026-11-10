@@ -1595,9 +1595,11 @@ function personCard(net, nick, { spoke = true } = {}) {
   if (w?.account) {
     rows.push(['Account', w.account]);
   }
-  const chans = w?.channels || about.chans.join(' ');
-  if (chans) {
-    rows.push(['On', chans]);
+  // WHOIS lists every channel they are on; until it answers, only the ones shared with you are known.
+  if (w?.channels) {
+    rows.push(['On', w.channels]);
+  } else if (about.chans.length) {
+    rows.push(['With you', about.chans.join(' ')]);
   }
   if (spoke && about.last) {
     rows.push(['Spoke', ago(about.last.ts)]);
@@ -1619,7 +1621,8 @@ function personCard(net, nick, { spoke = true } = {}) {
   return card;
 }
 
-el.log.addEventListener('pointerover', (e) => {
+// Asked on hover anywhere a person is shown: the chat, the people list, the person cards.
+document.addEventListener('pointerover', (e) => {
   const n = e.target.closest?.('[data-person]');
   if (!n) {
     return;

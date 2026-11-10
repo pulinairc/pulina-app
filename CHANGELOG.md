@@ -12,6 +12,7 @@
 * Add hiding channels from the list with an eye button
 * Add channel numbers in the list while the number key is held
 * Add Last.fm now playing to the message box
+* Fix the person card to list every channel from WHOIS
 
 ### 1.1.0: 2026-11-10
 
