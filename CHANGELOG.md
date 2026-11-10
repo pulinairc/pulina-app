@@ -21,6 +21,7 @@
 * Add a crown for the most active
 * Change the README features to one line each
 * Fix reactions to you showing as highlights
+* Change the README demo to show this release
 
 ### 1.1.0: 2026-11-10
 
