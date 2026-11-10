@@ -3112,7 +3112,7 @@ el.input.addEventListener('input', () => {
 /** What is left of IRC's line limit, counting down as you type; red and below zero when too long. */
 function roomLeft() {
   const b = state.buffers.get(state.current);
-  if (!b || b.name === '' || !el.input.value) {
+  if (!b || b.name === '' || !el.input.value.trim()) {
     return null;
   }
   return messageRoom(el.input.value, state.me[b.net] || '', b.name);
@@ -3284,6 +3284,12 @@ const SHORTCUT_ACTIONS = [
   ['prevChannel', 'Previous channel'],
   ['nextChannel', 'Next channel'],
   ['channelNumber', 'Channel 1 to 9 (with a number)'],
+  ['latest', 'Back to the latest'],
+  ['reply', 'Reply to the last message'],
+  ['highlights', 'Highlights'],
+  ['shelf', 'Chat or Shelf'],
+  ['people', 'People'],
+  ['settings', 'Settings'],
   ['complete', 'Complete a nick'],
   ['recall', 'Bring back the last message'],
   ['textLarger', 'Larger text'],
@@ -3316,6 +3322,12 @@ const SHORTCUT_RUN = {
   nextUnreadChannel: () => jumpToUnreadChannel(),
   prevChannel: () => step(-1),
   nextChannel: () => step(1),
+  highlights: () => (el.inbox.hidden ? openInbox() : closeInbox()),
+  shelf: () => setView(shelf.open ? 'chat' : 'shelf'),
+  people: () => el.pill.click(),
+  settings: () => (el.settings.open ? el.settings.close() : el.gear.click()),
+  latest: () => el.jumpLatest.click(),
+  reply: () => replyToLast(),
   textLarger: () => applyTextSize(textSize() + TEXT_SIZE_STEP),
   textSmaller: () => applyTextSize(textSize() - TEXT_SIZE_STEP),
   textDefault: () => applyTextSize(TEXT_SIZE_DEFAULT),
@@ -3339,7 +3351,7 @@ document.addEventListener(
     }
     // Cmd+arrows move the cursor while there is a message to edit; channels only when it is empty.
     const editing = e.target === el.input && el.input.value !== '' && /Arrow/.test(combo) && combo.startsWith('Mod+');
-    if (editing && (action === 'prevChannel' || action === 'nextChannel')) {
+    if (editing && ['prevChannel', 'nextChannel', 'latest'].includes(action)) {
       return;
     }
     e.preventDefault();
@@ -5291,7 +5303,12 @@ function renderInbox() {
   el.inboxFreshTab.setAttribute('aria-selected', String(!inbox.archive));
   el.inboxArchiveTab.setAttribute('aria-selected', String(inbox.archive));
   el.inboxAll.hidden = inbox.archive || fresh.length === 0;
+  // Drawing again keeps the keyboard on the row it was on.
+  const focused = el.inboxList.contains(document.activeElement) ? document.activeElement.line?.id : null;
   el.inboxList.replaceChildren(...list.map((l) => inboxRow(l, !inbox.archive)));
+  if (focused) {
+    [...el.inboxList.children].find((r) => r.line?.id === focused)?.focus();
+  }
   if (!list.length) {
     const empty = query.trim() ? 'Nothing matches.' : inbox.archive ? 'Nothing here yet.' : 'All caught up.';
     el.inboxList.append(h('div', 'inbox-empty', empty));
@@ -5311,6 +5328,8 @@ function inboxText(l) {
 function inboxRow(l, fresh) {
   const row = h('div', 'inbox-row');
   row.tabIndex = 0;
+  row.line = l;
+  row.fresh = fresh;
   const head = h('div', 'inbox-meta');
   head.append(h('span', 'inbox-nick', l.nick), h('span', 'inbox-where', `${l.buffer} · ${shortWhen(l.ts)}`));
   const body = h('div', 'inbox-body');
@@ -5335,7 +5354,13 @@ function inboxRow(l, fresh) {
     openLine(l);
   };
   row.addEventListener('click', open);
-  row.addEventListener('keydown', (e) => e.key === 'Enter' && open());
+  row.addEventListener('keydown', (e) => {
+    // Kept from the message box, which takes the focus as the chat opens.
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      open();
+    }
+  });
   return row;
 }
 
@@ -6340,3 +6365,71 @@ function ordinal(n) {
   const end = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th');
   return `${n}${end}`;
 }
+
+// Keys for the rest: reply to the last message, page through the chat, move through the
+// highlights and the Settings tabs with the arrows.
+
+/** Reply to the newest message from someone else in this channel. */
+function replyToLast() {
+  const b = state.buffers.get(state.current);
+  const last = b?.lines.findLast((l) => CHAT_KINDS.has(l.kind) && !l.own && l.nick !== state.me[b.net]);
+  if (last) {
+    startReply(last);
+  }
+}
+
+const PAGE_PART = 0.9;
+
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'PageUp' && e.key !== 'PageDown') {
+    return;
+  }
+  // From the message box or nowhere in particular, the keys page through the chat.
+  const at = document.activeElement;
+  if (at !== el.input && at !== document.body && !el.log.contains(at)) {
+    return;
+  }
+  e.preventDefault();
+  stopGlide();
+  el.log.scrollBy({ top: (e.key === 'PageUp' ? -1 : 1) * el.log.clientHeight * PAGE_PART });
+});
+
+el.inboxList.addEventListener('keydown', (e) => {
+  const row = e.target.closest('.inbox-row');
+  if (!row) {
+    return;
+  }
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault();
+    (e.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling)?.focus();
+  } else if ((e.key === 'Delete' || e.key === 'Backspace') && row.fresh) {
+    e.preventDefault();
+    const next = row.nextElementSibling || row.previousElementSibling;
+    markDone(row.line.id);
+    // The list is drawn again; the row that took this one's place gets the focus.
+    renderInbox();
+    [...el.inboxList.children].find((r) => r.line?.id === next?.line?.id)?.focus();
+  }
+});
+
+// With the highlights open, the down arrow goes into the list from the filter or from anywhere else.
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'ArrowDown' || el.inbox.hidden || el.inboxList.contains(document.activeElement)) {
+    return;
+  }
+  e.preventDefault();
+  el.inboxList.querySelector('.inbox-row')?.focus();
+});
+
+el.settingsTabs.addEventListener('keydown', (e) => {
+  const tab = e.target.closest('[data-tab]');
+  if (!tab || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) {
+    return;
+  }
+  e.preventDefault();
+  const next = e.key === 'ArrowDown' ? tab.nextElementSibling : tab.previousElementSibling;
+  if (next) {
+    next.focus();
+    next.click();
+  }
+});

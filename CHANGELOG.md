@@ -1,6 +1,7 @@
 ### [Unreleased]
 
 * Change the README to shorter features and plain headings
+* Add full keyboard support
 
 ### 1.5.2: 2026-11-10
 
