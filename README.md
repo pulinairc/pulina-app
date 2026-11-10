@@ -241,7 +241,8 @@ token_file = "~/.config/lobby/server.token"
 | `Tab` | Complete a nick, or pick one from the list that opens as you type a name or `@` |
 | `Up` in an empty input | Bring back the last message |
 | `Ctrl+Shift+R` (`Cmd+Shift+R` on a Mac) | Reply to the last message |
-| `Ctrl+Down` (`Cmd+Down` on a Mac) | Back to the newest message |
+| `Ctrl+Up`, `Ctrl+Down` (`Cmd` on a Mac) | Scroll the chat up and down |
+| `Ctrl+End` (`Cmd+End` on a Mac) | Back to the newest message |
 | `PageUp`, `PageDown` | Scroll the chat a page at a time |
 | `Ctrl+Shift+H` (`Cmd+Shift+H` on a Mac) | Open highlights. `Down` and `Up` move between them, `Enter` opens one, `Delete` marks it done |
 | `Ctrl+Shift+S` (`Cmd+Shift+S` on a Mac) | Switch between the chat and the shelf |

@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Add Cmd/Ctrl+Up and Down to scroll the chat
+
 ### 1.5.6: 2026-11-10
 
 * Fix the chat climbing on Mac channel switches

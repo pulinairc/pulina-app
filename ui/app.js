@@ -3340,6 +3340,8 @@ const SHORTCUT_ACTIONS = [
   ['nextChannel', 'Next channel'],
   ['channelNumber', 'Channel 1 to 9 (with a number)'],
   ['latest', 'Back to the latest'],
+  ['scrollUp', 'Scroll the chat up'],
+  ['scrollDown', 'Scroll the chat down'],
   ['reply', 'Reply to the last message'],
   ['highlights', 'Highlights'],
   ['shelf', 'Chat or Shelf'],
@@ -3385,6 +3387,8 @@ const SHORTCUT_RUN = {
   people: () => el.pill.click(),
   settings: () => (el.settings.open ? el.settings.close() : el.gear.click()),
   latest: () => el.jumpLatest.click(),
+  scrollUp: () => scrollChat(-1),
+  scrollDown: () => scrollChat(1),
   reply: () => replyToLast(),
   textLarger: () => applyTextSize(textSize() + TEXT_SIZE_STEP),
   textSmaller: () => applyTextSize(textSize() - TEXT_SIZE_STEP),
@@ -3409,7 +3413,7 @@ document.addEventListener(
     }
     // Cmd+arrows move the cursor while there is a message to edit; channels only when it is empty.
     const editing = e.target === el.input && el.input.value !== '' && /Arrow/.test(combo) && combo.startsWith('Mod+');
-    if (editing && ['prevChannel', 'nextChannel', 'latest'].includes(action)) {
+    if (editing && ['prevChannel', 'nextChannel', 'latest', 'scrollUp', 'scrollDown'].includes(action)) {
       return;
     }
     e.preventDefault();
@@ -6469,6 +6473,14 @@ function replyToLast() {
 }
 
 const PAGE_PART = 0.9;
+const SCROLL_STEP_PX = 80;
+
+/** A step up or down, like a turn of the wheel; holding the key keeps it going. */
+function scrollChat(direction) {
+  stopGlide();
+  movedByHand = true;
+  el.log.scrollBy({ top: direction * SCROLL_STEP_PX });
+}
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'PageUp' && e.key !== 'PageDown') {
