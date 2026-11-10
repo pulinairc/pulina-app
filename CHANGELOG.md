@@ -5,6 +5,7 @@
 * Change the now playing Send button to the accent colour
 * Add a Save button and a Saved note to Settings
 * Change the now playing bars to equal widths and a faster beat
+* Change the README demo to show the new features
 
 ### 1.5.0: 2026-11-10
 
