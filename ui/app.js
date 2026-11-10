@@ -991,10 +991,11 @@ function toBottom() {
 // While a reaction row or message menu is open the chat holds still, so new messages
 // do not carry it away from the pointer; closing it catches up.
 function following() {
-  return atBottom() && !actionPanel;
+  return (atBottom() || glide !== 0) && !actionPanel;
 }
 
 function renderLog() {
+  stopGlide();
   el.col.replaceChildren();
   view = { lastLine: null, group: null, events: null, command: null, lastByNick: new Map(), separator: null, separatorAfter: null };
   const b = state.buffers.get(state.current);
@@ -1027,6 +1028,8 @@ function toSeparator() {
 function appendLine(l, live) {
   const pinned = following();
   const prev = view.lastLine;
+  const tail = el.col.lastElementChild;
+  let fresh = null;
 
   // "nick: 😂" becomes a reaction under that nick's last message.
   const reaction = l.kind === 'msg' ? parseReaction(l.text) : null;
@@ -1064,7 +1067,8 @@ function appendLine(l, live) {
     view.group = null;
   } else if (CHAT_KINDS.has(l.kind) && answersCommand(l, prev)) {
     // A bot answering the command just asked: inside that command's card.
-    view.command.answers.append(answerRow(l));
+    fresh = answerRow(l);
+    view.command.answers.append(fresh);
     view.command.last = l;
   } else if (CHAT_KINDS.has(l.kind)) {
     view.events = null;
@@ -1089,6 +1093,7 @@ function appendLine(l, live) {
       }
       view.group.body.append(r);
       view.group.last = l;
+      fresh = r;
     }
   } else {
     view.events = null;
@@ -1098,9 +1103,70 @@ function appendLine(l, live) {
 
   view.lastLine = l;
   // Your own message always brings the view down to it; a reaction stays put.
-  if (live && (pinned || l.own || l.nick === state.me[l.net])) {
-    toBottom();
+  if (!live) {
+    return;
   }
+  fadeIn(tail, fresh);
+  if (pinned || l.own || l.nick === state.me[l.net]) {
+    glideDown();
+  }
+}
+
+// A new message fades in while the chat glides up to it. The glide moves the scroll position
+// itself, so the chat never counts as scrolled away while it runs.
+const ARRIVE_MS = 180;
+const ARRIVALS_PER_FRAME = 4;
+const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)');
+let glide = 0;
+let arrivals = 0;
+
+function calm() {
+  return REDUCED_MOTION.matches || document.hidden;
+}
+
+function fadeIn(tail, fresh) {
+  // A burst, like a backlog after reconnecting, just appears.
+  if (arrivals === 0) {
+    requestAnimationFrame(() => {
+      arrivals = 0;
+    });
+  }
+  arrivals += 1;
+  if (calm() || arrivals > ARRIVALS_PER_FRAME) {
+    return;
+  }
+  const added = [];
+  for (let n = tail ? tail.nextElementSibling : el.col.firstElementChild; n; n = n.nextElementSibling) {
+    added.push(n);
+  }
+  if (!added.length && fresh) {
+    added.push(fresh);
+  }
+  for (const n of added) {
+    n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ARRIVE_MS, easing: 'ease-out' });
+  }
+}
+
+function glideDown() {
+  cancelAnimationFrame(glide);
+  glide = 0;
+  if (calm()) {
+    return toBottom();
+  }
+  const from = el.log.scrollTop;
+  const start = performance.now();
+  const step = (now) => {
+    const p = Math.min((now - start) / ARRIVE_MS, 1);
+    const to = el.log.scrollHeight - el.log.clientHeight;
+    el.log.scrollTop = from + (to - from) * (1 - (1 - p) ** 3);
+    glide = p < 1 ? requestAnimationFrame(step) : 0;
+  };
+  glide = requestAnimationFrame(step);
+}
+
+function stopGlide() {
+  cancelAnimationFrame(glide);
+  glide = 0;
 }
 
 // Bot commands, asked and answered: "!seen milla" becomes a card, and the lines a known bot
@@ -3153,7 +3219,7 @@ function updateJumps() {
   el.jumpUnread.hidden = !(count && (above || below));
   el.jumpUnread.classList.toggle('down', Boolean(below));
   const messages = count === 1 ? 'message' : 'messages';
-  el.jumpLatest.hidden = atBottom();
+  el.jumpLatest.hidden = atBottom() || glide !== 0;
   if (!el.jumpLatest.hidden) {
     const more = messagesBelow(log.bottom);
     el.jumpLatestLabel.textContent = more ? `${more} more` : 'Latest';
@@ -3221,6 +3287,9 @@ const stayDown = new ResizeObserver(() => {
   if (actionPanel) {
     return;
   }
+  if (glide) {
+    return;
+  }
   if (stuck) {
     toBottom();
   } else {
@@ -3228,12 +3297,15 @@ const stayDown = new ResizeObserver(() => {
   }
 });
 stayDown.observe(el.log);
+// Scrolling by hand takes over from a glide.
+el.log.addEventListener('wheel', stopGlide, { passive: true });
+el.log.addEventListener('touchstart', stopGlide, { passive: true });
 stayDown.observe(el.col);
 
 el.log.addEventListener(
   'scroll',
   () => {
-    stuck = atBottom();
+    stuck = atBottom() || glide !== 0;
     noteAnchor();
     cancelAnimationFrame(jumpFrame);
     jumpFrame = requestAnimationFrame(() => {
@@ -4583,6 +4655,7 @@ const FLASH_MS = 2400;
 const WINDOW_FLASH_DELAY_MS = 60;
 
 function centerLine(id) {
+  stopGlide();
   requestAnimationFrame(() => {
     const row = [...el.col.querySelectorAll('.text')].find((r) => r.line?.id === id);
     if (!row) {
