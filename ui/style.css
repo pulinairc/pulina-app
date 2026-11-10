@@ -4039,3 +4039,6 @@ body.docked #status {
   margin-top: 3px;
   color: var(--dim);
 }
+.nl-standing b {
+  color: var(--strong);
+}

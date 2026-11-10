@@ -17,6 +17,7 @@
 * Add a Today ranking to the people list
 * Add CTCP requests, replies and DCC offers to the chat
 * Add how much you chatted compared to usual
+* Change the Today place to bold, without who is next
 
 ### 1.1.0: 2026-11-10
 

@@ -6164,7 +6164,7 @@ function todayRanking(b) {
   }
   const me = (state.me[b.net] || '').toLowerCase();
   const place = list.findIndex((x) => x.nick.toLowerCase() === me);
-  const out = [h('div', 'nl-standing', standing(list, place))];
+  const out = [standing(list, place)];
   const usual = nicklist.today.usual;
   if (usual !== undefined) {
     out[0].append(h('div', 'nl-usual', usualLine(place === -1 ? 0 : list[place].words, usual)));
@@ -6197,15 +6197,15 @@ async function refreshToday(b) {
   }
 }
 
-/** "You are 3rd with 272 words, 3 ahead of samiy." */
+/** "You are **3rd** with 272 words." */
 function standing(list, place) {
+  const line = h('div', 'nl-standing');
   if (place === -1) {
-    return 'You have not said anything here today.';
+    line.textContent = 'You have not said anything here today.';
+    return line;
   }
-  const mine = list[place];
-  const next = list[place + 1];
-  const ahead = next ? `, ${mine.words - next.words} ahead of ${identity(next.nick).name}` : '';
-  return `You are ${ordinal(place + 1)} with ${mine.words.toLocaleString('fi-FI')} words${ahead}.`;
+  line.append('You are ', h('b', null, ordinal(place + 1)), ` with ${list[place].words.toLocaleString('fi-FI')} words.`);
+  return line;
 }
 
 // "Usual" is your average by this time of day over the earlier days the channel was talked on,
