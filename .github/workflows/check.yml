@@ -153,12 +153,39 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
 
+      # The system image download from Google fails now and then (a broken zip), which failed
+      # the whole check, so the image and the emulator are made once and kept in the cache.
+      - name: Keep the emulator in the cache
+        uses: actions/cache@v6
+        id: avd
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+            /usr/local/lib/android/sdk/system-images/android-34
+          key: avd-34-google_apis-x86_64
+
+      - name: Make the emulator
+        if: steps.avd.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Emulator made"
+
       - name: Start the app on an emulator and see it stay up
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           arch: x86_64
           target: google_apis
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
           script: sh tools/android-smoke.sh
 
       - uses: actions/upload-artifact@v7
