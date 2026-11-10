@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.5.6: 2026-11-10
 
 * Fix the chat climbing on Mac channel switches
 * Add hiding for server windows
