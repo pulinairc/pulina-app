@@ -1279,6 +1279,10 @@ dialog:focus {
     0 10px 28px rgb(0 0 0 / 60%);
   pointer-events: none;
 }
+.nl-face .crown svg {
+  width: 16px;
+  height: 16px;
+}
 
 /* The person card: tinted from the top with their own colour. */
 .tip.person {
@@ -3999,7 +4003,7 @@ body.docked #status {
 }
 .nl-rank {
   display: grid;
-  grid-template-columns: 16px auto 1fr auto;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   column-gap: 8px;
   row-gap: 4px;
@@ -4008,11 +4012,30 @@ body.docked #status {
 .nl-rank .av {
   --avatar: 22px;
 }
+.nl-rank.top {
+  padding-top: 11px;
+}
+.nl-face {
+  position: relative;
+  display: flex;
+}
 .nl-place {
-  color: var(--faint);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 26%;
+  background: rgb(0 0 0 / 0.6);
+  color: #fff;
   font-size: 11.5px;
-  text-align: right;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.nl-rank:hover .nl-place {
+  opacity: 1;
 }
 .nl-rank .nl-name {
   min-width: 0;
@@ -4026,7 +4049,7 @@ body.docked #status {
   font-variant-numeric: tabular-nums;
 }
 .nl-meter {
-  grid-column: 3 / 5;
+  grid-column: 2 / 4;
   height: 3px;
   border-radius: 2px;
   background: var(--raised);
@@ -4049,8 +4072,13 @@ body.docked #status {
   display: inline-flex;
   color: #f5c542;
 }
-.nl-place .crown {
-  justify-content: flex-end;
+.nl-face .crown {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-14deg);
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.5));
+  pointer-events: none;
 }
 .podium-spot .crown {
   margin-bottom: -2px;

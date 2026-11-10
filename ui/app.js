@@ -6277,18 +6277,20 @@ function todayRanking(b) {
   list.forEach((x, i) => {
     const row = h('div', 'nl-rank');
     row.classList.toggle('me', i === place);
+    row.classList.toggle('top', i === 0);
     const bar = h('span', 'nl-meter');
     const fill = h('i');
     fill.style.width = `${(x.words / most) * 100}%`;
     bar.append(fill);
     const name = h('span', 'nl-name', identity(x.nick).name);
     personTip(name, b.net, x.nick);
-    // The first place shows a crown in place of its number.
-    const placeMark = h('span', 'nl-place', i === 0 ? '' : String(i + 1));
+    // The place shows over the photo on hover; the first wears a crown.
+    const face = h('span', 'nl-face');
+    face.append(avatar(x.nick, ''), h('span', 'nl-place', String(i + 1)));
     if (i === 0) {
-      placeMark.append(crown());
+      face.append(crown());
     }
-    row.append(placeMark, avatar(x.nick, ''), name, h('span', 'nl-words', x.words.toLocaleString('fi-FI')), bar);
+    row.append(face, name, h('span', 'nl-words', x.words.toLocaleString('fi-FI')), bar);
     out.push(row);
   });
   return out;
