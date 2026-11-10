@@ -140,12 +140,30 @@ export function stripFormatting(text) {
   return text.replace(FORMATTING, '');
 }
 
-export function mentions(text, me) {
-  if (!me) {
-    return false;
+/**
+ * Matches any of the words (a nick, or highlight words) as a whole word, in any letters,
+ * so "rolle" is found in "rolle: hi" but not in "Anterolle" or "kontrolleri".
+ */
+const patterns = new Map();
+
+function wordPattern(words) {
+  const list = [words].flat().filter(Boolean);
+  if (!list.length) {
+    return null;
   }
-  const escaped = me.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`(^|[^\\w])${escaped}(?![\\w])`, 'i').test(text);
+  const key = list.join('\n');
+  if (!patterns.has(key)) {
+    const any = list.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    patterns.set(key, new RegExp(`(?<![\\p{L}\\p{N}_])(?:${any})(?![\\p{L}\\p{N}_])`, 'giu'));
+  }
+  const re = patterns.get(key);
+  re.lastIndex = 0;
+  return re;
+}
+
+export function mentions(text, words) {
+  const re = wordPattern(words);
+  return Boolean(re) && re.test(text);
 }
 
 /** Split text into plain, link and mention pieces. */
@@ -167,14 +185,14 @@ export function tokenize(text, me) {
   return out;
 }
 
-function splitMentions(text, me) {
-  if (!me || !mentions(text, me)) {
+function splitMentions(text, words) {
+  const re = wordPattern(words);
+  if (!re) {
     return [{ type: 'text', value: text }];
   }
-  const escaped = me.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const out = [];
   let at = 0;
-  for (const m of text.matchAll(new RegExp(`(?<![\\w])${escaped}(?![\\w])`, 'gi'))) {
+  for (const m of text.matchAll(re)) {
     if (m.index > at) {
       out.push({ type: 'text', value: text.slice(at, m.index) });
     }
@@ -794,13 +812,16 @@ export function isCommand(text) {
 }
 
 /** Bot nicks from the setting, any mix of spaces and commas, lower-case. */
+/** "a, b c" as ["a", "b", "c"], lowercased. */
+export function wordList(value = '') {
+  return value
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map((w) => w.toLowerCase());
+}
+
 export function botNicks(value = '') {
-  return new Set(
-    value
-      .split(/[\s,]+/)
-      .filter(Boolean)
-      .map((n) => n.toLowerCase()),
-  );
+  return new Set(wordList(value));
 }
 
 const IMAGE_EXT = /\.(?:jpe?g|png|gif|webp|avif|heic)$/i;

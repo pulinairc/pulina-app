@@ -27,6 +27,7 @@ import {
   nickColor,
   dayLabel,
   mentions,
+  wordList,
   shortUrl,
   nickHue,
   parseReaction,
@@ -76,6 +77,23 @@ test('splits links and mentions', () => {
   assert.equal(t[2].value, 'https://example.org/a');
   assert.equal(mentions('trolleybus', 'rolle'), false);
   assert.equal(tokenize('\x02bold\x02 \x0304red', '')[0].value, 'bold red');
+});
+
+test('highlight words match whole words only', () => {
+  const words = ['rolle', 'rollelle', 'rollella', 'rollen'];
+  for (const text of ['rolle: hi', 'Rollelle tuli viesti', 'oli rollella eilen', 'tämä on rollen', 'kiitos rolle!']) {
+    assert.equal(mentions(text, words), true, text);
+  }
+  for (const text of ['Anterolle soitti', 'kontrolleri hajosi', 'rolleä', 'ärolle', 'rolle_bot']) {
+    assert.equal(mentions(text, words), false, text);
+  }
+  assert.deepEqual(
+    tokenize('moi rollelle ja rollen', words)
+      .filter((t) => t.type === 'mention')
+      .map((t) => t.value),
+    ['rollelle', 'rollen'],
+  );
+  assert.deepEqual(wordList('rolle, Rollelle  rollen'), ['rolle', 'rollelle', 'rollen']);
 });
 
 test('nick colours ignore trailing underscores and avoid purple', () => {

@@ -7,6 +7,7 @@
 * Fix scrolling past the lines around an old highlight
 * Move the more emojis button last on phones
 * Add a quick glide and fade for new messages
+* Add highlight words in Settings
 
 ### 1.0.2: 2026-11-10
 

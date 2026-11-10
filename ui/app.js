@@ -29,6 +29,7 @@ import {
   peopleGroups,
   quietFor,
   botNicks,
+  wordList,
   nickMatches,
   nickQuery,
   isCommand,
@@ -65,6 +66,7 @@ const REACTION_SETTING = 'reactions';
 // Emoji helpers in the message box, on unless turned off.
 const EMOTICON_SETTING = 'emoticons';
 const BOTS_SETTING = 'bots';
+const HIGHLIGHT_WORDS_SETTING = 'highlightWords';
 /** A bot's answer joins the command it follows only this soon after it. */
 const BOT_ANSWER_MS = 60 * 1000;
 const SHORTCODE_SETTING = 'shortcodes';
@@ -139,6 +141,7 @@ const el = {
   notifyGuideLater: $('notify-guide-later'),
   emoticonToggle: $('emoticon-toggle'),
   botsField: $('bots-field'),
+  highlightField: $('highlight-field'),
   shortcodeToggle: $('shortcode-toggle'),
   iconChoices: $('icon-choices'),
   textSize: $('text-size'),
@@ -378,7 +381,7 @@ function recountUnread(b) {
   const seen = readMap[b.key];
   const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own);
   b.unread = fresh.length;
-  b.mention = fresh.length > 0 && (isPrivate(b) || fresh.some((l) => mentions(l.text, state.me[l.net])));
+  b.mention = fresh.length > 0 && (isPrivate(b) || fresh.some((l) => mentions(l.text, myWords(l.net))));
 }
 
 function applyReadSetting(value) {
@@ -521,7 +524,7 @@ function onLine(l) {
     inbox.lines.set(l.id, l);
     renderInbox();
   }
-  const mentioned = isPrivate(b) || mentions(l.text, state.me[l.net]);
+  const mentioned = isPrivate(b) || mentions(l.text, myWords(l.net));
   if (mentioned) {
     b.mention = true;
   }
@@ -584,7 +587,7 @@ function attentionCount(b) {
     return 0;
   }
   const seen = readMap[b.key] ?? Infinity;
-  return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && mentions(l.text, state.me[l.net])).length || 1;
+  return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && mentions(l.text, myWords(l.net))).length || 1;
 }
 
 const BELL =
@@ -668,7 +671,7 @@ function highlightCount() {
     }
     const seen = readMap[b.key] ?? Infinity;
     const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own);
-    n += isPrivate(b) ? fresh.length : fresh.filter((l) => mentions(l.text, state.me[l.net])).length;
+    n += isPrivate(b) ? fresh.length : fresh.filter((l) => mentions(l.text, myWords(l.net))).length;
   }
   return n;
 }
@@ -925,6 +928,7 @@ function renderSettings() {
   renderNotifyState();
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
   el.botsField.value = state.settings[BOTS_SETTING] || '';
+  el.highlightField.value = state.settings[HIGHLIGHT_WORDS_SETTING] || '';
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
   renderIconChoices();
   renderShortcuts();
@@ -1253,7 +1257,7 @@ function row(l) {
   }
   replyHints.delete(l.text);
   // Lines meant for you get a dot in the margin.
-  r.classList.toggle('for-me', !r.classList.contains('own') && CHAT_KINDS.has(l.kind) && mentions(l.text, me));
+  r.classList.toggle('for-me', !r.classList.contains('own') && CHAT_KINDS.has(l.kind) && mentions(l.text, myWords(l.net)));
 
   if (l.kind === 'action') {
     const who = identity(l.nick, l.mask);
@@ -1265,7 +1269,7 @@ function row(l) {
 
   let firstUrl = null;
   const members = nicksOf(l);
-  const tokens = tokenize(text, state.me[l.net]).flatMap((t) => (t.type === 'text' ? splitNicks(t.value, members) : [t]));
+  const tokens = tokenize(text, myWords(l.net)).flatMap((t) => (t.type === 'text' ? splitNicks(t.value, members) : [t]));
   for (const t of tokens) {
     if (t.type === 'url') {
       const a = h('a', 'link', shortUrl(t.value));
@@ -1500,6 +1504,15 @@ function topReactions() {
 }
 
 // Settings live on lobby-server (or locally in direct mode), so every device shares them.
+function highlightWords() {
+  return wordList(state.settings[HIGHLIGHT_WORDS_SETTING]);
+}
+
+/** Your nick on that network and your highlight words. */
+function myWords(net) {
+  return [state.me[net], ...highlightWords()];
+}
+
 function saveSetting(key, value) {
   state.settings[key] = value;
   invoke('set_setting', { key, value }).catch((e) => renderStatus(String(e)));
@@ -3669,6 +3682,11 @@ async function start() {
     if (e.payload.key === HIGHLIGHTS_SETTING) {
       renderInbox();
     }
+    if (e.payload.key === HIGHLIGHT_WORDS_SETTING) {
+      el.highlightField.value = e.payload.value;
+      renderLog();
+      loadHighlightsSoon();
+    }
   });
   // A lobby-server connection came back: fetch what was missed.
   await listen('server', (e) => {
@@ -4813,7 +4831,7 @@ function shortWhen(ts) {
 }
 
 function isHighlight(l) {
-  return Boolean(l.id) && !l.own && CHAT_KINDS.has(l.kind) && isChannel(l.buffer) && mentions(l.text, state.me[l.net]);
+  return Boolean(l.id) && !l.own && CHAT_KINDS.has(l.kind) && isChannel(l.buffer) && mentions(l.text, myWords(l.net));
 }
 
 function highlightMarks() {
@@ -4848,7 +4866,7 @@ function loadHighlightsSoon() {
 }
 
 async function loadHighlights(before) {
-  const words = [...new Set(Object.values(state.me).filter(Boolean))];
+  const words = [...new Set([...Object.values(state.me), ...highlightWords()].filter(Boolean))];
   if (!words.length) {
     return;
   }
@@ -4892,7 +4910,7 @@ function renderInbox() {
 
 function inboxText(l) {
   const box = h('div', 'inbox-text');
-  for (const t of tokenize(l.text, state.me[l.net])) {
+  for (const t of tokenize(l.text, myWords(l.net))) {
     box.append(t.type === 'mention' ? h('span', 'mention', t.value) : t.type === 'url' ? shortUrl(t.value) : t.value);
   }
   return box;
@@ -5452,6 +5470,12 @@ document.addEventListener('drop', (e) => {
   e.preventDefault();
   uploadFiles(files);
 });
+el.highlightField.addEventListener('change', () => {
+  saveSetting(HIGHLIGHT_WORDS_SETTING, el.highlightField.value.trim());
+  renderLog();
+  loadHighlightsSoon();
+});
+
 el.botsField.addEventListener('change', () => {
   saveSetting(BOTS_SETTING, el.botsField.value.trim());
   renderLog();
