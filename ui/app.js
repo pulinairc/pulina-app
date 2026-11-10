@@ -974,7 +974,8 @@ el.settings.addEventListener('click', (e) => {
   }
 });
 el.settings.addEventListener('close', () => el.input.focus());
-el.switcher.addEventListener('close', () => el.input.focus());
+// Not when the highlights inbox took over: on a phone that would raise the keyboard over it.
+el.switcher.addEventListener('close', () => el.inbox.hidden && el.input.focus());
 el.connection.addEventListener('close', () => el.input.focus());
 
 // Log
@@ -4773,7 +4774,7 @@ function openInbox() {
   el.inbox.hidden = false;
   document.body.classList.add('inbox-open');
   renderInbox();
-  el.inboxList.querySelector('.inbox-row')?.focus({ preventScroll: true });
+  document.activeElement?.blur();
 }
 
 function closeInbox() {

@@ -3,6 +3,7 @@
 * Change the connection notice and docked people list to be more compact on phones
 * Add a Latest button to the shelf
 * Change the shelf to separate Links and Pictures tabs
+* Fix the keyboard opening over the highlights on iPhone
 
 ### 1.0.2: 2026-11-10
 
