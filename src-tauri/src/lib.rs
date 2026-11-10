@@ -135,6 +135,21 @@ async fn around(state: State<'_, AppState>, net: String, buffer: String, line: i
 }
 
 #[tauri::command]
+async fn talkers(
+    state: State<'_, AppState>,
+    net: String,
+    buffer: String,
+    since: i64,
+    until: i64,
+) -> Result<Vec<lobby_core::store::Talker>, String> {
+    match state.source() {
+        Source::Local(hub) => hub.talkers(&net, &buffer, since, until),
+        Source::Remote(remote) => from_value(remote.request(|id| ClientMsg::Talkers { id, net, buffer, since, until }).await?),
+        Source::Unconfigured => Ok(vec![]),
+    }
+}
+
+#[tauri::command]
 async fn count_unread(state: State<'_, AppState>, net: String, buffer: String, after: i64, before: i64) -> Result<i64, String> {
     match state.source() {
         Source::Local(hub) => hub.count_unread(&net, &buffer, after, before),
@@ -630,6 +645,7 @@ pub fn run() {
             around,
             mentions,
             count_unread,
+            talkers,
             now_playing,
             links,
             send,

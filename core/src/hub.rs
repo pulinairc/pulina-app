@@ -223,6 +223,10 @@ impl Hub {
         self.store.history(net, buffer, before.unwrap_or(i64::MAX), HISTORY_PAGE).map_err(|e| e.to_string())
     }
 
+    pub fn talkers(&self, net: &str, buffer: &str, since: i64, until: i64) -> Result<Vec<crate::store::Talker>, String> {
+        self.store.talkers(net, buffer, since, until).map_err(|e| e.to_string())
+    }
+
     pub fn count_unread(&self, net: &str, buffer: &str, after: i64, before: i64) -> Result<i64, String> {
         self.store.count_unread(net, buffer, after, before).map_err(|e| e.to_string())
     }

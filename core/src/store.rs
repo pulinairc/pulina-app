@@ -19,6 +19,12 @@ pub struct Line {
     pub own: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Talker {
+    pub nick: String,
+    pub words: i64,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BufferRef {
     pub net: String,
@@ -132,6 +138,24 @@ impl Store {
         ))?;
         lines.extend(stmt.query_map(params![net, buffer, id, limit], line_row)?.collect::<rusqlite::Result<Vec<_>>>()?);
         Ok(lines)
+    }
+
+    /// Words said per person in a channel between two times, most first, like toptod counts them:
+    /// messages and actions, a nick in any letter case counted as one.
+    pub fn talkers(&self, net: &str, buffer: &str, since: i64, until: i64) -> rusqlite::Result<Vec<Talker>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare(
+            "SELECT nick, text FROM lines WHERE net = ?1 AND buffer = ?2 COLLATE NOCASE AND ts >= ?3 AND ts < ?4 AND kind IN ('msg', 'action') ORDER BY id",
+        )?;
+        let mut by_nick: HashMap<String, Talker> = HashMap::new();
+        for row in stmt.query_map(params![net, buffer, since, until], |r| Ok((r.get::<_, String>(0)?, r.get::<_, String>(1)?)))? {
+            let (nick, text) = row?;
+            let entry = by_nick.entry(nick.to_lowercase()).or_insert(Talker { nick, words: 0 });
+            entry.words += text.split_whitespace().count() as i64;
+        }
+        let mut out: Vec<Talker> = by_nick.into_values().collect();
+        out.sort_by(|a, b| b.words.cmp(&a.words).then_with(|| a.nick.cmp(&b.nick)));
+        Ok(out)
     }
 
     /// Chat lines by others between two line ids, for unread counts beyond what an app has loaded.
@@ -268,6 +292,22 @@ mod tests {
         }
         let texts: Vec<_> = store.around("n", "#a", 5, 1).unwrap().into_iter().map(|l| l.text).collect();
         assert_eq!(texts, vec!["2", "4", "6"]);
+    }
+
+    #[test]
+    fn counts_words_per_person_between_two_times() {
+        let store = Store::open(Path::new(":memory:")).unwrap();
+        let say = |nick: &str, kind: &str, text: &str, ts: i64| {
+            store.insert(&Line { nick: nick.into(), ts, ..line("#a", kind, text, false) }).unwrap();
+        };
+        say("kaisla", "msg", "moi kaikki täällä", 100);
+        say("Kaisla", "action", "heiluttaa", 150);
+        say("otso", "msg", "moro", 120);
+        say("otso", "notice", "ei lasketa tätä", 130);
+        say("otso", "msg", "liian myöhään", 300);
+        say("kaisla", "join", "", 110);
+        let top = store.talkers("n", "#A", 100, 200).unwrap();
+        assert_eq!(top, vec![Talker { nick: "kaisla".into(), words: 4 }, Talker { nick: "otso".into(), words: 1 }]);
     }
 
     #[test]
