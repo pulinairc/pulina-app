@@ -237,7 +237,7 @@ token_file = "~/.config/lobby/server.token"
 | `Alt+Left`, `Alt+Right`, `Cmd` on a Mac while the message box is empty | Previous and next channel |
 | `Alt+A`, or the unread counter | Next channel with unread, mentions first |
 | `Alt+U`, or the unread pill | Jump to the first unread message in this channel |
-| `Ctrl+Enter` (`Cmd+Enter` on a Mac) | Mark this channel read |
+| `Ctrl+Enter` (`Cmd+Enter` on a Mac) | Mark this channel read and go to the newest message |
 | `Tab` | Complete a nick, or pick one from the list that opens as you type a name or `@` |
 | `Up` in an empty input | Bring back the last message |
 | `Ctrl+Shift+R` (`Cmd+Shift+R` on a Mac) | Reply to the last message |

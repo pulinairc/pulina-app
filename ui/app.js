@@ -3278,7 +3278,7 @@ let IS_MAC = false;
 const SHORTCUT_SETTING = 'shortcuts';
 const SHORTCUT_ACTIONS = [
   ['switcher', 'Find a channel'],
-  ['markRead', 'Mark this channel read'],
+  ['markRead', 'Mark this channel read and go to the newest'],
   ['jumpUnread', 'Jump to the first unread'],
   ['nextUnreadChannel', 'Next channel with unread'],
   ['prevChannel', 'Previous channel'],
@@ -3317,7 +3317,10 @@ function pressed(e, action) {
 
 const SHORTCUT_RUN = {
   switcher: () => (el.switcher.open ? el.switcher.close() : openSwitcher()),
-  markRead: () => markCurrentRead(),
+  markRead: () => {
+    markCurrentRead();
+    el.jumpLatest.click();
+  },
   jumpUnread: () => jumpToUnread(),
   nextUnreadChannel: () => jumpToUnreadChannel(),
   prevChannel: () => step(-1),

@@ -2,6 +2,7 @@
 
 * Change the Today crown to a hat on the photo
 * Fix the length count sitting low in the message box
+* Change Ctrl+Enter to also go to the newest
 
 ### 1.5.3: 2026-11-10
 
