@@ -1,13 +1,11 @@
-### [Unreleased]
-
-* Change the Today crown to a hat on the photo
-* Fix the length count sitting low in the message box
-* Change Ctrl+Enter to also go to the newest
-
 ### 1.5.3: 2026-11-10
 
 * Change the README to shorter features and plain headings
 * Add full keyboard support
+* Change the Today crown to a hat on the photo
+* Fix the length count sitting low in the message box
+* Change Ctrl+Enter to also go to the newest
+* Change the Today place to a bubble on your row
 
 ### 1.5.2: 2026-11-10
 
