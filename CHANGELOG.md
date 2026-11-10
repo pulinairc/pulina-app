@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.5.3: 2026-11-10
 
 * Change the README to shorter features and plain headings
 * Add full keyboard support
