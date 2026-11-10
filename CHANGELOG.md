@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Fix the gaps between the README features
+
 ### 1.5.0: 2026-11-10
 
 * Add endless scrolling back through the chat history
