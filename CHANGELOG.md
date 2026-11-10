@@ -8,6 +8,7 @@
 * Change bots and highlight words to read comma separated
 * Fix missing space under the last setting of each tab
 * Change the Files heading to File storage
+* Change the Settings tabs to a column on the left
 
 ### 1.1.0: 2026-11-10
 

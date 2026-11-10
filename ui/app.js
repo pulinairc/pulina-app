@@ -1020,7 +1020,7 @@ el.settingsTabs.addEventListener('click', (e) => {
   const b = e.target.closest('[data-tab]');
   if (b) {
     showSettingsTab(b.dataset.tab);
-    b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    el.settings.querySelector('.settings-body').scrollTop = 0;
   }
 });
 // About: the version and the commit it was built from, linked to that commit.

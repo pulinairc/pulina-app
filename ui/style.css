@@ -969,9 +969,22 @@ dialog:focus {
   background: var(--raised);
 }
 
+/* Tabs down the left, the chosen tab's settings scrolling on the right. */
 #settings[open] {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  width: min(620px, calc(100vw - 24px));
+  height: min(560px, calc(100vh - 80px));
+  overflow: hidden;
+}
+#settings .sheet-head {
+  grid-column: 1 / -1;
+}
+.settings-body {
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding-bottom: 20px;
 }
 
@@ -3650,22 +3663,25 @@ body.docked #status {
   font-size: 12.5px;
 }
 
-/* Settings tabs: one row, sideways scrolling where it does not fit. */
 .settings-tabs {
-  flex: none;
-  position: sticky;
-  top: 0;
-  z-index: 1;
   display: flex;
-  gap: 4px;
-  padding: 8px 18px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  background: var(--panel);
-  border-bottom: 1px solid var(--line);
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 8px 12px 12px;
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
 }
 .settings-tabs .inbox-tab {
-  flex: none;
+  text-align: left;
+}
+@media (max-width: 520px) {
+  .settings-tabs {
+    padding: 10px 6px 10px 8px;
+  }
+  .settings-tabs .inbox-tab {
+    padding: 0 8px;
+    font-size: 12.5px;
+  }
 }
 #settings section.tab-off {
   display: none;
