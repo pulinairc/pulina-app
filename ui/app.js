@@ -4847,7 +4847,13 @@ el.log.addEventListener(
   'scroll',
   () => {
     const b = state.buffers.get(state.current);
-    if (!b?.window || windowLoading) {
+    if (!b || windowLoading) {
+      return;
+    }
+    if (!b.window) {
+      if (el.log.scrollTop < WINDOW_EDGE_PX) {
+        growBack(b);
+      }
       return;
     }
     if (el.log.scrollTop < WINDOW_EDGE_PX) {
@@ -4858,6 +4864,33 @@ el.log.addEventListener(
   },
   { passive: true },
 );
+
+/**
+ * The live chat reaches back as far as the history goes, a page at a time as you near the top.
+ * Older pages are drawn only, not held: what is not held is counted as unread by the server.
+ */
+async function growBack(b) {
+  const first = view.oldest ?? b.lines.find((l) => l.id)?.id;
+  if (view.atStart || !first) {
+    return;
+  }
+  windowLoading = true;
+  const lines = await invoke('history', { net: b.net, buffer: b.name, before: first }).catch(() => null);
+  windowLoading = false;
+  if (!lines || state.current !== b.key || b.window) {
+    return;
+  }
+  if (!lines.length) {
+    view.atStart = true;
+    return;
+  }
+  view.oldest = lines[0].id;
+  // The first unread was not held, so its New line comes with the page that has it.
+  const seen = readMap[b.key];
+  const marker = b.unreadGap && !view.separator && seen !== undefined && lines[0].id <= seen ? seen : null;
+  prependLines(lines, marker);
+  updateJumps();
+}
 
 async function growWindow(b, side) {
   b.windowEnd ??= {};
@@ -4896,17 +4929,18 @@ async function growWindow(b, side) {
 }
 
 /** Older lines above the view: drawn on their own, put in front, and the scroll moved by their height. */
-function prependLines(lines) {
+function prependLines(lines, separatorAfter = null) {
   const col = el.col;
   const kept = view;
   const firstDay = col.firstElementChild?.classList.contains('day') ? col.firstElementChild : null;
   el.col = h('div');
-  view = { lastLine: null, group: null, events: null, command: null, lastByNick: new Map(), separator: null, separatorAfter: null };
+  view = { lastLine: null, group: null, events: null, command: null, lastByNick: new Map(), separator: null, separatorAfter };
   for (const l of lines) {
     appendLine(l);
   }
   const fresh = el.col;
   const lastTs = view.lastLine?.ts;
+  kept.separator ||= view.separator;
   el.col = col;
   view = kept;
   if (firstDay && lastTs && firstDay.textContent === dayLabel(lastTs)) {
@@ -5001,9 +5035,11 @@ async function loadHighlights(before) {
       inbox.lines.set(l.id, l);
     }
   }
-  if (before !== null) {
+  // The first page decides too: a short one is all there is.
+  if (before !== null || !inbox.paged) {
     inbox.older = lines.length >= FOUND_PAGE;
   }
+  inbox.paged ||= before !== null;
   renderInbox();
 }
 

@@ -1,3 +1,8 @@
+### [Unreleased]
+
+* Add endless scrolling back through the chat history
+* Fix Load older showing when all highlights are loaded
+
 ### 1.1.0: 2026-11-10
 
 * Change the connection notice and docked people list to be more compact on phones
