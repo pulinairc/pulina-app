@@ -3861,6 +3861,8 @@ body.docked #status {
 }
 .np-actions .primary-btn {
   padding: 8px 14px;
+  background: var(--accent);
+  color: var(--bg);
 }
 .np-actions .wide-btn {
   text-align: center;
