@@ -790,6 +790,10 @@ body.dropping .composer-box {
   line-height: 1.45;
   outline: none;
   resize: none;
+  /* Long links and words wrap, so the box only ever scrolls up and down. */
+  overflow-x: hidden;
+  overflow-wrap: anywhere;
+  touch-action: pan-y;
 }
 
 .box-btn {
