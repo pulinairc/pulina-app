@@ -4129,3 +4129,19 @@ body.docked #status {
   background: none;
   white-space: normal;
 }
+
+/* Phones: highlights and the unread count readable at arm's length. */
+@media (max-width: 600px) {
+  #unread-count {
+    font-size: 14px;
+  }
+  .inbox-row .av {
+    --avatar: 34px;
+  }
+  .inbox-meta {
+    font-size: 14px;
+  }
+  .inbox-text {
+    font-size: 15.5px;
+  }
+}
