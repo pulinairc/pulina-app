@@ -916,7 +916,11 @@ function select(k) {
     nicklist.picked.clear();
     const was = state.buffers.get(state.current);
     if (was) {
-      was.spot = was.window ? null : readingSpot();
+      // Untouched since it was opened there, the spot is kept as it was: measuring it again adds a
+      // pixel of rounding on each switch, and the chat would creep up.
+      const now = was.window ? null : readingSpot();
+      was.spot = now && !movedByHand && was.shown ? was.shown : now;
+      movedByHand = false;
       was.window = null;
       was.windowSeparator = null;
     }
@@ -1243,6 +1247,7 @@ function renderLog() {
     }
     // Pictures loading next must not move the chat before the first scroll event says where it is.
     stuck = atBottom();
+    lastTop = el.log.scrollTop;
     noteAnchor();
   }
   updateJumps();
@@ -1261,19 +1266,32 @@ function readingSpot() {
 }
 
 function topSpot() {
+  const rows = el.col.querySelectorAll('.text');
   const top = el.log.getBoundingClientRect().top;
-  const row = [...el.col.querySelectorAll('.text')].find((r) => r.getBoundingClientRect().bottom > top);
-  return row?.line ? { id: row.line.id, offset: row.getBoundingClientRect().top - top } : null;
+  // Rows run top to bottom, so the first one still in view is found by halving.
+  let lo = 0;
+  let hi = rows.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (rows[mid].getBoundingClientRect().bottom > top) {
+      hi = mid;
+    } else {
+      lo = mid + 1;
+    }
+  }
+  const row = rows[lo];
+  return row?.line ? { id: row.line.id, row, offset: row.getBoundingClientRect().top - top } : null;
 }
 
 function backToSpot(b) {
   const spot = b.spot;
   b.spot = null;
-  return toSpot(spot);
+  b.shown = toSpot(spot) ? spot : null;
+  return Boolean(b.shown);
 }
 
 function toSpot(spot) {
-  const row = spot && [...el.col.querySelectorAll('.text')].find((r) => r.line?.id === spot.id);
+  const row = spot?.row?.isConnected ? spot.row : spot && [...el.col.querySelectorAll('.text')].find((r) => r.line?.id === spot.id);
   if (!row) {
     return false;
   }
@@ -3641,24 +3659,22 @@ let stuck = true;
 // Away from the bottom, a picture or card loading above what you read must not push it away:
 // WebKit has no scroll anchoring of its own, so the line at the top of the view is held in place.
 let anchor = null;
+let lastTop = 0;
 
+// Found by rows, not by what is under a point: a floating pill there would hide the line.
 function noteAnchor() {
-  const box = el.log.getBoundingClientRect();
-  const node = document.elementFromPoint(box.left + box.width / 2, box.top + ANCHOR_PROBE_PX)?.closest('#col > *');
-  anchor = node ? { node, top: node.getBoundingClientRect().top - box.top } : null;
+  anchor = topSpot();
 }
 
 function holdAnchor() {
-  if (!anchor?.node.isConnected) {
-    return;
-  }
-  const moved = anchor.node.getBoundingClientRect().top - el.log.getBoundingClientRect().top - anchor.top;
-  if (Math.abs(moved) >= 1) {
-    el.log.scrollTop += moved;
-  }
+  toSpot(anchor);
 }
 
-const ANCHOR_PROBE_PX = 8;
+// Moving the chat by hand, so leaving a channel measures where it is again.
+let movedByHand = false;
+for (const kind of ['wheel', 'touchmove', 'pointerdown']) {
+  el.log.addEventListener(kind, () => (movedByHand = true), { passive: true });
+}
 const stayDown = new ResizeObserver(() => {
   if (actionPanel) {
     return;
@@ -3681,7 +3697,10 @@ stayDown.observe(el.col);
 el.log.addEventListener(
   'scroll',
   () => {
-    stuck = atBottom() || glide !== 0;
+    // Pictures and cards growing under a chat that follows the newest do not stop it following;
+    // only moving it up does.
+    stuck = atBottom() || glide !== 0 || (stuck && el.log.scrollTop >= lastTop);
+    lastTop = el.log.scrollTop;
     noteAnchor();
     cancelAnimationFrame(jumpFrame);
     jumpFrame = requestAnimationFrame(() => {
@@ -6448,6 +6467,7 @@ document.addEventListener('keydown', (e) => {
   }
   e.preventDefault();
   stopGlide();
+  movedByHand = true;
   el.log.scrollBy({ top: (e.key === 'PageUp' ? -1 : 1) * el.log.clientHeight * PAGE_PART });
 });
 

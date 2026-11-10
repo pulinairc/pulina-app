@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Fix the chat climbing on Mac channel switches
+
 ### 1.5.5: 2026-11-10
 
 * Fix the chat creeping up on channel switches
