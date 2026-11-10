@@ -4097,6 +4097,8 @@ function showTip(target, x, { fresh = false } = {}) {
       const card = personCard(target.dataset.net, target.dataset.nick, { spoke: !target.dataset.noSpoke });
       tip.style.setProperty('--tint', card.style.getPropertyValue('--tint'));
       tip.replaceChildren(card);
+    } else if (target.tipNode) {
+      tip.replaceChildren(target.tipNode.cloneNode(true));
     } else if (target.dataset.tip) {
       tip.textContent = target.dataset.tip;
     } else {
@@ -6271,10 +6273,16 @@ function todayRanking(b) {
   }
   const me = (state.me[b.net] || '').toLowerCase();
   const place = list.findIndex((x) => x.nick.toLowerCase() === me);
-  const out = [standing(list, place)];
   const usual = nicklist.today.usual;
-  if (usual !== undefined) {
-    out[0].append(h('div', 'nl-usual', keepLastTwo(usualLine(place === -1 ? 0 : list[place].words, usual))));
+  const usualText = usual === undefined ? '' : keepLastTwo(usualLine(place === -1 ? 0 : list[place].words, usual));
+  const out = [];
+  // Your own place shows when you point at your row; without one it stays on top.
+  const line = standing(list, place);
+  if (usualText) {
+    line.append(h('div', 'nl-usual', usualText));
+  }
+  if (place === -1) {
+    out.push(line);
   }
   const most = list[0].words;
   list.forEach((x, i) => {
@@ -6286,7 +6294,12 @@ function todayRanking(b) {
     fill.style.width = `${(x.words / most) * 100}%`;
     bar.append(fill);
     const name = h('span', 'nl-name', identity(x.nick).name);
-    personTip(name, b.net, x.nick);
+    if (i === place) {
+      row.dataset.tip = line.textContent;
+      row.tipNode = line;
+    } else {
+      personTip(name, b.net, x.nick);
+    }
     // The place shows over the photo on hover; the first wears a crown.
     const face = h('span', 'nl-face');
     face.append(avatar(x.nick, ''), h('span', 'nl-place', String(i + 1)));

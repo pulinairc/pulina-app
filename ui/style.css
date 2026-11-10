@@ -4122,3 +4122,10 @@ body.docked #status {
 .nl-standing {
   text-wrap: pretty;
 }
+.tip .nl-standing {
+  max-width: 220px;
+  margin: 0;
+  padding: 2px 0;
+  background: none;
+  white-space: normal;
+}
