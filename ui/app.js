@@ -5535,7 +5535,7 @@ document.addEventListener(
 // Shelf: the channel's links, pictures and videos on its own timeline, newest first.
 
 const SHELF_BOTTOM_PX = 40;
-const shelf = { tab: 'links', open: false, key: null, lines: [], older: true, loading: false };
+const shelf = { tab: 'pictures', open: false, key: null, lines: [], older: true, loading: false };
 const linkTitles = new IntersectionObserver((entries) => {
   for (const e of entries) {
     if (e.isIntersecting) {
@@ -5618,8 +5618,8 @@ function shelfItems() {
 function shelfTabs(links, pictures) {
   const bar = h('div', 'shelf-tabs');
   for (const [name, label, count] of [
-    ['links', 'Links', links],
     ['pictures', 'Pictures', pictures],
+    ['links', 'Links', links],
   ]) {
     const tab = h('button', 'shelf-tab', `${label} ${count}`);
     tab.type = 'button';

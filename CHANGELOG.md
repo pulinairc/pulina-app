@@ -4,6 +4,7 @@
 * Add hiding for server windows
 * Fix a thin middle bar in now playing
 * Fix highlights not opening at their line
+* Change the shelf to open on Pictures
 
 ### 1.5.5: 2026-11-10
 
