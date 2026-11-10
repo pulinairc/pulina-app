@@ -3752,6 +3752,14 @@ function applyStatus(st) {
     if (IS_MAC) {
       offerNotifyGuide();
     }
+    // iPhone pauses Lobby in the background, so the Allow prompt cannot wait for a first notification;
+    // the badge on the icon needs the same permission.
+    if (st.platform === 'ios' && notifyOn() && notifier) {
+      notifier
+        .isPermissionGranted()
+        .then((granted) => granted || notifier.requestPermission())
+        .catch(() => {});
+    }
   }
   state.networks = st.networks.map((n) => n.name);
   state.configPath = st.config_path;
