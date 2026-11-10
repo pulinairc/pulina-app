@@ -10,6 +10,7 @@
 * Change the Files heading to File storage
 * Change the Settings tabs to a column on the left
 * Add hiding channels from the list with an eye button
+* Add channel numbers in the list while the number key is held
 
 ### 1.1.0: 2026-11-10
 

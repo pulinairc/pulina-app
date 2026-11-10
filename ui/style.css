@@ -963,6 +963,22 @@ dialog:focus {
   height: 24px;
   font-size: 13px;
 }
+.item .chan-icon[data-num] {
+  position: relative;
+}
+.show-numbers .item .chan-icon[data-num]::after {
+  content: attr(data-num);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+  background: var(--strong);
+  color: var(--bg);
+  font-size: 13px;
+  font-weight: 700;
+}
 .item .name {
   flex: 1;
   min-width: 0;

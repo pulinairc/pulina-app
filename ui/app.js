@@ -931,6 +931,22 @@ function step(offset) {
 // Switcher
 
 let showHidden = false;
+const CHANNEL_NUMBERS = 9;
+
+// While the channel number modifier is held, the list shows each channel's number in place of its picture.
+function showNumbers(e) {
+  const fake = { key: 'x', code: 'KeyX', metaKey: e.metaKey, ctrlKey: e.ctrlKey, altKey: e.altKey, shiftKey: e.shiftKey };
+  const held = comboMods(comboOf(fake, IS_MAC));
+  document.body.classList.toggle('show-numbers', held !== '' && held === shortcuts().channelNumber);
+}
+document.addEventListener('keydown', showNumbers, true);
+// Some systems still report a modifier as held on its own release, so letting go of any one hides them.
+document.addEventListener(
+  'keyup',
+  (e) => ['Alt', 'Control', 'Meta', 'Shift'].includes(e.key) && document.body.classList.remove('show-numbers'),
+  true,
+);
+window.addEventListener('blur', () => document.body.classList.remove('show-numbers'));
 
 /** The list: channels, then hidden ones when opened or searched for. */
 function matches() {
@@ -946,6 +962,11 @@ function renderList() {
   const nodes = [];
   let net = null;
   let hiddenShown = false;
+  const numbers = new Map(
+    ordered()
+      .slice(0, CHANNEL_NUMBERS)
+      .map((b, i) => [b.key, String(i + 1)]),
+  );
   list.forEach((b, i) => {
     if (isHidden(b) && !hiddenShown) {
       hiddenShown = true;
@@ -964,7 +985,11 @@ function renderList() {
     item.classList.toggle('current', b.key === state.current);
     item.classList.toggle('mention', b.mention);
     item.classList.toggle('muted', isMuted(b) || isHidden(b));
-    item.append(icon(b, h('span', 'chan-icon')), h('span', 'name', label(b)));
+    const pic = icon(b, h('span', 'chan-icon'));
+    if (numbers.has(b.key)) {
+      pic.dataset.num = numbers.get(b.key);
+    }
+    item.append(pic, h('span', 'name', label(b)));
     if (wantsAttention(b)) {
       item.append(h('span', 'count', String(attentionCount(b))));
     }
