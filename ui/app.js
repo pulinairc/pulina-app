@@ -5322,38 +5322,33 @@ function shelfTile(l, url, kind) {
   return tile;
 }
 
+/** A link in the shelf looks like its card in the chat; who posted it and when opens that message. */
 function shelfLink(l, url) {
   const row = h('div', 'shelf-link');
-  row.tabIndex = 0;
-  let host = url;
+  const who = h('button', 'shelf-who');
+  who.type = 'button';
+  who.dataset.tip = 'Show in the chat';
+  who.append(avatar(l.nick, l.mask), h('span', 'shelf-nick', l.nick), h('span', 'shelf-time', shortWhen(l.ts)));
+  who.addEventListener('click', () => openLine(l));
+  // Every card keeps three lines, so cards filling in as they scroll into view never move the list.
+  const blank = '\u00a0';
+  let site = url;
   try {
-    host = new URL(url).hostname.replace(/^www\./, '');
+    site = new URL(url).hostname.replace(/^www\./, '');
   } catch {
     /* shown as typed */
   }
-  const badge = h('span', 'shelf-site');
-  const title = h('span', 'shelf-title', shortUrl(url));
-  const text = h('div', 'shelf-text');
-  text.append(title, h('span', 'shelf-host', host));
-  const who = h('div', 'shelf-who');
-  who.append(avatar(l.nick, l.mask), h('span', 'shelf-time', shortWhen(l.ts)));
-  row.append(badge, text, who);
-  row.dataset.tip = shelfTip(l);
+  let card = pageCard({ url, site, title: shortUrl(url), description: blank });
+  row.append(who, card);
   row.fill = async () => {
     const p = await getPreview(url);
-    if (p?.title) {
-      title.textContent = p.title;
-    }
-    if (p?.image) {
-      const img = image(p.image);
-      img.addEventListener('load', () => badge.classList.add('filled'));
-      badge.append(img);
+    if (p) {
+      const next = pageCard({ ...p, url, site: p.site || site, title: p.title || shortUrl(url), description: p.description || blank });
+      card.replaceWith(next);
+      card = next;
     }
   };
   linkTitles.observe(row);
-  const open = () => openLine(l);
-  row.addEventListener('click', open);
-  row.addEventListener('keydown', (e) => e.key === 'Enter' && open());
   return row;
 }
 

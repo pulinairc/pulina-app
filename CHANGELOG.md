@@ -11,6 +11,7 @@
 * Add uploads to S3, R2, SFTP, catbox and lobby-server
 * Add tabs to Settings
 * Fix the jump to the first unread with thousands unread
+* Change shelf links to look like their cards in the chat
 
 ### 1.0.2: 2026-11-10
 
