@@ -1257,6 +1257,10 @@ function readingSpot() {
   if (atBottom() || glide) {
     return null;
   }
+  return topSpot();
+}
+
+function topSpot() {
   const top = el.log.getBoundingClientRect().top;
   const row = [...el.col.querySelectorAll('.text')].find((r) => r.getBoundingClientRect().bottom > top);
   return row?.line ? { id: row.line.id, offset: row.getBoundingClientRect().top - top } : null;
@@ -1265,11 +1269,15 @@ function readingSpot() {
 function backToSpot(b) {
   const spot = b.spot;
   b.spot = null;
+  return toSpot(spot);
+}
+
+function toSpot(spot) {
   const row = spot && [...el.col.querySelectorAll('.text')].find((r) => r.line?.id === spot.id);
   if (!row) {
     return false;
   }
-  el.log.scrollTop += row.getBoundingClientRect().top - el.log.getBoundingClientRect().top - spot.offset;
+  el.log.scrollTop += Math.round(row.getBoundingClientRect().top - el.log.getBoundingClientRect().top - spot.offset);
   return true;
 }
 
@@ -6208,7 +6216,15 @@ async function addRecap(b) {
   if (!list?.length || state.current !== b.key || !line.isConnected || line.nextElementSibling?.classList.contains('recap')) {
     return;
   }
+  // The card goes in above what is being read; WebKit does not hold the view in place on its own.
+  const bottom = atBottom();
+  const spot = bottom ? null : topSpot();
   line.after(recapCard(b, list));
+  if (bottom) {
+    toBottom();
+  } else {
+    toSpot(spot);
+  }
 }
 
 function recapCard(b, list) {

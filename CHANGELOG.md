@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Fix the chat creeping up on channel switches
+
 ### 1.5.4: 2026-11-10
 
 * Fix the message box scrolling sideways
