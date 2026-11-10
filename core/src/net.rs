@@ -419,9 +419,13 @@ impl Session {
         let from = msg.nick();
         let notice = msg.command == "NOTICE";
 
+        let ctcp;
         let (kind, text) = match irc::action(raw) {
             Some(text) => ("action", text),
-            None if irc::is_ctcp(raw) => return vec![],
+            None if irc::is_ctcp(raw) => {
+                ctcp = ctcp_line(raw, notice, from, irc::is_channel(target));
+                (ctcp.0, ctcp.1.as_str())
+            }
             None if notice => ("notice", raw),
             None => ("msg", raw),
         };
@@ -438,6 +442,50 @@ impl Session {
 
         vec![Out::Line(self.line(buffer, kind, msg, text, now))]
     }
+}
+
+/// A CTCP request, reply or DCC offer said in words. irssi answers requests and takes DCC itself,
+/// so these only tell what happened.
+fn ctcp_line(raw: &str, reply: bool, from: &str, to_channel: bool) -> (&'static str, String) {
+    let inner = raw.trim_matches('\u{1}');
+    let (command, rest) = inner.split_once(' ').unwrap_or((inner, ""));
+    let command = command.to_ascii_uppercase();
+    if reply {
+        let rest = if rest.is_empty() { String::new() } else { format!(": {rest}") };
+        return ("ctcp", format!("answered {command}{rest}"));
+    }
+    if command != "DCC" {
+        let whose = if to_channel { "the channel for" } else { "for your" };
+        return ("ctcp", format!("asked {whose} {command}"));
+    }
+    let (kind, args) = rest.split_once(' ').unwrap_or((rest, ""));
+    let text = match kind.to_ascii_uppercase().as_str() {
+        "SEND" => {
+            let (name, tail) = match args.strip_prefix('"') {
+                Some(quoted) => quoted.split_once('"').unwrap_or((quoted, "")),
+                None => args.split_once(' ').unwrap_or((args, "")),
+            };
+            let size = tail.split_whitespace().nth(2).and_then(|n| n.parse::<u64>().ok());
+            let size = size.map(|n| format!(" ({})", file_size(n))).unwrap_or_default();
+            format!("offers a file: {name}{size}. Take it in irssi with /dcc get {from}")
+        }
+        "CHAT" => format!("asks for a DCC chat. Answer it in irssi with /dcc chat {from}"),
+        other => format!("sent a DCC {other}"),
+    };
+    ("dcc", text)
+}
+
+/// 2621440 as "2,5 MB".
+fn file_size(bytes: u64) -> String {
+    const UNITS: [&str; 4] = ["B", "KB", "MB", "GB"];
+    let mut size = bytes as f64;
+    let mut unit = 0;
+    while size >= 1024.0 && unit < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit += 1;
+    }
+    let shown = if unit == 0 { format!("{size}") } else { format!("{size:.1}").trim_end_matches(".0").replace('.', ",") };
+    format!("{shown} {}", UNITS[unit])
 }
 
 #[cfg(test)]
@@ -490,8 +538,6 @@ mod tests {
         let out = feed(&mut s, ":mikko!m@h PRIVMSG #a :\u{1}ACTION waves\u{1}");
         assert_eq!(lines(&out), vec![("#a".into(), "action".into(), "mikko".into())]);
 
-        let out = feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}VERSION\u{1}");
-        assert!(out.is_empty());
 
         let out = feed(&mut s, ":irc.example NOTICE * :Looking up your hostname");
         assert_eq!(lines(&out), vec![("".into(), "notice".into(), "irc.example".into())]);
@@ -575,6 +621,26 @@ mod tests {
         assert_eq!((w.channels.as_str(), w.idle_secs, w.found), ("@#rust #tea", Some(300), true));
         assert!(feed(&mut s, ":srv 301 me kaisla :away from a message").iter().all(|o| matches!(o, Out::Line(_))));
     }
+    #[test]
+    fn shows_ctcp_and_dcc() {
+        let mut s = Session::new("Net", "rolle");
+        let text = |outs: Vec<Out>| match &outs[..] {
+            [Out::Line(l)] => (l.buffer.clone(), l.kind.clone(), l.text.clone()),
+            _ => panic!("expected one line"),
+        };
+        assert_eq!(text(feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}VERSION\u{1}")), ("mikko".into(), "ctcp".into(), "asked for your VERSION".into()));
+        assert_eq!(
+            text(feed(&mut s, ":mikko!m@h NOTICE rolle :\u{1}VERSION irssi 1.4.5\u{1}")),
+            ("".into(), "ctcp".into(), "answered VERSION: irssi 1.4.5".into())
+        );
+        assert_eq!(
+            text(feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}DCC SEND \"loma kuva.jpg\" 3232235777 5000 2621440\u{1}")),
+            ("mikko".into(), "dcc".into(), "offers a file: loma kuva.jpg (2,5 MB). Take it in irssi with /dcc get mikko".into())
+        );
+        assert_eq!(text(feed(&mut s, ":mikko!m@h PRIVMSG rolle :\u{1}DCC CHAT chat 3232235777 5001\u{1}")).2, "asks for a DCC chat. Answer it in irssi with /dcc chat mikko");
+        assert_eq!(text(feed(&mut s, ":mikko!m@h PRIVMSG #a :\u{1}PING 123\u{1}")), ("#a".into(), "ctcp".into(), "asked the channel for PING".into()));
+    }
+
     /// Servers split a long channel list over several 319 lines.
     #[test]
     fn keeps_every_whois_channel_line() {

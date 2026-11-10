@@ -2507,7 +2507,8 @@ document.addEventListener(
 );
 
 function note(l) {
-  const text = l.kind === 'topic' ? `${l.nick} changed the topic to “${l.text}”` : l.text;
+  const said = { topic: `${l.nick} changed the topic to “${l.text}”`, ctcp: `${l.nick} ${l.text}`, dcc: `${l.nick} ${l.text}` };
+  const text = said[l.kind] ?? l.text;
   const n = h('div', 'events', text);
   n.dataset.tip = clock(l.ts);
   return n;
