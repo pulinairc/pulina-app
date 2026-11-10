@@ -6071,10 +6071,11 @@ function dayStart(daysBack = 0) {
 }
 
 /** Words per person between two times, without the bots from Settings. */
+/** Words per person between two times, without the bots from Settings; null if not counted. */
 async function talkers(b, since, until) {
   const bots = botNicks(state.settings[BOTS_SETTING]);
-  const list = await invoke('talkers', { net: b.net, buffer: b.name, since, until }).catch(() => []);
-  return list.filter((t) => !bots.has(t.nick.toLowerCase()));
+  const list = await invoke('talkers', { net: b.net, buffer: b.name, since, until }).catch(() => null);
+  return list?.filter((t) => !bots.has(t.nick.toLowerCase())) ?? null;
 }
 
 async function addRecap(b) {
@@ -6091,7 +6092,7 @@ async function addRecap(b) {
     recaps.set(cached, await talkers(b, dayStart(1), today));
   }
   const list = recaps.get(cached);
-  if (!list.length || state.current !== b.key || !line.isConnected || line.nextElementSibling?.classList.contains('recap')) {
+  if (!list?.length || state.current !== b.key || !line.isConnected || line.nextElementSibling?.classList.contains('recap')) {
     return;
   }
   line.after(recapCard(b, list));
@@ -6173,9 +6174,13 @@ function todayRanking(b) {
   if (!t || t.key !== b.key || Date.now() - t.at > TODAY_FRESH_MS) {
     refreshToday(b);
   }
-  const list = t?.key === b.key ? t.list : null;
+  if (t?.key !== b.key) {
+    return [h('div', 'nl-empty', 'Counting…')];
+  }
+  const list = t.list;
+  // An older lobby-server does not count words; it never answers the request.
   if (!list) {
-    return [];
+    return [h('div', 'nl-empty', 'Your lobby-server needs an update to count this.')];
   }
   if (!list.length) {
     return [h('div', 'nl-empty', 'Nobody has said anything here today.')];
@@ -6248,7 +6253,7 @@ async function usualWords(b) {
   const sinceMidnight = Date.now() - dayStart();
   const back = Array.from({ length: USUAL_DAYS }, (_, i) => i + 1);
   const days = await Promise.all(back.map((d) => talkers(b, dayStart(d), dayStart(d) + sinceMidnight)));
-  const talked = days.filter((list) => list.length);
+  const talked = days.filter((list) => list?.length);
   const mine = talked.map((list) => list.find((t) => t.nick.toLowerCase() === me)?.words || 0);
   const value = talked.length >= USUAL_MIN_DAYS ? mine.reduce((n, w) => n + w, 0) / talked.length : undefined;
   usuals.set(b.key, { at: Date.now(), value });
