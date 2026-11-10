@@ -289,13 +289,14 @@ function refreshForPhotos() {
 
 /** Redraw the chat without moving what the reader is looking at. */
 function redrawKeepingScroll() {
-  const fromBottom = el.log.scrollHeight - el.log.scrollTop;
   const pinned = atBottom();
+  const spot = pinned ? null : topSpot();
   renderLog();
   if (pinned) {
     toBottom();
-  } else {
-    el.log.scrollTop = el.log.scrollHeight - fromBottom;
+  } else if (toSpot(spot)) {
+    stuck = false;
+    noteAnchor();
   }
 }
 
@@ -487,7 +488,13 @@ async function loadHistory(b) {
   if (state.current !== b.key) {
     renderHeader();
   } else if (fresh.length || dropped) {
+    // Lines from the server must not move a reader who has jumped up, to a highlight say.
+    const spot = atBottom() ? null : topSpot();
     renderLog();
+    if (toSpot(spot)) {
+      stuck = false;
+      noteAnchor();
+    }
   } else {
     updateJumps();
   }
@@ -2623,16 +2630,13 @@ function place(card, rowNode) {
   if (!rowNode.isConnected) {
     return;
   }
-  const pinned = following();
+  // The chat's resize watcher keeps the newest message in view while the card and its picture load;
+  // a pull to the bottom decided here would undo a jump made in between, such as to a highlight.
   if (rowNode.dataset.onlyLink === 'true') {
     rowNode.replaceWith(card);
   } else {
     rowNode.after(card);
   }
-  const keep = () => pinned && toBottom();
-  card.querySelector('img')?.addEventListener('load', keep);
-  card.querySelector('video')?.addEventListener('loadedmetadata', keep);
-  keep();
 }
 
 // Videos only play while they are on screen.
@@ -3663,10 +3667,18 @@ let lastTop = 0;
 // Found by rows, not by what is under a point: a floating pill there would hide the line.
 function noteAnchor() {
   anchor = topSpot();
+  if (anchor) {
+    anchor.at = el.log.scrollTop;
+  }
 }
 
 function holdAnchor() {
+  // Moved since it was noted (a jump to a highlight, a page key) and no scroll event yet: that place is the new one.
+  if (anchor?.at !== el.log.scrollTop) {
+    return noteAnchor();
+  }
   toSpot(anchor);
+  anchor.at = el.log.scrollTop;
 }
 
 // Moving the chat by hand, so leaving a channel measures where it is again.
@@ -5073,6 +5085,7 @@ function centerLine(id) {
     }
     stuck = false;
     row.scrollIntoView({ block: 'center' });
+    noteAnchor();
     setTimeout(() => {
       row.classList.add('flash');
       setTimeout(() => row.classList.remove('flash'), FLASH_MS);
@@ -5725,7 +5738,9 @@ function openNotified(id) {
       if (!row) {
         return;
       }
+      stuck = false;
       row.scrollIntoView({ block: 'center' });
+      noteAnchor();
       row.classList.add('flash');
       setTimeout(() => row.classList.remove('flash'), FLASH_MS);
     }),
