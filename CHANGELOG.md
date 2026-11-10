@@ -7,6 +7,7 @@
 * Fix "N more" in an earlier view to count to the newest
 * Change bots and highlight words to read comma separated
 * Fix missing space under the last setting of each tab
+* Change the Files heading to File storage
 
 ### 1.1.0: 2026-11-10
 

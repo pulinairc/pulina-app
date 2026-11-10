@@ -193,7 +193,7 @@ Every shortcut can be changed under Settings, Keyboard shortcuts.
 
 **Emoji.** `:D`, `:)`, `<3` and friends turn into emoji as you type. A colon at the start of a word opens the emoji picker, and `:joy` or a Finnish word like `:nauru` lists matching emoji, most used first. Both can be turned off in Settings.
 
-**Attachments.** Paste an image into the message box, drop files on the window, or use the paperclip. The file is uploaded and its address is put into your message, so everyone on IRC can open it. Settings, Files picks where files go:
+**Attachments.** Paste an image into the message box, drop files on the window, or use the paperclip. The file is uploaded and its address is put into your message, so everyone on IRC can open it. Settings, Files, File storage picks where files go:
 
 | Choice | Where the file goes | Setup |
 |--------|---------------------|-------|
