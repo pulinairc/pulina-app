@@ -851,3 +851,36 @@ export function inboxSplit(lines, upTo, done) {
   const archived = sorted.filter((l) => l.id <= upTo || done.has(l.id));
   return { fresh, archived };
 }
+
+/** Lowercase, with ä and ö read as a and o, so a quick filter needs no special letters. */
+function plain(text) {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Mn}/gu, '');
+}
+
+/** Whether `needle`'s letters appear in `hay` in order, like "mstk" in "mustikkasoppa". */
+function inOrder(needle, hay) {
+  let at = 0;
+  for (const c of needle) {
+    at = hay.indexOf(c, at) + 1;
+    if (!at) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * A loose filter over a line: every word of the query must be in the nick, channel, network or
+ * text, or spell out the nick or channel with letters left out. Text needs whole pieces, as
+ * letters scattered over a long message would match nearly anything.
+ */
+export function looseMatch(line, query) {
+  const words = plain(query).split(/\s+/).filter(Boolean);
+  const nick = plain(line.nick || '');
+  const buffer = plain(line.buffer || '');
+  const all = `${nick} ${buffer} ${plain(line.net || '')} ${plain(line.text || '')}`;
+  return words.every((w) => all.includes(w) || inOrder(w, nick) || inOrder(w.replace(/^#/, ''), buffer));
+}

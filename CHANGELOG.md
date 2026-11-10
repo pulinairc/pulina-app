@@ -3,6 +3,7 @@
 * Add endless scrolling back through the chat history
 * Fix Load older showing when all highlights are loaded
 * Fix uploads hanging when lobby-server has no place for files
+* Add a filter to the highlights inbox
 
 ### 1.1.0: 2026-11-10
 

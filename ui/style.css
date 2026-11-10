@@ -3234,6 +3234,25 @@ body.docked #status {
   color: var(--mention);
   font-size: 12.5px;
 }
+.inbox-filter {
+  flex: none;
+  margin: 0 12px 8px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--strong);
+  font: inherit;
+  font-size: 13.5px;
+  outline: none;
+}
+.inbox-filter:focus {
+  border-color: var(--line-strong);
+}
+.inbox-filter::placeholder {
+  color: var(--faint);
+}
 .inbox-list {
   overflow-y: auto;
   overscroll-behavior: contain;

@@ -27,6 +27,7 @@ import {
   nickColor,
   dayLabel,
   mentions,
+  looseMatch,
   wordList,
   shortUrl,
   nickHue,
@@ -462,4 +463,14 @@ test('the inbox keeps what is not done and newer than the line read up to', () =
     archived.map((l) => l.id),
     [7, 3],
   );
+});
+
+test('filters highlights loosely by nick, channel and words', () => {
+  const l = { nick: 'mustikkasoppa', buffer: '#pulina', net: 'QuakeNet', text: 'rolle: oli halunnu yön olevan viilee' };
+  for (const q of ['', 'mustikka', 'pulina', '#pul', 'quakenet', 'viilee', 'yon', 'mstk', 'pulina viilee', 'Mustikka #PULINA']) {
+    assert.equal(looseMatch(l, q), true, q);
+  }
+  for (const q of ['kummitus', '#antisocial', 'pulina kummitus', 'xyz']) {
+    assert.equal(looseMatch(l, q), false, q);
+  }
 });

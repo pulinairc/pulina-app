@@ -31,6 +31,7 @@ import {
   botNicks,
   wordList,
   nickMatches,
+  looseMatch,
   nickQuery,
   isCommand,
   splitNicks,
@@ -105,6 +106,7 @@ const el = {
   inboxPill: $('inbox-pill'),
   inbox: $('inbox'),
   inboxList: $('inbox-list'),
+  inboxFilter: $('inbox-filter'),
   inboxFreshTab: $('inbox-fresh-tab'),
   inboxArchiveTab: $('inbox-archive-tab'),
   inboxAll: $('inbox-all'),
@@ -5057,14 +5059,16 @@ function renderInbox() {
   if (el.inbox.hidden) {
     return;
   }
-  const list = inbox.archive ? archived : fresh;
+  const query = el.inboxFilter.value;
+  const list = (inbox.archive ? archived : fresh).filter((l) => looseMatch(l, query));
   el.inboxFreshTab.textContent = fresh.length ? `For you · ${fresh.length}` : 'For you';
   el.inboxFreshTab.setAttribute('aria-selected', String(!inbox.archive));
   el.inboxArchiveTab.setAttribute('aria-selected', String(inbox.archive));
   el.inboxAll.hidden = inbox.archive || fresh.length === 0;
   el.inboxList.replaceChildren(...list.map((l) => inboxRow(l, !inbox.archive)));
   if (!list.length) {
-    el.inboxList.append(h('div', 'inbox-empty', inbox.archive ? 'Nothing here yet.' : 'All caught up.'));
+    const empty = query.trim() ? 'Nothing matches.' : inbox.archive ? 'Nothing here yet.' : 'All caught up.';
+    el.inboxList.append(h('div', 'inbox-empty', empty));
   }
   el.inboxFoot.hidden = !inbox.archive || !inbox.older;
   el.inboxFoot.textContent = 'Load older';
@@ -5162,8 +5166,11 @@ function openInbox() {
 
 function closeInbox() {
   el.inbox.hidden = true;
+  el.inboxFilter.value = '';
   document.body.classList.remove('inbox-open');
 }
+
+el.inboxFilter.addEventListener('input', renderInbox);
 
 el.inboxPill.addEventListener('click', (e) => {
   e.stopPropagation();
@@ -5188,10 +5195,17 @@ el.inbox.querySelector('.inbox-dim').addEventListener('click', closeInbox);
 document.addEventListener(
   'keydown',
   (e) => {
-    if (e.key === 'Escape' && !el.inbox.hidden) {
-      e.stopPropagation();
-      closeInbox();
+    if (e.key !== 'Escape' || el.inbox.hidden) {
+      return;
     }
+    e.stopPropagation();
+    // Escape clears a filter first, then closes.
+    if (el.inboxFilter.value) {
+      el.inboxFilter.value = '';
+      renderInbox();
+      return;
+    }
+    closeInbox();
   },
   true,
 );
