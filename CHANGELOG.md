@@ -3,6 +3,7 @@
 * Add a count of what is left of the IRC line while typing
 * Fix a lone last word in the Today lines
 * Fix the now playing bars not showing after a start
+* Change the README features to headings with a few sentences each
 
 ### 1.5.1: 2026-11-10
 
