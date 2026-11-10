@@ -122,7 +122,16 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <section>
+    <div id="settings-tabs" class="settings-tabs" role="tablist" aria-label="Settings">
+      <button class="inbox-tab" type="button" role="tab" data-tab="general">General</button>
+      <button class="inbox-tab" type="button" role="tab" data-tab="notifications">Notifications</button>
+      <button class="inbox-tab" type="button" role="tab" data-tab="chat">Chat</button>
+      <button class="inbox-tab" type="button" role="tab" data-tab="files">Files</button>
+      <button class="inbox-tab" type="button" role="tab" data-tab="people">People</button>
+      <button class="inbox-tab" type="button" role="tab" data-tab="connections">Connections</button>
+      <button class="inbox-tab" type="button" role="tab" data-tab="about">About</button>
+    </div>
+    <section data-tab="notifications">
       <h3>Notifications</h3>
       <label class="switch-row" for="notify-toggle">
         <span>Mentions and private messages</span>
@@ -133,7 +142,7 @@
       <button id="notify-test" class="link-btn" type="button">Send a test notification</button>
       <p id="notify-result" class="notify-result" role="status" hidden></p>
     </section>
-    <section>
+    <section data-tab="general">
       <h3><label for="text-size">Text size</label></h3>
       <div class="size-row">
         <input id="text-size" type="range" min="70" max="200" step="1">
@@ -142,16 +151,16 @@
       </div>
       <button id="text-size-reset" class="link-btn" type="button">Reset</button>
     </section>
-    <section id="icon-section">
+    <section id="icon-section" data-tab="general">
       <h3>App icon</h3>
       <div id="icon-choices" class="icon-choices" role="radiogroup" aria-label="App icon"></div>
     </section>
-    <section id="shortcut-section">
+    <section id="shortcut-section" data-tab="general">
       <h3>Keyboard shortcuts</h3>
       <div id="shortcut-list" class="shortcut-list"></div>
       <button id="shortcut-reset" class="link-btn" type="button">Reset to defaults</button>
     </section>
-    <section>
+    <section data-tab="chat">
       <h3>Emoji</h3>
       <label class="switch-row" for="emoticon-toggle">
         <span>Turn text smileys into real emoji</span>
@@ -162,32 +171,69 @@
         <input id="shortcode-toggle" class="switch" type="checkbox" role="switch">
       </label>
     </section>
-    <section>
+    <section data-tab="notifications">
       <h3><label for="highlight-field">Highlight words</label></h3>
       <input id="highlight-field" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="nickname, nicknamelle">
       <p class="hint">Besides your nick, these words highlight a message and put it in Highlights. Only whole words count, so a word inside a longer one does not.</p>
     </section>
-    <section>
+    <section data-tab="chat">
       <h3><label for="bots-field">Bots</label></h3>
       <input id="bots-field" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="seenbot, infobot">
       <p class="hint">What these nicks say right after a command like <span class="mono">!seen</span> is shown inside it, as its answer.</p>
     </section>
-    <section>
-      <h3><label for="upload-url">Attachments</label></h3>
-      <input id="upload-url" class="field" type="url" autocomplete="off" spellcheck="false" placeholder="https://files.example.org/upload.php?k=key">
-      <p class="hint">The file host your files go to. Any host that takes a POST and answers with the file's address works, the README shows how to run one.</p>
+    <section data-tab="files">
+      <h3>Where files go</h3>
+      <div id="upload-via" class="choices" role="radiogroup" aria-label="Where files go">
+        <label class="choice"><input type="radio" name="upload-via" value="auto"><span>Automatic<small>Your lobby-server first, then your own file host, then catbox.moe</small></span></label>
+        <label class="choice"><input type="radio" name="upload-via" value="server"><span>Your lobby-server<small>It puts files where its config says. Keys stay on the server</small></span></label>
+        <label class="choice"><input type="radio" name="upload-via" value="filehost"><span>Your own file host<small>Like the upload.php in the README, soju or Halloy hosts</small></span></label>
+        <label class="choice"><input type="radio" name="upload-via" value="s3"><span>S3 storage<small>Cloudflare R2 or any S3 bucket</small></span></label>
+        <label class="choice"><input type="radio" name="upload-via" value="sftp"><span>Your server over SFTP<small>A folder your web server serves</small></span></label>
+        <label class="choice"><input type="radio" name="upload-via" value="catbox"><span>catbox.moe<small>Free, no setup. Files are public and kept until unseen for 2 years</small></span></label>
+      </div>
+      <div class="upload-fields" data-via="auto filehost">
+        <label class="field-label" for="upload-url">File host address</label>
+        <input id="upload-url" class="field" type="url" autocomplete="off" spellcheck="false" placeholder="https://files.example.org/upload.php?k=key">
+      </div>
+      <div class="upload-fields" data-via="s3">
+        <label class="field-label" for="s3-endpoint">S3 address</label>
+        <input id="s3-endpoint" class="field" type="url" autocomplete="off" spellcheck="false" placeholder="https://ACCOUNT.r2.cloudflarestorage.com" data-s3="endpoint">
+        <label class="field-label" for="s3-bucket">Bucket</label>
+        <input id="s3-bucket" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="files" data-s3="bucket">
+        <label class="field-label" for="s3-region">Region</label>
+        <input id="s3-region" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="auto" data-s3="region">
+        <label class="field-label" for="s3-key">Access key ID</label>
+        <input id="s3-key" class="field" type="text" autocomplete="off" spellcheck="false" data-s3="access_key">
+        <label class="field-label" for="s3-secret">Secret access key</label>
+        <input id="s3-secret" class="field" type="password" autocomplete="off" spellcheck="false" data-s3="secret_key">
+        <label class="field-label" for="s3-public">Public address of the bucket</label>
+        <input id="s3-public" class="field" type="url" autocomplete="off" spellcheck="false" placeholder="https://files.example.org" data-s3="public_url">
+      </div>
+      <div class="upload-fields" data-via="sftp">
+        <label class="field-label" for="sftp-server">Server</label>
+        <input id="sftp-server" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="you@example.org" data-sftp="server">
+        <label class="field-label" for="sftp-password">Password, if no key is set up</label>
+        <input id="sftp-password" class="field" type="password" autocomplete="off" spellcheck="false" data-sftp="password">
+        <label class="field-label" for="sftp-dir">Folder</label>
+        <input id="sftp-dir" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="/var/www/files" data-sftp="dir">
+        <label class="field-label" for="sftp-public">Web address of that folder</label>
+        <input id="sftp-public" class="field" type="url" autocomplete="off" spellcheck="false" placeholder="https://files.example.org" data-sftp="public_url">
+        <p class="hint">Lobby signs in with your SSH keys or its own key. To use its own, add this line to <span class="mono">~/.ssh/authorized_keys</span> on the server:</p>
+        <div class="key-box"><code id="sftp-key"></code><button id="sftp-copy" class="link-btn" type="button">Copy</button></div>
+      </div>
+      <p class="hint">Keys and passwords are saved with your other settings, on your lobby-server when you use one. Only pictures, PDFs and text files go to your own bucket or folder.</p>
     </section>
-    <section>
+    <section data-tab="people">
       <h3>People</h3>
       <button id="open-people" class="wide-btn" type="button">People and photos</button>
     </section>
-    <section>
+    <section data-tab="connections">
       <h3>Connections</h3>
       <div id="connections"></div>
       <button id="open-connection" class="wide-btn" type="button">Set up the connection</button>
       <p class="hint">Saved in <span id="config-path" class="mono"></span></p>
     </section>
-    <section id="about-section">
+    <section id="about-section" data-tab="about">
       <h3>About</h3>
       <p class="about"><a id="about-version" href="https://github.com/rollecode/lobby">Lobby</a></p>
       <p class="hint">Made by <a href="https://github.com/rollecode">Rolle Roni Mikael Laukkarinen</a>, <a href="https://github.com/rollecode/lobby/blob/main/LICENSE">MIT licence</a>.</p>

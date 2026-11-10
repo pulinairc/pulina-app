@@ -5,6 +5,7 @@ pub mod irc;
 pub mod net;
 pub mod protocol;
 pub mod store;
+pub mod upload;
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;

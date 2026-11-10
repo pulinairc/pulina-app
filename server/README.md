@@ -91,6 +91,37 @@ If irssiproxy listens on a host name instead of `127.0.0.1` (its `irssiproxy_bin
 | `token` or `token_file` | The secret apps must send. Defaults to `~/.config/lobby-server/token` |
 | `allow_insecure` | Allow listening on a public address without TLS. Leave it off |
 | `[[network]]` | `name`, `host`, `port`, and `password` or `password_file` |
+| `[upload]` | Where attachments sent through lobby-server go, see next |
+
+### Attachments
+
+With an `[upload]` section, Lobby can send files through lobby-server (Settings, Files, Your lobby-server, or Automatic). The keys stay in this file and never reach the apps. Restart lobby-server after changing it.
+
+A Cloudflare R2 bucket, or any S3 storage:
+
+```toml
+[upload]
+kind = "s3"
+endpoint = "https://ACCOUNT_ID.r2.cloudflarestorage.com"
+region = "auto"
+bucket = "files"
+access_key = "..."
+secret_key = "..."
+public_url = "https://files.example.org"
+```
+
+For R2, make an API token with Object Read & Write on that bucket, and connect a custom domain to the bucket for `public_url`. The `r2.dev` address is rate limited and meant for testing.
+
+Or a folder on this machine that your web server serves:
+
+```toml
+[upload]
+kind = "folder"
+dir = "/var/www/files"
+public_url = "https://files.example.org"
+```
+
+Only pictures, PDFs and plain text are kept, each in a folder with a random name. Files can be up to 20 MB.
 
 ## 5. Start it
 

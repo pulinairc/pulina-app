@@ -51,6 +51,10 @@ impl Remote {
 
     /// Send a request built around a fresh id and wait for its reply.
     pub async fn request(&self, build: impl FnOnce(u64) -> ClientMsg) -> Result<Value, String> {
+        self.request_within(REQUEST_TIMEOUT, build).await
+    }
+
+    pub async fn request_within(&self, wait: Duration, build: impl FnOnce(u64) -> ClientMsg) -> Result<Value, String> {
         let id = self.next_id.fetch_add(1, Ordering::Relaxed);
         let json = serde_json::to_string(&build(id)).map_err(|e| e.to_string())?;
         let (tx, rx) = oneshot::channel();
@@ -61,7 +65,7 @@ impl Remote {
             lock(&self.pending).remove(&id);
             return Err(UNREACHABLE.into());
         }
-        match tokio::time::timeout(REQUEST_TIMEOUT, rx).await {
+        match tokio::time::timeout(wait, rx).await {
             Ok(Ok(result)) => result,
             _ => {
                 lock(&self.pending).remove(&id);

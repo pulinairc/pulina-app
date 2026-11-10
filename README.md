@@ -193,7 +193,18 @@ Every shortcut can be changed under Settings, Keyboard shortcuts.
 
 **Emoji.** `:D`, `:)`, `<3` and friends turn into emoji as you type. A colon at the start of a word opens the emoji picker, and `:joy` or a Finnish word like `:nauru` lists matching emoji, most used first. Both can be turned off in Settings.
 
-**Attachments.** Paste an image into the message box, drop files on the window, or use the paperclip. The file goes to your file host and its address is put into your message, so everyone on IRC can open it. Set the host's address under Settings, File host for attachments.
+**Attachments.** Paste an image into the message box, drop files on the window, or use the paperclip. The file is uploaded and its address is put into your message, so everyone on IRC can open it. Settings, Files picks where files go:
+
+| Choice | Where the file goes | Setup |
+|--------|---------------------|-------|
+| Automatic | Your lobby-server, then your own file host, then catbox.moe, whichever works first | None |
+| Your lobby-server | Where lobby-server's config says: an S3 bucket or a folder its web server serves | `[upload]` in lobby-server's config, see the [server README](server/README.md). The keys stay on the server |
+| Your own file host | A host that takes the file as a POST, like `upload.php` below, soju or Halloy hosts | Its address |
+| S3 storage | Your Cloudflare R2 or other S3 bucket, straight from the app | S3 address, bucket, key and the bucket's public address |
+| Your server over SFTP | A folder on your server that a web server serves | `you@host`, folder, its web address, and your SSH key, Lobby's own key or a password |
+| catbox.moe | [catbox.moe](https://catbox.moe), free | None. Files are public and kept until unseen for 2 years |
+
+A bucket, folder or SFTP server of your own only gets pictures, PDFs and plain text, so nothing a browser would run is served from your domain. Each file goes in a folder of its own with a random name. Settings are saved on your lobby-server when you use one, so every device uses the same choice. Files can be up to 20 MB.
 
 <details>
 <summary><strong>Running a file host for attachments</strong></summary>
@@ -282,6 +293,8 @@ server {"type":"reply","id":1,"data":[...],"error":null}
 app    {"type":"send","id":2,"net":"IRCnet","buffer":"#rust","text":"moi"}
 app    {"type":"save_person","id":3,"person":{"id":0,"name":"Kaisla","nicks":["kaisla"],...}}
 app    {"type":"set_setting","id":4,"key":"read","value":"{...}"}
+app    {"type":"upload","id":5,"name":"photo.png","mime":"image/png","data":"<base64>"}
+server {"type":"reply","id":5,"data":"https://files.example.org/3f2a.../photo.png","error":null}
 ```
 
 </details>

@@ -16,3 +16,6 @@ tokio-tungstenite = "0.30.0"
 futures-util = "0.3.34"
 toml = "1.2.1"
 dirs = "7.0.0"
+reqwest = { version = "0.13.5", features = ["gzip", "multipart"] }
+getrandom = "0.4.3"
+base64 = "0.23.1"

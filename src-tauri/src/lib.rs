@@ -4,6 +4,7 @@ mod embed;
 mod macos;
 mod preview;
 mod remote;
+mod sftp;
 mod tunnel;
 
 use lobby_core::hub::{Event, Hub, Snapshot};
@@ -186,49 +187,63 @@ async fn set_setting(state: State<'_, AppState>, key: String, value: String) -> 
     }
 }
 
-const UPLOAD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
+/// lobby-server gets longer than other requests, as it passes the file on before answering.
+const SERVER_UPLOAD_WAIT: std::time::Duration = std::time::Duration::from_secs(150);
 
-/// Send a file to the file host set in Settings and return its address. The file comes as
-/// raw bytes; the host address, the file name (URI-encoded) and its type come as the
-/// `x-host`, `x-name` and `x-type` headers.
+/// Send a file where `x-target` says (JSON with a `kind`) and return its address. The file comes
+/// as raw bytes; its name (URI-encoded) and type come as the `x-name` and `x-type` headers.
 #[tauri::command]
-async fn upload(request: tauri::ipc::Request<'_>) -> Result<String, String> {
+async fn upload(state: State<'_, AppState>, request: tauri::ipc::Request<'_>) -> Result<String, String> {
+    use base64::Engine;
     let tauri::ipc::InvokeBody::Raw(bytes) = request.body() else {
         return Err("Expected the file's bytes".into());
     };
     let header = |name: &str| request.headers().get(name).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
-    let url = header("x-host");
-    if !url.starts_with("https://") && !url.starts_with("http://") {
-        return Err("Set a file host address in Settings first".into());
-    }
     let name = header("x-name");
+    let name = percent_decode(&name);
     let mime = header("x-type");
+    let target: serde_json::Value = serde_json::from_str(&header("x-target")).map_err(|e| e.to_string())?;
+    let file = lobby_core::upload::File { name, mime, bytes: bytes.clone() };
 
-    let res = reqwest::Client::builder()
-        .timeout(UPLOAD_TIMEOUT)
-        .build()
-        .map_err(|e| e.to_string())?
-        .post(url)
-        .header(reqwest::header::CONTENT_TYPE, if mime.is_empty() { "application/octet-stream" } else { &mime })
-        .header(reqwest::header::CONTENT_DISPOSITION, format!("attachment; filename*=UTF-8''{name}"))
-        .body(bytes.clone())
-        .send()
-        .await
-        .map_err(|e| format!("Upload failed: {e}"))?;
-
-    let status = res.status();
-    if !status.is_success() {
-        return Err(match status.as_u16() {
-            413 => "The file is too big for the file host".into(),
-            415 => "The file host does not take this type of file".into(),
-            code => format!("The file host answered {code}"),
-        });
+    match target["kind"].as_str() {
+        Some("server") => {
+            let Source::Remote(remote) = state.source() else {
+                return Err("Not connected to a lobby-server".into());
+            };
+            let data = base64::engine::general_purpose::STANDARD.encode(&file.bytes);
+            let (name, mime) = (file.name, file.mime);
+            from_value(remote.request_within(SERVER_UPLOAD_WAIT, |id| ClientMsg::Upload { id, name, mime, data }).await?)
+        }
+        Some("sftp") => {
+            let sftp: sftp::Sftp = serde_json::from_value(target).map_err(|e| format!("SFTP settings: {e}"))?;
+            sftp::send(&sftp, &config::ssh_dir(), file).await
+        }
+        _ => {
+            let target: lobby_core::upload::Target = serde_json::from_value(target).map_err(|e| format!("Upload settings: {e}"))?;
+            lobby_core::upload::send(&target, file).await
+        }
     }
-    res.headers()
-        .get(reqwest::header::LOCATION)
-        .and_then(|v| v.to_str().ok())
-        .map(String::from)
-        .ok_or("The file host did not say where the file went".into())
+}
+
+/// `x-name` arrives URI-encoded, as headers carry only ASCII.
+fn percent_decode(text: &str) -> String {
+    let bytes = text.as_bytes();
+    let mut out = Vec::with_capacity(bytes.len());
+    let mut i = 0;
+    while i < bytes.len() {
+        let hex = bytes.get(i + 1..i + 3).and_then(|h| std::str::from_utf8(h).ok()).and_then(|h| u8::from_str_radix(h, 16).ok());
+        match (bytes[i], hex) {
+            (b'%', Some(b)) => {
+                out.push(b);
+                i += 3;
+            }
+            (b, _) => {
+                out.push(b);
+                i += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&out).into_owned()
 }
 
 #[tauri::command]
@@ -627,6 +642,12 @@ pub fn run() {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn decodes_file_names() {
+        assert_eq!(super::percent_decode("Kes%C3%A4%20kuva.png"), "Kesä kuva.png");
+        assert_eq!(super::percent_decode("100%"), "100%");
+    }
+
     use super::*;
 
     #[test]

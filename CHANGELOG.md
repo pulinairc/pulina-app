@@ -8,6 +8,8 @@
 * Move the more emojis button last on phones
 * Add a quick glide and fade for new messages
 * Add highlight words in Settings
+* Add uploads to S3, R2, SFTP, catbox and lobby-server
+* Add tabs to Settings
 
 ### 1.0.2: 2026-11-10
 

@@ -153,6 +153,10 @@ const el = {
   attachBtn: $('attach-btn'),
   attachFile: $('attach-file'),
   uploadUrl: $('upload-url'),
+  uploadVia: $('upload-via'),
+  sftpKey: $('sftp-key'),
+  sftpCopy: $('sftp-copy'),
+  settingsTabs: $('settings-tabs'),
   slash: $('slash'),
   replying: $('replying'),
   openPeople: $('open-people'),
@@ -932,7 +936,7 @@ function renderSettings() {
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
   renderIconChoices();
   renderShortcuts();
-  el.uploadUrl.value = uploadHost();
+  renderUploadSettings();
   const rows = state.networks.map((n) => {
     const row = h('div', 'conn');
     const name = h('span', '', state.me[n] ? `${n} · ${state.me[n]}` : n);
@@ -947,8 +951,29 @@ function renderSettings() {
 el.gear.addEventListener('click', () => {
   el.switcher.close();
   renderSettings();
+  showSettingsTab(settingsTab);
   el.settings.showModal();
   el.settings.focus();
+});
+
+let settingsTab = 'general';
+
+function showSettingsTab(tab) {
+  settingsTab = tab;
+  for (const b of el.settingsTabs.children) {
+    b.setAttribute('aria-selected', String(b.dataset.tab === tab));
+  }
+  for (const section of el.settings.querySelectorAll('section[data-tab]')) {
+    section.classList.toggle('tab-off', section.dataset.tab !== tab);
+  }
+}
+
+el.settingsTabs.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tab]');
+  if (b) {
+    showSettingsTab(b.dataset.tab);
+    b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
 });
 // About: the version and the commit it was built from, linked to that commit.
 const REPO_URL = 'https://github.com/rollecode/lobby';
@@ -968,7 +993,7 @@ function showAbout() {
   if (!el.settings.open) {
     el.gear.click();
   }
-  $('about-section').scrollIntoView({ block: 'end' });
+  showSettingsTab('about');
 }
 
 el.settingsClose.addEventListener('click', () => el.settings.close());
@@ -3676,7 +3701,7 @@ async function start() {
     if (e.payload.key === MUTED_SETTING || e.payload.key === CHANNELS_SETTING) {
       renderHeader();
     }
-    if (e.payload.key === UPLOAD_SETTING) {
+    if ([UPLOAD_SETTING, UPLOAD_VIA_SETTING, UPLOAD_S3_SETTING, UPLOAD_SFTP_SETTING].includes(e.payload.key)) {
       renderAttach();
     }
     if (e.payload.key === HIGHLIGHTS_SETTING) {
@@ -5396,14 +5421,123 @@ el.shortcodeToggle.addEventListener('change', () => saveSetting(SHORTCODE_SETTIN
 // Attachments: files go to the file host set in Settings, and their address into the message.
 
 const UPLOAD_SETTING = 'upload';
+const UPLOAD_VIA_SETTING = 'uploadVia';
+const UPLOAD_S3_SETTING = 'uploadS3';
+const UPLOAD_SFTP_SETTING = 'uploadSftp';
 
 function uploadHost() {
   return state.settings[UPLOAD_SETTING] || '';
 }
 
-function renderAttach() {
-  el.attachBtn.hidden = !uploadHost();
+function uploadVia() {
+  return state.settings[UPLOAD_VIA_SETTING] || 'auto';
 }
+
+function jsonSetting(key) {
+  try {
+    return JSON.parse(state.settings[key] || '{}');
+  } catch {
+    return {};
+  }
+}
+
+let viaServer = null;
+
+/** Whether this app talks to a lobby-server, asked once. */
+async function hasServer() {
+  if (viaServer === null) {
+    const c = await invoke('get_connection').catch(() => null);
+    viaServer = Boolean(c) && c.mode !== 'irc';
+  }
+  return viaServer;
+}
+
+/** Where to try sending a file, in order. Automatic: lobby-server, your own file host, catbox.moe. */
+async function uploadTargets() {
+  const host = uploadHost();
+  switch (uploadVia()) {
+    case 'server':
+      return [{ kind: 'server' }];
+    case 'filehost':
+      return [{ kind: 'filehost', url: host }];
+    case 's3':
+      return [{ kind: 's3', ...jsonSetting(UPLOAD_S3_SETTING) }];
+    case 'sftp':
+      return [{ kind: 'sftp', ...jsonSetting(UPLOAD_SFTP_SETTING) }];
+    case 'catbox':
+      return [{ kind: 'catbox' }];
+  }
+  const targets = [];
+  if (await hasServer()) {
+    targets.push({ kind: 'server' });
+  }
+  if (host) {
+    targets.push({ kind: 'filehost', url: host });
+  }
+  targets.push({ kind: 'catbox' });
+  return targets;
+}
+
+function renderAttach() {
+  el.attachBtn.hidden = uploadVia() === 'filehost' && !uploadHost();
+}
+
+function renderUploadSettings() {
+  const via = uploadVia();
+  for (const r of el.uploadVia.querySelectorAll('input')) {
+    r.checked = r.value === via;
+  }
+  for (const part of el.settings.querySelectorAll('[data-via]')) {
+    part.hidden = !part.dataset.via.split(' ').includes(via);
+  }
+  el.uploadUrl.value = uploadHost();
+  const s3 = jsonSetting(UPLOAD_S3_SETTING);
+  for (const f of el.settings.querySelectorAll('[data-s3]')) {
+    f.value = s3[f.dataset.s3] || '';
+  }
+  const sftp = jsonSetting(UPLOAD_SFTP_SETTING);
+  for (const f of el.settings.querySelectorAll('[data-sftp]')) {
+    f.value = sftp[f.dataset.sftp] || '';
+  }
+  if (via === 'sftp' && !el.sftpKey.textContent) {
+    // Lobby's own public key, without the tunnel-only options in front of it.
+    invoke('get_connection')
+      .then((c) => {
+        el.sftpKey.textContent = `restrict ${c.key_line.split(' ').slice(-3).join(' ')}`;
+      })
+      .catch(() => {});
+  }
+}
+
+function saveFields(key, attr) {
+  const value = {};
+  for (const f of el.settings.querySelectorAll(`[data-${attr}]`)) {
+    value[f.dataset[attr]] = f.value.trim();
+  }
+  saveSetting(key, JSON.stringify(value));
+}
+
+el.uploadVia.addEventListener('change', (e) => {
+  saveSetting(UPLOAD_VIA_SETTING, e.target.value);
+  renderUploadSettings();
+  renderAttach();
+});
+el.settings.addEventListener('change', (e) => {
+  if (e.target.dataset.s3 !== undefined) {
+    saveFields(UPLOAD_S3_SETTING, 's3');
+  }
+  if (e.target.dataset.sftp !== undefined) {
+    saveFields(UPLOAD_SFTP_SETTING, 'sftp');
+  }
+});
+el.sftpCopy.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(el.sftpKey.textContent);
+    el.sftpCopy.textContent = 'Copied';
+  } catch {
+    getSelection().selectAllChildren(el.sftpKey);
+  }
+});
 
 function insertAtCursor(text) {
   const start = el.input.selectionStart ?? el.input.value.length;
@@ -5416,23 +5550,29 @@ function insertAtCursor(text) {
 }
 
 async function uploadFiles(files) {
-  if (!uploadHost()) {
-    renderStatus('Set a file host in Settings to send files');
-    return;
-  }
+  const targets = await uploadTargets();
   for (const file of files) {
     const name = file.name || `pasted.${file.type.split('/')[1] || 'png'}`;
     renderStatus(`Uploading ${name}…`);
-    try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const url = await invoke('upload', bytes, {
-        headers: { 'x-host': uploadHost(), 'x-name': encodeURIComponent(name), 'x-type': file.type || 'application/octet-stream' },
-      });
-      insertAtCursor(url);
-      renderStatus();
-    } catch (e) {
-      renderStatus(String(e));
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    let failure = '';
+    for (const target of targets) {
+      try {
+        const url = await invoke('upload', bytes, {
+          headers: {
+            'x-target': JSON.stringify(target),
+            'x-name': encodeURIComponent(name),
+            'x-type': file.type || 'application/octet-stream',
+          },
+        });
+        insertAtCursor(url);
+        failure = '';
+        break;
+      } catch (e) {
+        failure = String(e);
+      }
     }
+    renderStatus(failure || undefined);
   }
 }
 

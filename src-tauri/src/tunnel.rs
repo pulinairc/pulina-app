@@ -89,7 +89,7 @@ fn home_keys() -> Vec<PrivateKey> {
         .collect()
 }
 
-struct Client {
+pub struct Client {
     host: String,
     port: u16,
     known_hosts: PathBuf,
@@ -129,25 +129,34 @@ impl Drop for Tunnel {
     }
 }
 
+/// A signed-in SSH session, with keys as `ssh` would try them, or a password when one is given.
+pub async fn connect(target: &Target, dir: &Path, password: Option<&str>) -> Result<Handle<Client>, String> {
+    let config = Arc::new(client::Config {
+        keepalive_interval: Some(KEEPALIVE),
+        keepalive_max: KEEPALIVE_MISSES,
+        nodelay: true,
+        ..Default::default()
+    });
+    let handler = Client { host: target.host.clone(), port: target.port, known_hosts: dir.join("known_hosts") };
+    let mut session = client::connect(config, (target.host.as_str(), target.port), handler).await.map_err(|e| match e {
+        russh::Error::UnknownKey => format!("{}: the server's host key changed or is not trusted", target.host),
+        e => format!("ssh {}: {e}", target.host),
+    })?;
+    if let Some(password) = password.filter(|p| !p.is_empty()) {
+        let result = session.authenticate_password(target.user.clone(), password).await.map_err(|e| e.to_string())?;
+        if result.success() {
+            return Ok(session);
+        }
+    }
+    if !authenticate(&mut session, target, dir).await? {
+        return Err(format!("ssh {}@{}: no key was accepted. Add Lobby's key on the server, see Settings.", target.user, target.host));
+    }
+    Ok(session)
+}
+
 impl Tunnel {
     pub async fn open(target: &Target, remote_port: u16, dir: &Path) -> Result<Self, String> {
-        let config = Arc::new(client::Config {
-            keepalive_interval: Some(KEEPALIVE),
-            keepalive_max: KEEPALIVE_MISSES,
-            nodelay: true,
-            ..Default::default()
-        });
-        let handler = Client { host: target.host.clone(), port: target.port, known_hosts: dir.join("known_hosts") };
-        let mut session = client::connect(config, (target.host.as_str(), target.port), handler).await.map_err(|e| match e {
-            russh::Error::UnknownKey => format!("{}: the server's host key changed or is not trusted", target.host),
-            e => format!("ssh {}: {e}", target.host),
-        })?;
-
-        if !authenticate(&mut session, target, dir).await? {
-            return Err(format!("ssh {}@{}: no key was accepted. Add Lobby's key on the server, see Settings.", target.user, target.host));
-        }
-
-        let session = Arc::new(session);
+        let session = Arc::new(connect(target, dir, None).await?);
         let listener = TcpListener::bind("127.0.0.1:0").await.map_err(|e| e.to_string())?;
         let port = listener.local_addr().map_err(|e| e.to_string())?.port();
         let handle = Arc::clone(&session);

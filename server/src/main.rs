@@ -5,6 +5,7 @@ use futures_util::{SinkExt, StreamExt};
 use lobby_core::hub::{Event, Hub};
 use lobby_core::protocol::{ClientMsg, ServerMsg};
 use lobby_core::store::Store;
+use lobby_core::upload;
 use lobby_core::{Network, expand, read_secret};
 use serde::Deserialize;
 use std::net::SocketAddr;
@@ -14,6 +15,7 @@ use std::time::Duration;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::broadcast::error::RecvError;
 use tokio_tungstenite::tungstenite::Message;
+use tokio_tungstenite::tungstenite::protocol::WebSocketConfig;
 
 const DEFAULT_LISTEN: &str = "127.0.0.1:7667";
 const DEFAULT_TOKEN_FILE: &str = "~/.config/lobby-server/token";
@@ -21,6 +23,8 @@ const MIN_TOKEN_LEN: usize = 16;
 const HELLO_TIMEOUT: Duration = Duration::from_secs(10);
 /// Reverse proxies drop quiet WebSockets, so ping well inside their usual 60 s.
 const PING_EVERY: Duration = Duration::from_secs(30);
+/// An attachment arrives in one frame, in base64, so frames may be as big as the largest file.
+const MAX_FRAME: usize = upload::MAX_BYTES * 2;
 
 #[derive(Deserialize)]
 struct Config {
@@ -33,6 +37,8 @@ struct Config {
     allow_insecure: bool,
     #[serde(rename = "network", default)]
     networks: Vec<Network>,
+    /// Where attachments sent through lobby-server go. Without it the app uses its own choice.
+    upload: Option<upload::Target>,
 }
 
 fn default_listen() -> String {
@@ -102,6 +108,7 @@ async fn run() -> Result<(), String> {
     let store = Store::open(&data.join("history.db")).map_err(|e| e.to_string())?;
 
     let names: Vec<String> = config.networks.iter().map(|n| n.name.clone()).collect();
+    let uploads = Arc::new(config.upload);
     let hub = Hub::new(store, config.networks, config.nick);
     hub.start();
 
@@ -115,8 +122,9 @@ async fn run() -> Result<(), String> {
         let hub = Arc::clone(&hub);
         let token = Arc::clone(&token);
         let path = Arc::clone(&path);
+        let uploads = Arc::clone(&uploads);
         tokio::spawn(async move {
-            if let Err(e) = serve(stream, hub, &token, &path).await {
+            if let Err(e) = serve(stream, hub, &token, &path, uploads).await {
                 eprintln!("{peer}: {e}");
             }
         });
@@ -136,7 +144,7 @@ fn to_json<T: serde::Serialize>(r: Result<T, String>) -> Result<serde_json::Valu
 
 fn answer(hub: &Arc<Hub>, path: &Path, msg: ClientMsg) -> Option<ServerMsg> {
     Some(match msg {
-        ClientMsg::Hello { .. } => return None,
+        ClientMsg::Hello { .. } | ClientMsg::Upload { .. } => return None,
         ClientMsg::History { id, net, buffer, before } => reply(id, to_json(hub.history(&net, &buffer, before))),
         ClientMsg::Recent { id } => reply(id, to_json(hub.recent_buffers())),
         ClientMsg::Around { id, net, buffer, line } => reply(id, to_json(hub.around(&net, &buffer, line))),
@@ -156,8 +164,17 @@ fn answer(hub: &Arc<Hub>, path: &Path, msg: ClientMsg) -> Option<ServerMsg> {
     })
 }
 
-async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str, path: &Path) -> Result<(), String> {
-    let ws = tokio_tungstenite::accept_async(stream).await.map_err(|e| e.to_string())?;
+/// Put a file where the config says, off the connection's loop so events keep flowing meanwhile.
+async fn store_upload(target: &Option<upload::Target>, name: String, mime: String, data: &str) -> Result<String, String> {
+    use base64::Engine;
+    let target = target.as_ref().ok_or("lobby-server has no place for files set up")?;
+    let bytes = base64::engine::general_purpose::STANDARD.decode(data).map_err(|e| e.to_string())?;
+    upload::send(target, upload::File { name, mime, bytes }).await
+}
+
+async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str, path: &Path, uploads: Arc<Option<upload::Target>>) -> Result<(), String> {
+    let limits = WebSocketConfig::default().max_frame_size(Some(MAX_FRAME)).max_message_size(Some(MAX_FRAME));
+    let ws = tokio_tungstenite::accept_async_with_config(stream, Some(limits)).await.map_err(|e| e.to_string())?;
     let (mut sink, mut incoming) = ws.split();
     let send = |msg: ServerMsg| Message::text(serde_json::to_string(&msg).unwrap_or_default());
 
@@ -176,6 +193,7 @@ async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str, path: &Path) -> Re
     let mut events = hub.subscribe();
     sink.send(send(ServerMsg::Welcome { snapshot: hub.snapshot() })).await.map_err(|e| e.to_string())?;
     let mut ping = tokio::time::interval(PING_EVERY);
+    let (stored, mut stored_rx) = tokio::sync::mpsc::unbounded_channel::<ServerMsg>();
 
     loop {
         tokio::select! {
@@ -191,12 +209,21 @@ async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str, path: &Path) -> Re
                 Some(Err(e)) => return Err(e.to_string()),
                 Some(Ok(Message::Text(text))) => {
                     let Ok(msg) = serde_json::from_str::<ClientMsg>(text.as_str()) else { continue };
+                    if let ClientMsg::Upload { id, name, mime, data } = msg {
+                        let (stored, uploads) = (stored.clone(), Arc::clone(&uploads));
+                        tokio::spawn(async move {
+                            let result = store_upload(&uploads, name, mime, &data).await;
+                            let _ = stored.send(reply(id, to_json(result)));
+                        });
+                        continue;
+                    }
                     if let Some(out) = answer(&hub, path, msg) {
                         sink.send(send(out)).await.map_err(|e| e.to_string())?;
                     }
                 }
                 Some(Ok(_)) => {}
             },
+            Some(out) = stored_rx.recv() => sink.send(send(out)).await.map_err(|e| e.to_string())?,
             _ = ping.tick() => sink.send(Message::Ping(Default::default())).await.map_err(|e| e.to_string())?,
         }
     }
@@ -220,5 +247,18 @@ mod tests {
         assert_eq!(config.listen, DEFAULT_LISTEN);
         assert_eq!(config.networks.len(), 1);
         assert!(!config.allow_insecure);
+        assert!(config.upload.is_none());
+    }
+
+    #[test]
+    fn reads_the_upload_target() {
+        let config: Config = toml::from_str(
+            "nick = \"rolle\"\n[upload]\nkind = \"folder\"\ndir = \"/var/www/files\"\npublic_url = \"https://files.example.org\"",
+        )
+        .unwrap();
+        assert_eq!(
+            config.upload,
+            Some(upload::Target::Folder { dir: "/var/www/files".into(), public_url: "https://files.example.org".into() })
+        );
     }
 }

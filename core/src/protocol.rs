@@ -10,19 +10,72 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ClientMsg {
-    Hello { token: String },
-    History { id: u64, net: String, buffer: String, before: Option<i64> },
-    Recent { id: u64 },
-    Around { id: u64, net: String, buffer: String, line: i64 },
-    Mentions { id: u64, words: Vec<String>, before: Option<i64> },
-    Links { id: u64, net: String, buffer: String, before: Option<i64> },
-    Send { id: u64, net: String, buffer: String, text: String },
-    SavePerson { id: u64, person: Person },
-    DeletePerson { id: u64, person: i64 },
-    SetSetting { id: u64, key: String, value: String },
-    Networks { id: u64 },
-    SaveNetwork { id: u64, network: crate::Network },
-    DeleteNetwork { id: u64, name: String },
+    Hello {
+        token: String,
+    },
+    History {
+        id: u64,
+        net: String,
+        buffer: String,
+        before: Option<i64>,
+    },
+    Recent {
+        id: u64,
+    },
+    Around {
+        id: u64,
+        net: String,
+        buffer: String,
+        line: i64,
+    },
+    Mentions {
+        id: u64,
+        words: Vec<String>,
+        before: Option<i64>,
+    },
+    Links {
+        id: u64,
+        net: String,
+        buffer: String,
+        before: Option<i64>,
+    },
+    Send {
+        id: u64,
+        net: String,
+        buffer: String,
+        text: String,
+    },
+    SavePerson {
+        id: u64,
+        person: Person,
+    },
+    DeletePerson {
+        id: u64,
+        person: i64,
+    },
+    SetSetting {
+        id: u64,
+        key: String,
+        value: String,
+    },
+    /// A file for lobby-server to put where its config says, `data` in base64. The reply is its address.
+    Upload {
+        id: u64,
+        name: String,
+        mime: String,
+        data: String,
+    },
+    Networks {
+        id: u64,
+    },
+    SaveNetwork {
+        id: u64,
+        network: crate::Network,
+    },
+    DeleteNetwork {
+        id: u64,
+        name: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
