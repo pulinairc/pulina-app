@@ -73,12 +73,29 @@
       </button>
     </div>
     <div class="composer-box">
+      <div id="np-card" class="glass np-card" role="dialog" aria-label="Now playing" hidden>
+        <div class="np-track">
+          <img id="np-cover" class="np-cover" alt="" hidden>
+          <div class="np-text">
+            <div id="np-title" class="np-title"></div>
+            <div id="np-artist" class="np-artist"></div>
+          </div>
+        </div>
+        <div id="np-line" class="np-line"></div>
+        <div class="np-actions">
+          <button id="np-send" class="primary-btn" type="button">Send</button>
+          <button id="np-edit" class="wide-btn" type="button">Put in the message box</button>
+        </div>
+      </div>
       <button id="attach-btn" class="box-btn" type="button" aria-label="Attach a file" data-tip="Attach a file" hidden>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5l-8.5 8.5a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8"/></svg>
       </button>
       <input id="attach-file" type="file" multiple hidden>
       <label for="input" class="sr">Message</label>
       <textarea id="input" rows="1" autocomplete="off" spellcheck="true" placeholder="Message"></textarea>
+      <button id="np-btn" class="box-btn np-btn" type="button" aria-label="Now playing" aria-expanded="false" hidden>
+        <span class="eq" aria-hidden="true"><i></i><i></i><i></i></span>
+      </button>
       <button id="emoji-btn" class="box-btn" type="button" aria-label="Emoji" data-tip="Emoji">
         <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg>
       </button>
@@ -127,6 +144,7 @@
       <button class="inbox-tab" type="button" role="tab" data-tab="general">General</button>
       <button class="inbox-tab" type="button" role="tab" data-tab="notifications">Notifications</button>
       <button class="inbox-tab" type="button" role="tab" data-tab="chat">Chat</button>
+      <button class="inbox-tab" type="button" role="tab" data-tab="music">Music</button>
       <button class="inbox-tab" type="button" role="tab" data-tab="files">Files</button>
       <button class="inbox-tab" type="button" role="tab" data-tab="people">People</button>
       <button class="inbox-tab" type="button" role="tab" data-tab="connections">Connections</button>
@@ -182,6 +200,17 @@
       <h3><label for="bots-field">Bots</label></h3>
       <input id="bots-field" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="seenbot, infobot">
       <p class="hint">What these nicks say right after a command like <span class="mono">!seen</span> is shown inside it, as its answer.</p>
+    </section>
+    <section data-tab="music">
+      <h3>Last.fm</h3>
+      <label class="field-label" for="lastfm-user">Username</label>
+      <input id="lastfm-user" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="your Last.fm username">
+      <label class="field-label" for="lastfm-key">API key</label>
+      <input id="lastfm-key" class="field" type="password" autocomplete="off" spellcheck="false">
+      <p class="hint"><a href="https://www.last.fm/api/account/create">Create an API key</a> on Last.fm and copy it here. While something plays, bars show next to the emoji button.</p>
+      <label class="field-label" for="np-format">Message</label>
+      <input id="np-format" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="np. {artist} - {title}">
+      <p class="hint">{artist}, {title} and {album} are filled in.</p>
     </section>
     <section data-tab="files">
       <h3>File storage</h3>

@@ -1,5 +1,6 @@
 mod config;
 mod embed;
+mod lastfm;
 #[cfg(target_os = "macos")]
 mod macos;
 mod preview;
@@ -253,6 +254,11 @@ fn percent_decode(text: &str) -> String {
         }
     }
     String::from_utf8_lossy(&out).into_owned()
+}
+
+#[tauri::command]
+async fn now_playing(user: String, key: String) -> Result<Option<lastfm::Playing>, String> {
+    lastfm::now_playing(&user, &key).await
 }
 
 #[tauri::command]
@@ -624,6 +630,7 @@ pub fn run() {
             around,
             mentions,
             count_unread,
+            now_playing,
             links,
             send,
             preview,

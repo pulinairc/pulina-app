@@ -28,6 +28,7 @@ import {
   dayLabel,
   mentions,
   looseMatch,
+  npLine,
   wordList,
   shortUrl,
   nickHue,
@@ -473,4 +474,10 @@ test('filters highlights loosely by nick, channel and words', () => {
   for (const q of ['kummitus', '#antisocial', 'pulina kummitus', 'xyz']) {
     assert.equal(looseMatch(l, q), false, q);
   }
+});
+
+test('fills in the now playing line', () => {
+  const t = { artist: 'Röyksopp', title: 'Running to the Sea', album: 'The Inevitable End' };
+  assert.equal(npLine('', t), 'np. Röyksopp - Running to the Sea');
+  assert.equal(npLine('♫ {title} / {artist} ({album})', t), '♫ Running to the Sea / Röyksopp (The Inevitable End)');
 });

@@ -32,6 +32,7 @@ import {
   wordList,
   nickMatches,
   looseMatch,
+  npLine,
   nickQuery,
   isCommand,
   splitNicks,
@@ -155,6 +156,17 @@ const el = {
   attachBtn: $('attach-btn'),
   attachFile: $('attach-file'),
   uploadUrl: $('upload-url'),
+  npBtn: $('np-btn'),
+  npCard: $('np-card'),
+  npCover: $('np-cover'),
+  npTitle: $('np-title'),
+  npArtist: $('np-artist'),
+  npLine: $('np-line'),
+  npSend: $('np-send'),
+  npEdit: $('np-edit'),
+  lastfmUser: $('lastfm-user'),
+  lastfmKey: $('lastfm-key'),
+  npFormat: $('np-format'),
   uploadVia: $('upload-via'),
   sftpKey: $('sftp-key'),
   sftpCopy: $('sftp-copy'),
@@ -1088,6 +1100,9 @@ function renderSettings() {
   renderIconChoices();
   renderShortcuts();
   renderUploadSettings();
+  el.lastfmUser.value = state.settings[LASTFM_USER_SETTING] || '';
+  el.lastfmKey.value = state.settings[LASTFM_KEY_SETTING] || '';
+  el.npFormat.value = state.settings[NP_FORMAT_SETTING] || '';
   const rows = state.networks.map((n) => {
     const row = h('div', 'conn');
     const name = h('span', '', state.me[n] ? `${n} · ${state.me[n]}` : n);
@@ -3916,6 +3931,9 @@ async function start() {
     if (e.payload.key === HIDDEN_SETTING) {
       renderInbox();
     }
+    if ([LASTFM_USER_SETTING, LASTFM_KEY_SETTING].includes(e.payload.key)) {
+      pollNowPlaying();
+    }
     if ([UPLOAD_SETTING, UPLOAD_VIA_SETTING, UPLOAD_S3_SETTING, UPLOAD_SFTP_SETTING].includes(e.payload.key)) {
       renderAttach();
     }
@@ -3947,6 +3965,7 @@ async function start() {
   });
 
   applyStatus(await invoke('status'));
+  pollNowPlaying();
 
   for (const r of await invoke('recent_buffers').catch(() => [])) {
     buffer(r.net, r.buffer);
@@ -5904,3 +5923,114 @@ el.uploadUrl.addEventListener('change', () => {
   saveSetting(UPLOAD_SETTING, el.uploadUrl.value.trim());
   renderAttach();
 });
+
+// Now playing from Last.fm: bars by the emoji button while something plays. They open a card with
+// the line to send, which goes to the channel or into the message box to add to.
+
+const LASTFM_USER_SETTING = 'lastfmUser';
+const LASTFM_KEY_SETTING = 'lastfmKey';
+const NP_FORMAT_SETTING = 'npFormat';
+const NP_POLL_MS = 30_000;
+let nowPlaying = null;
+let npTimer = 0;
+
+async function pollNowPlaying() {
+  clearTimeout(npTimer);
+  const user = state.settings[LASTFM_USER_SETTING];
+  const key = state.settings[LASTFM_KEY_SETTING];
+  if (!user || !key) {
+    setNowPlaying(null);
+    return;
+  }
+  // Only asked while the window is in use; coming back asks at once.
+  if (!document.hidden) {
+    setNowPlaying(await invoke('now_playing', { user, key }).catch(() => null));
+  }
+  npTimer = setTimeout(pollNowPlaying, NP_POLL_MS);
+}
+
+function setNowPlaying(track) {
+  nowPlaying = track;
+  el.npBtn.hidden = !track;
+  el.npBtn.dataset.tip = track ? `${track.artist} – ${track.title}` : '';
+  if (!track) {
+    closeNp();
+  } else if (!el.npCard.hidden) {
+    fillNp();
+  }
+}
+
+function npText() {
+  return npLine(state.settings[NP_FORMAT_SETTING], nowPlaying);
+}
+
+function fillNp() {
+  const b = state.buffers.get(state.current);
+  el.npTitle.textContent = nowPlaying.title;
+  el.npArtist.textContent = [nowPlaying.artist, nowPlaying.album].filter(Boolean).join(' · ');
+  el.npCover.hidden = !nowPlaying.image;
+  if (nowPlaying.image) {
+    el.npCover.src = nowPlaying.image;
+  }
+  el.npLine.textContent = npText();
+  el.npSend.textContent = b ? `Send to ${label(b)}` : 'Send';
+  el.npSend.disabled = !b;
+}
+
+function openNp() {
+  fillNp();
+  el.npCard.hidden = false;
+  el.npBtn.setAttribute('aria-expanded', 'true');
+}
+
+function closeNp() {
+  el.npCard.hidden = true;
+  el.npBtn.setAttribute('aria-expanded', 'false');
+}
+
+el.npBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  el.npCard.hidden ? openNp() : closeNp();
+});
+el.npCard.addEventListener('pointerdown', (e) => e.stopPropagation());
+document.addEventListener('pointerdown', (e) => {
+  if (!el.npCard.hidden && e.target !== el.npBtn && !el.npBtn.contains(e.target)) {
+    closeNp();
+  }
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !el.npCard.hidden) {
+    closeNp();
+  }
+});
+el.npSend.addEventListener('click', async () => {
+  const b = state.buffers.get(state.current);
+  if (!b || !nowPlaying) {
+    return;
+  }
+  closeNp();
+  try {
+    await invoke('send', { net: b.net, buffer: b.name, text: npText() });
+  } catch (err) {
+    renderStatus(String(err));
+  }
+});
+el.npEdit.addEventListener('click', () => {
+  closeNp();
+  insertAtCursor(npText());
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    pollNowPlaying();
+  }
+});
+for (const [field, key] of [
+  [el.lastfmUser, LASTFM_USER_SETTING],
+  [el.lastfmKey, LASTFM_KEY_SETTING],
+  [el.npFormat, NP_FORMAT_SETTING],
+]) {
+  field.addEventListener('change', () => {
+    saveSetting(key, field.value.trim());
+    pollNowPlaying();
+  });
+}

@@ -3755,3 +3755,113 @@ body.docked #status {
 .upload-fields .field-label {
   margin: 12px 0 6px;
 }
+
+/* Now playing: three bars in the colour of the other buttons, pink while the card is open. */
+.np-btn[aria-expanded="true"] {
+  color: var(--accent);
+}
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 13px;
+}
+.eq i {
+  display: block;
+  width: 3px;
+  height: 100%;
+  border-radius: 1px;
+  background: currentColor;
+  transform-origin: bottom;
+  animation: eq 0.9s ease-in-out infinite;
+}
+.eq i:nth-child(1) {
+  animation-delay: -0.3s;
+}
+.eq i:nth-child(2) {
+  animation-delay: -0.6s;
+}
+@keyframes eq {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .eq i {
+    animation: none;
+    transform: scaleY(0.7);
+  }
+}
+.composer-box {
+  position: relative;
+}
+.np-card {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 10;
+  width: min(320px, 100%);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--panel);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 40%);
+}
+.np-card[hidden] {
+  display: none;
+}
+.np-track {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.np-cover {
+  width: 52px;
+  height: 52px;
+  flex: none;
+  border-radius: 8px;
+  object-fit: cover;
+}
+.np-text {
+  min-width: 0;
+}
+.np-title,
+.np-artist {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.np-title {
+  color: var(--strong);
+  font-weight: 600;
+}
+.np-artist {
+  color: var(--dim);
+  font-size: 13px;
+}
+.np-line {
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.np-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.np-actions .primary-btn {
+  padding: 8px 14px;
+}
+.np-actions .wide-btn {
+  text-align: center;
+}

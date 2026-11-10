@@ -884,3 +884,10 @@ export function looseMatch(line, query) {
   const all = `${nick} ${buffer} ${plain(line.net || '')} ${plain(line.text || '')}`;
   return words.every((w) => all.includes(w) || inOrder(w, nick) || inOrder(w.replace(/^#/, ''), buffer));
 }
+
+export const NP_FORMAT = 'np. {artist} - {title}';
+
+/** "np. {artist} - {title}" with the playing track filled in. */
+export function npLine(format, track) {
+  return (format || NP_FORMAT).replace(/\{(artist|title|album)\}/g, (_, k) => track[k] || '').trim();
+}
