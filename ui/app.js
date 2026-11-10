@@ -546,6 +546,12 @@ function onLine(l) {
   if (visible && !b.window) {
     queueLive(l);
   }
+  if (b.window && CHAT_KINDS.has(l.kind) && !l.own) {
+    b.windowAfter = (b.windowAfter || 0) + 1;
+    if (visible) {
+      updateJumps();
+    }
+  }
   // Nothing is marked read on its own: only the Mark as read button does that.
   if (!CHAT_KINDS.has(l.kind) || l.own) {
     return;
@@ -1082,6 +1088,7 @@ function renderLog() {
   document.body.classList.toggle('windowed', Boolean(b.window));
   if (b.window) {
     stuck = false;
+    countAfterWindow(b);
     el.windowWhen.textContent = `Earlier: ${dayLabel(b.window.find((l) => l.id === b.windowAt)?.ts ?? b.window[0].ts)}`;
     if (view.separator) {
       toSeparator();
@@ -3327,7 +3334,8 @@ function updateJumps() {
   const messages = count === 1 ? 'message' : 'messages';
   el.jumpLatest.hidden = atBottom() || glide !== 0;
   if (!el.jumpLatest.hidden) {
-    const more = messagesBelow(log.bottom);
+    // In an earlier view, the messages not drawn yet count too.
+    const more = messagesBelow(log.bottom) + (b?.window ? b.windowAfter || 0 : 0);
     el.jumpLatestLabel.textContent = more ? `${more} more` : 'Latest';
   }
   el.markRead.hidden = count === 0;
@@ -4895,6 +4903,19 @@ async function growBack(b) {
   updateJumps();
 }
 
+/** Messages newer than the earlier view holds, so its "N more" counts all the way to the newest. */
+async function countAfterWindow(b) {
+  const last = b.window?.[b.window.length - 1]?.id;
+  if (!last) {
+    return;
+  }
+  const n = await invoke('count_unread', { net: b.net, buffer: b.name, after: last, before: Number.MAX_SAFE_INTEGER }).catch(() => 0);
+  if (b.window?.[b.window.length - 1]?.id === last) {
+    b.windowAfter = n;
+    updateJumps();
+  }
+}
+
 async function growWindow(b, side) {
   b.windowEnd ??= {};
   if (b.windowEnd[side]) {
@@ -4925,6 +4946,7 @@ async function growWindow(b, side) {
   for (const l of lines) {
     appendLine(l);
   }
+  countAfterWindow(b);
   const newest = b.window[b.window.length - 1].id;
   if (!lines.length || (b.lines.length && newest >= b.lines[0].id)) {
     joinLatest(b, newest);
