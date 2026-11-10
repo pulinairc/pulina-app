@@ -1283,10 +1283,6 @@ dialog:focus {
     0 10px 28px rgb(0 0 0 / 60%);
   pointer-events: none;
 }
-.nl-face .crown svg {
-  width: 16px;
-  height: 16px;
-}
 
 /* The person card: tinted from the top with their own colour. */
 .tip.person {
@@ -4016,9 +4012,6 @@ body.docked #status {
 .nl-rank .av {
   --avatar: 22px;
 }
-.nl-rank.top {
-  padding-top: 11px;
-}
 .nl-face {
   position: relative;
   display: flex;
@@ -4075,14 +4068,6 @@ body.docked #status {
 .crown {
   display: inline-flex;
   color: #f5c542;
-}
-.nl-face .crown {
-  position: absolute;
-  top: -11px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-14deg);
-  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.5));
-  pointer-events: none;
 }
 .podium-spot .crown {
   margin-bottom: -2px;

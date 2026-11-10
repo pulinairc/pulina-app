@@ -6331,7 +6331,6 @@ function todayRanking(b) {
   list.forEach((x, i) => {
     const row = h('div', 'nl-rank');
     row.classList.toggle('me', i === place);
-    row.classList.toggle('top', i === 0);
     const bar = h('span', 'nl-meter');
     const fill = h('i');
     fill.style.width = `${(x.words / most) * 100}%`;
@@ -6343,12 +6342,9 @@ function todayRanking(b) {
     } else {
       personTip(name, b.net, x.nick);
     }
-    // The place shows over the photo on hover; the first wears a crown.
+    // The place shows over the photo on hover.
     const face = h('span', 'nl-face');
     face.append(avatar(x.nick, ''), h('span', 'nl-place', String(i + 1)));
-    if (i === 0) {
-      face.append(crown());
-    }
     row.append(face, name, h('span', 'nl-words', x.words.toLocaleString('fi-FI')), bar);
     out.push(row);
   });

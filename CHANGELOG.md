@@ -1,6 +1,7 @@
 ### [Unreleased]
 
 * Fix the chat creeping up on channel switches
+* Remove the crown from the Today list
 
 ### 1.5.4: 2026-11-10
 
