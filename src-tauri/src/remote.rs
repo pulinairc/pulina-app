@@ -16,6 +16,10 @@ use tokio_tungstenite::tungstenite::Message;
 
 const RECONNECT_DELAY: Duration = Duration::from_secs(5);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(15);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(15);
+const PING_EVERY: Duration = Duration::from_secs(10);
+// A link that was cut while the phone slept gives no error, only silence.
+const SILENCE_LIMIT: Duration = Duration::from_secs(25);
 const UNREACHABLE: &str = "lobby-server unreachable";
 
 type Pending = Mutex<HashMap<u64, oneshot::Sender<Result<Value, String>>>>;
@@ -105,6 +109,10 @@ impl Remote {
     }
 
     async fn run(&self, app: &AppHandle) -> Result<(), String> {
+        tokio::time::timeout(CONNECT_TIMEOUT, self.connect()).await.map_err(|_| "no answer".to_string())??.serve(self, app).await
+    }
+
+    async fn connect(&self) -> Result<Link, String> {
         // Held for the whole connection: dropping it closes the ssh tunnel.
         let mut _tunnel = None;
         let url = match &self.link.ssh {
@@ -119,31 +127,60 @@ impl Remote {
         };
 
         let (ws, _) = tokio_tungstenite::connect_async(url.as_str()).await.map_err(|e| e.to_string())?;
-        let (mut sink, mut stream) = ws.split();
+        Ok(Link { ws, _tunnel })
+    }
+}
 
-        let hello = serde_json::to_string(&ClientMsg::Hello { token: self.link.token() }).map_err(|e| e.to_string())?;
+struct Link {
+    ws: tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>,
+    _tunnel: Option<Tunnel>,
+}
+
+impl Link {
+    async fn serve(self, remote: &Remote, app: &AppHandle) -> Result<(), String> {
+        let (mut sink, mut stream) = self.ws.split();
+
+        let hello = serde_json::to_string(&ClientMsg::Hello { token: remote.link.token() }).map_err(|e| e.to_string())?;
         sink.send(Message::text(hello)).await.map_err(|e| e.to_string())?;
 
         let (tx, mut rx) = mpsc::unbounded_channel::<String>();
-        *lock(&self.out) = Some(tx);
+        *lock(&remote.out) = Some(tx);
         let writer = tauri::async_runtime::spawn(async move {
-            while let Some(text) = rx.recv().await {
-                if sink.send(Message::text(text)).await.is_err() {
+            let mut ping = tokio::time::interval(PING_EVERY);
+            loop {
+                let frame = tokio::select! {
+                    text = rx.recv() => match text {
+                        Some(text) => Message::text(text),
+                        None => break,
+                    },
+                    _ = ping.tick() => Message::Ping(Default::default()),
+                };
+                if sink.send(frame).await.is_err() {
                     break;
                 }
             }
         });
 
-        while let Some(frame) = stream.next().await {
-            let frame = frame.map_err(|e| e.to_string())?;
+        let result = loop {
+            let frame = match tokio::time::timeout(SILENCE_LIMIT, stream.next()).await {
+                Err(_) => break Err("no answer".to_string()),
+                Ok(None) => break Ok(()),
+                Ok(Some(frame)) => frame,
+            };
+            let frame = match frame {
+                Ok(frame) => frame,
+                Err(e) => break Err(e.to_string()),
+            };
             let Message::Text(text) = frame else { continue };
             let Ok(msg) = serde_json::from_str::<ServerMsg>(text.as_str()) else { continue };
-            self.handle(app, msg);
-        }
+            remote.handle(app, msg);
+        };
         writer.abort();
-        Ok(())
+        result
     }
+}
 
+impl Remote {
     fn handle(&self, app: &AppHandle, msg: ServerMsg) {
         match msg {
             ServerMsg::Welcome { snapshot } => {

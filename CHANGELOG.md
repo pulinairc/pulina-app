@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Fix a blank chat while lobby-server is unreachable
+
 ### 1.6.0: 2026-11-10
 
 * Fix the phone chat scrolling sideways beside people
