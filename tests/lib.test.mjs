@@ -493,5 +493,8 @@ test('counts the room left in a message, in bytes, per line', () => {
   assert.equal(messageRoom('/join #x', 'rolle', '#pulina'), null);
   const long = 'x'.repeat(420);
   assert.equal(messageRoom(long, 'rolle', '#pulina'), -20);
-  assert.equal(messageRoom('hi', 'a_very_long_nickname', '#a-channel-with-a-long-name-indeed'), 510 - (1 + 20 + 1 + 10 + 1 + 63 + 9 + 34 + 2) - 2);
+  assert.equal(
+    messageRoom('hi', 'a_very_long_nickname', '#a-channel-with-a-long-name-indeed'),
+    510 - (1 + 20 + 1 + 10 + 1 + 63 + 9 + 34 + 2) - 2,
+  );
 });
