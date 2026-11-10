@@ -5155,8 +5155,10 @@ function shortWhen(ts) {
   return sameDay(ts, Date.now()) ? clock(ts).slice(0, 5) : dayLabel(ts);
 }
 
+/** A line that names you; a reaction ("rolle: 🎉") shows as a reaction, not a highlight. */
 function isHighlight(l) {
   return (
+    !parseReaction(l.text) &&
     !hiddenKeys().has(key(l.net, l.buffer)) &&
     Boolean(l.id) &&
     !l.own &&
