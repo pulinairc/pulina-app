@@ -4815,7 +4815,7 @@ document.addEventListener(
 // Shelf: the channel's links, pictures and videos on its own timeline, newest first.
 
 const SHELF_BOTTOM_PX = 40;
-const shelf = { open: false, key: null, lines: [], older: true, loading: false };
+const shelf = { tab: 'links', open: false, key: null, lines: [], older: true, loading: false };
 const linkTitles = new IntersectionObserver((entries) => {
   for (const e of entries) {
     if (e.isIntersecting) {
@@ -4882,45 +4882,70 @@ async function loadShelf(more = false) {
   renderShelf(more ? fromBottom : null);
 }
 
+/** Every link, picture and video in the shelf's lines, oldest first. */
+function shelfItems() {
+  const items = [];
+  for (const l of [...shelf.lines].reverse()) {
+    for (const t of tokenize(l.text, '')) {
+      if (t.type === 'url') {
+        items.push({ l, url: t.value, kind: mediaKind(t.value) });
+      }
+    }
+  }
+  return items;
+}
+
+function shelfTabs(links, pictures) {
+  const bar = h('div', 'shelf-tabs');
+  for (const [name, label, count] of [
+    ['links', 'Links', links],
+    ['pictures', 'Pictures', pictures],
+  ]) {
+    const tab = h('button', 'shelf-tab', `${label} ${count}`);
+    tab.type = 'button';
+    tab.setAttribute('aria-selected', String(shelf.tab === name));
+    tab.addEventListener('click', () => {
+      shelf.tab = name;
+      renderShelf();
+    });
+    bar.append(tab);
+  }
+  return bar;
+}
+
 /** Oldest first like the chat, so the newest sits at the bottom where the shelf opens. */
 function renderShelf(keepFromBottom = null) {
-  const nodes = [];
+  const items = shelfItems();
+  const links = items.filter((i) => i.kind === 'link');
+  const pictures = items.filter((i) => i.kind !== 'link');
+  const nodes = [shelfTabs(links.length, pictures.length)];
   if (shelf.older && shelf.lines.length) {
     const more = h('button', 'shelf-more', 'Older');
     more.type = 'button';
     more.addEventListener('click', () => loadShelf(true));
     nodes.push(more);
   }
-  let day = null;
-  let tiles = null;
-  for (const l of [...shelf.lines].reverse()) {
-    if (!day || !sameDay(day, l.ts)) {
-      day = l.ts;
-      nodes.push(h('div', 'shelf-day', dayLabel(l.ts)));
-      tiles = null;
-    }
-    for (const t of tokenize(l.text, '')) {
-      if (t.type !== 'url') {
-        continue;
+  const shown = shelf.tab === 'pictures' ? pictures : links;
+  if (shelf.tab === 'pictures') {
+    const grid = h('div', 'shelf-tiles');
+    grid.append(...shown.map((i) => shelfTile(i.l, i.url, i.kind)));
+    nodes.push(grid);
+  } else {
+    let day = null;
+    for (const i of shown) {
+      if (!day || !sameDay(day, i.l.ts)) {
+        day = i.l.ts;
+        nodes.push(h('div', 'shelf-day', dayLabel(i.l.ts)));
       }
-      const kind = mediaKind(t.value);
-      if (kind === 'link') {
-        nodes.push(shelfLink(l, t.value));
-        tiles = null;
-        continue;
-      }
-      if (!tiles) {
-        tiles = h('div', 'shelf-tiles');
-        nodes.push(tiles);
-      }
-      tiles.append(shelfTile(l, t.value, kind));
+      nodes.push(shelfLink(i.l, i.url));
     }
   }
-  if (!shelf.lines.length) {
-    nodes.push(h('div', 'shelf-empty', 'No links, pictures or videos here yet.'));
+  if (!shown.length) {
+    nodes.push(h('div', 'shelf-empty', shelf.tab === 'pictures' ? 'No pictures or videos here yet.' : 'No links here yet.'));
   }
   el.shelf.replaceChildren(...nodes);
   el.shelf.scrollTop = keepFromBottom === null ? el.shelf.scrollHeight : el.shelf.scrollHeight - keepFromBottom;
+  el.shelfLatest.hidden = shelfAtBottom();
 }
 
 function shelfTip(l) {

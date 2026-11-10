@@ -3486,7 +3486,7 @@ body.docked #status {
   inset: 0;
   z-index: 8;
   overflow-y: auto;
-  padding: 4px 0 16px;
+  padding: 0 0 16px;
   background: var(--bg);
 }
 .shelf[hidden] {
@@ -3495,6 +3495,33 @@ body.docked #status {
 .shelf > * {
   max-width: var(--column);
   margin-inline: auto;
+}
+.shelf-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--bg);
+}
+.shelf-tab {
+  flex: 1;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--faint);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.shelf-tab:hover {
+  color: var(--text);
+}
+.shelf-tab[aria-selected="true"] {
+  background: var(--hover);
+  color: var(--strong);
 }
 .shelf-day {
   display: flex;
@@ -3513,9 +3540,9 @@ body.docked #status {
 }
 .shelf-tiles {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
   gap: 5px;
-  padding: 0 12px 4px;
+  padding: 4px 12px;
 }
 .shelf-tile {
   position: relative;
