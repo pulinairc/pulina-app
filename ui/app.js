@@ -5627,6 +5627,26 @@ function shelfItems() {
   return items;
 }
 
+// The newest pictures are at the bottom, so a short row goes on top and the last row is always full.
+const tilesFromBottom = new ResizeObserver((entries) => {
+  for (const e of entries) {
+    alignTiles(e.target);
+  }
+});
+
+function alignTiles(grid) {
+  const first = grid.firstElementChild;
+  if (!first) {
+    return;
+  }
+  first.style.gridColumnStart = '';
+  const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+  const rest = grid.children.length % columns;
+  if (rest) {
+    first.style.gridColumnStart = String(columns - rest + 1);
+  }
+}
+
 function shelfTabs(links, pictures) {
   const bar = h('div', 'shelf-tabs');
   for (const [name, label, count] of [
@@ -5661,6 +5681,7 @@ function renderShelf(keepFromBottom = null) {
   if (shelf.tab === 'pictures') {
     const grid = h('div', 'shelf-tiles');
     grid.append(...shown.map((i) => shelfTile(i.l, i.url, i.kind)));
+    tilesFromBottom.observe(grid);
     nodes.push(grid);
   } else {
     let day = null;
