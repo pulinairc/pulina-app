@@ -2566,6 +2566,41 @@ el.pill.addEventListener('click', () => {
   }
 });
 el.pill.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+// Phones: a swipe in from the right edge opens the people list.
+const EDGE_ZONE_PX = 24;
+const EDGE_SWIPE_PX = 40;
+const EDGE_SLOP_PX = 10;
+let edgeSwipe = null;
+document.addEventListener(
+  'touchstart',
+  (e) => {
+    const t = e.touches[0];
+    const fromEdge = e.touches.length === 1 && t.clientX > innerWidth - EDGE_ZONE_PX;
+    edgeSwipe = fromEdge && !HOVER.matches && !el.pill.hidden && !nicklist.el ? { x: t.clientX, y: t.clientY } : null;
+  },
+  { passive: true },
+);
+document.addEventListener(
+  'touchmove',
+  (e) => {
+    if (!edgeSwipe) {
+      return;
+    }
+    const dx = edgeSwipe.x - e.touches[0].clientX;
+    const dy = Math.abs(e.touches[0].clientY - edgeSwipe.y);
+    if (dy > Math.max(dx, EDGE_SLOP_PX)) {
+      edgeSwipe = null;
+      return;
+    }
+    if (dx > EDGE_SWIPE_PX) {
+      edgeSwipe = null;
+      el.pill.click();
+    }
+  },
+  { passive: true },
+);
+
 document.addEventListener('pointerdown', () => {
   if (nicklist.menu) {
     closePeopleMenu();

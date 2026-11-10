@@ -4,6 +4,7 @@
 * Add a light tap on long press on phones
 * Add text size steps on iPhone volume buttons
 * Change the /me spark to sit by the name
+* Add a swipe from the right edge for people
 
 ### 1.6.0: 2026-11-10
 
