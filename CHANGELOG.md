@@ -5,6 +5,7 @@
 * Add text size steps on iPhone volume buttons
 * Change the /me spark to sit by the name
 * Add a swipe from the right edge for people
+* Fix the channel list raising the iPhone keyboard
 
 ### 1.6.0: 2026-11-10
 

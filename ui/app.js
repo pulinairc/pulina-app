@@ -1055,7 +1055,10 @@ function openSwitcher() {
   picked = 0;
   renderList();
   el.switcher.showModal();
-  el.filter.focus();
+  // On a phone the keyboard waits for a tap on the search.
+  if (HOVER.matches) {
+    el.filter.focus();
+  }
 }
 
 function pick(k) {
@@ -1203,7 +1206,7 @@ el.settings.addEventListener('click', (e) => {
 });
 el.settings.addEventListener('close', () => el.input.focus());
 // Not when the highlights inbox took over: on a phone that would raise the keyboard over it.
-el.switcher.addEventListener('close', () => el.inbox.hidden && el.input.focus());
+el.switcher.addEventListener('close', () => el.inbox.hidden && HOVER.matches && el.input.focus());
 el.connection.addEventListener('close', () => el.input.focus());
 
 // Log
@@ -3267,6 +3270,7 @@ function colonPicker() {
 const KEYBOARD_SETTLE_MS = 90;
 const KEYBOARD_MIN_PX = 40;
 let keyboardTimer = 0;
+let keyboardPinned = false;
 
 function fitKeyboard() {
   const vv = window.visualViewport;
@@ -3277,8 +3281,13 @@ function fitKeyboard() {
   if (vv.offsetTop > 0.5) {
     window.scrollTo(0, 0);
   }
+  // Taken before the slide starts moving the chat.
+  if (!keyboardTimer) {
+    keyboardPinned = stuck;
+  }
   clearTimeout(keyboardTimer);
   keyboardTimer = setTimeout(() => {
+    keyboardTimer = 0;
     const full = root.clientHeight;
     const up = vv.height < full - KEYBOARD_MIN_PX;
     root.classList.toggle('keyboard', up);
@@ -3287,6 +3296,10 @@ function fitKeyboard() {
       root.style.setProperty('--app-h', `${Math.round(vv.height / pageScale)}px`);
     } else {
       root.style.removeProperty('--app-h');
+    }
+    if (keyboardPinned) {
+      stuck = true;
+      toBottom();
     }
     const field = document.activeElement;
     if (up && field?.closest('dialog')) {
