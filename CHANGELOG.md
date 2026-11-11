@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.10.0: 2026-11-11
 
 * Fix the update check saying up to date without update files
 * Change the start light to widen over the chat, beam to the bottom
@@ -9,6 +9,7 @@
 * Change Finnish highlights to highlight
 * Add shared profile pictures between Lobby and Pulina users
 * Change "N changes" to open the full list on a click
+* Change the contact address to rolle@dude.fi
 
 ### 1.9.1: 2026-11-11
 
