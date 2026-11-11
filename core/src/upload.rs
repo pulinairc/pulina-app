@@ -8,6 +8,7 @@ use std::time::Duration;
 
 pub const MAX_BYTES: usize = 20 * 1024 * 1024;
 const TIMEOUT: Duration = Duration::from_secs(120);
+const USER_AGENT: &str = concat!("Lobby/", env!("CARGO_PKG_VERSION"), " (+https://github.com/rollecode/lobby)");
 const SIGNED_FOR: Duration = Duration::from_secs(300);
 const CATBOX_API: &str = "https://catbox.moe/user/api.php";
 const DEFAULT_REGION: &str = "auto";
@@ -76,7 +77,8 @@ pub async fn send(target: &Target, file: File) -> Result<String, String> {
 
 fn client() -> Result<reqwest::Client, String> {
     // HTTP/1.1: catbox.moe breaks off large uploads over HTTP/2 ("stream error received").
-    crate::http().timeout(TIMEOUT).http1_only().build().map_err(|e| e.to_string())
+    // catbox.moe drops a request with no User-Agent before answering.
+    crate::http().timeout(TIMEOUT).http1_only().user_agent(USER_AGENT).build().map_err(|e| e.to_string())
 }
 
 /// "Holiday photo.PNG" sent as image/png is kept as "<random>/Holiday-photo.png".

@@ -294,6 +294,7 @@ export const FI = {
   'Server address': 'Palvelimen osoite',
   'Channels to join': 'Kanavat',
   Join: 'Liity',
+  'Join channel': 'Liity kanavalle',
   'Other server': 'Muu palvelin',
   'Pick a nick that starts with a letter: letters, digits and - _ after it.':
     'Nimimerkin pitää alkaa kirjaimella. Sen jälkeen käyvät kirjaimet, numerot, väliviiva ja alaviiva.',
