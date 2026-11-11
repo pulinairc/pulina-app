@@ -21,4 +21,4 @@ Settings, chat history, people's photos and colours you set, and blocked people 
 
 ## Contact
 
-rolle.laukkarinen@gmail.com
+rolle@dude.fi
