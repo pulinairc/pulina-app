@@ -7,6 +7,7 @@
 * Add back steps and a read-to-the-end rules list for forks
 * Add a quit message, sent on closing and shown for others
 * Add default channel pictures for forks
+* Add drifting IRC signs behind the welcome
 
 ### 1.8.2: 2026-11-11
 

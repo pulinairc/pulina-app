@@ -4268,6 +4268,40 @@ dialog.welcome {
 dialog.welcome::backdrop {
   background: var(--bg);
 }
+/* Faint IRC signs drifting behind every welcome step. */
+.welcome-signs {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.welcome-signs span {
+  position: absolute;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-weight: 500;
+  line-height: 1;
+  color: color-mix(in srgb, var(--mention) 9%, transparent);
+  animation: sign-drift ease-in-out infinite;
+}
+.welcome-signs .sign-b {
+  color: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.welcome-signs .sign-c {
+  color: color-mix(in srgb, var(--dim) 8%, transparent);
+}
+@keyframes sign-drift {
+  50% {
+    transform: translate(18px, -26px) rotate(8deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-signs span {
+    animation: none;
+  }
+}
+.welcome-step {
+  position: relative;
+}
 .welcome-step {
   box-sizing: border-box;
   min-height: 100%;
