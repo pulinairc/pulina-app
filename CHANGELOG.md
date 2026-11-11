@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.8.0: 2026-11-11
 
 * Add Finnish, picked in Settings
 * Add block, report and word filters
