@@ -99,6 +99,8 @@ pub struct Hub {
 
 /// The channels each network was in, kept so a restart or a reconnect joins them again.
 const REJOIN_PREFIX: &str = "rejoin.";
+/// The setting that holds your own shared picture's link.
+const AVATAR_SETTING: &str = "avatar";
 
 fn remember(list: &mut Vec<String>, channel: &str, joined: bool) {
     let known = list.iter().any(|c| c.eq_ignore_ascii_case(channel));
@@ -388,7 +390,7 @@ impl Hub {
             let _ = tx.send(format!("PASS {password}"));
         }
         let _ = tx.send(format!("NICK {}", self.nick));
-        let _ = tx.send(format!("USER {} 0 * :Lobby", self.nick));
+        let _ = tx.send(format!("USER {} 0 * :{}", self.nick, self.realname()));
         self.set_conn(&net.name, "connected");
 
         let mut session = Session::new(&net.name, &self.nick);
@@ -411,6 +413,12 @@ impl Hub {
         lock(&self.channels).retain(|(n, _), _| n != &net.name);
         writer.abort();
         result
+    }
+
+    /// The real name others see: the shared picture's link when one is set, so Lobby and Pulina show it.
+    fn realname(&self) -> String {
+        let setting = self.store.settings().ok().and_then(|s| s.get(AVATAR_SETTING).cloned()).unwrap_or_default();
+        crate::net::avatar_in(&setting).unwrap_or_else(|| "Lobby".into())
     }
 
     fn remembered(&self, net: &str) -> Vec<String> {

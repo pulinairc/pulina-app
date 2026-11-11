@@ -55,10 +55,10 @@ export const FI = {
 
   // macOS notifications
   'macOS asks once whether Lobby may show notifications. Lobby uses them for mentions and private messages.':
-    'macOS kysyy kerran, saako Lobby näyttää ilmoituksia. Lobby ilmoittaa maininnoista ja yksityisviesteistä.',
+    'macOS kysyy kerran, saako Lobby näyttää ilmoituksia. Lobby ilmoittaa hailaiteista ja yksityisviesteistä.',
   'Allow notifications': 'Salli ilmoitukset',
   'Notifications are off for Lobby in System Settings, so mentions and private messages make no sound or banner.':
-    'Ilmoitukset on kytketty pois Järjestelmäasetuksissa, joten maininnoista ja yksityisviesteistä ei tule ääntä eikä banneria.',
+    'Ilmoitukset on kytketty pois Järjestelmäasetuksissa, joten hailaiteista ja yksityisviesteistä ei tule ääntä eikä banneria.',
   'Open System Settings': 'Avaa Järjestelmäasetukset',
   banners: 'bannerit',
   'the Dock badge': 'Dockin numeromerkki',
@@ -126,14 +126,14 @@ export const FI = {
   Channels: 'Kanavat',
   'Find a channel': 'Etsi kanava',
   'Jump to a channel or person': 'Hae kanavaa tai henkilöä',
-  Highlights: 'Maininnat',
+  Highlights: 'Hailaitit',
   Settings: 'Asetukset',
   'For you': 'Sinulle',
   'For you · {n}': 'Sinulle · {n}',
   Archive: 'Arkisto',
   'Mark all read': 'Merkitse kaikki luetuiksi',
   'Filter by nick, channel or words': 'Suodata nimimerkin, kanavan tai sanojen mukaan',
-  'Filter highlights': 'Suodata mainintoja',
+  'Filter highlights': 'Suodata hailaitteja',
 
   // Settings
   Saved: 'Tallennettu',
@@ -159,9 +159,9 @@ export const FI = {
   'Reset to defaults': 'Palauta oletukset',
   'Turn text smileys into real emoji': 'Muuta tekstihymiöt emojeiksi',
   'Suggest emoji after a colon': 'Ehdota emojeita kaksoispisteen jälkeen',
-  'Highlight words': 'Mainintasanat',
+  'Highlight words': 'Hailaittisanat',
   'Besides your nick, these words highlight a message and put it in Highlights. Only whole words count, so a word inside a longer one does not.':
-    'Nimimerkkisi lisäksi nämä sanat korostavat viestin ja nostavat sen Maininnat-listaan. Vain kokonaiset sanat huomioidaan, joten esimerkiksi kai ei korosta sanaa kaikki.',
+    'Nimimerkkisi lisäksi nämä sanat korostavat viestin ja nostavat sen Hailaitit-listaan. Vain kokonaiset sanat huomioidaan, joten esimerkiksi kai ei korosta sanaa kaikki.',
   'People to notify about': 'Ihmiset, joiden viesteistä ilmoitetaan',
   'Whatever these people say notifies you and counts on the app icon, in every channel.':
     'Saat ilmoituksen kaikista näiden ihmisten viesteistä kaikilla kanavilla, ja ne näkyvät sovelluksen kuvakkeessa.',
@@ -170,7 +170,7 @@ export const FI = {
     'Näistä sanoista tulee ilmoitus ja merkintä sovelluksen kuvakkeeseen, mutta viestiä ei korosteta. Vain kokonaiset sanat huomioidaan.',
   'Every message': 'Kaikki viestit',
   'Switched on, every message in that channel counts on the app icon or notifies you. Switched off, only highlights and the people and words set here do.':
-    'Kun kytkin on päällä, kanavan kaikki viestit näkyvät sovelluksen kuvakkeessa tai niistä tulee ilmoitus. Muuten vain maininnat sekä tässä valitut ihmiset ja sanat.',
+    'Kun kytkin on päällä, kanavan kaikki viestit näkyvät sovelluksen kuvakkeessa tai niistä tulee ilmoitus. Muuten vain hailaitit sekä tässä valitut ihmiset ja sanat.',
   Bots: 'Botit',
   'What these nicks say right after a command like': 'Näiden nimimerkkien vastaukset komentoihin, kuten',
   'is shown inside it, as its answer.': ', näytetään komennon yhteydessä.',
@@ -316,6 +316,8 @@ export const FI = {
   'Networks on lobby-server': 'lobby-serverin verkot',
   'Add a network': 'Lisää verkko',
   Nick: 'Nimimerkki',
+  'Others see your picture after you next connect.': 'Muut näkevät kuvasi, kun seuraavan kerran yhdistät.',
+  'Could not share your picture: {error}': 'Kuvan jakaminen ei onnistunut: {error}',
   'Joining {name}…': 'Liitytään kanavalle {name}…',
   '{count} chatting now': '{count} juttelee nyt',
   'Talked last': 'Viimeksi juttelivat',
@@ -471,7 +473,7 @@ export const FI = {
   Connect: 'Yhdistä',
   'Add your photo': 'Lisää kuvasi',
   'Turn on notifications': 'Ota ilmoitukset käyttöön',
-  'Pick your highlight words': 'Valitse mainintasanasi',
+  'Pick your highlight words': 'Valitse hailaittisanasi',
   '{done} of {total}': '{done}/{total}',
 
   // Emoji picker
@@ -510,8 +512,8 @@ export const FI = {
   'System Settings: {error}': 'Järjestelmäasetukset: {error}',
 
   // Highlights
-  '{n} highlight for you': '{n} maininta sinulle',
-  '{n} highlights for you': '{n} mainintaa sinulle',
+  '{n} highlight for you': '{n} hailaitti',
+  '{n} highlights for you': '{n} hailaittia',
   'Nothing matches.': 'Ei osumia.',
   'Nothing here yet.': 'Täällä ei ole vielä mitään.',
   'All caught up.': 'Kaikki luettu.',
