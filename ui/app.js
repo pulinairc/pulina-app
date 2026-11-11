@@ -1915,6 +1915,14 @@ function toSeparator() {
   el.log.scrollTop = Math.max(0, top - SEPARATOR_MARGIN_PX);
 }
 
+function renderEvents(events) {
+  const short = summarize(events.list);
+  const full = summarize(events.list, true);
+  events.node.textContent = events.open ? full : short;
+  events.node.classList.toggle('expandable', short !== full);
+  events.node.classList.toggle('open', Boolean(events.open));
+}
+
 /** Draw one line at the end of the chat; returns a row it added inside an existing group, if any. */
 function appendLine(l) {
   if (isMuffled(l)) {
@@ -1949,9 +1957,15 @@ function appendLine(l) {
     if (!view.events) {
       view.events = { list: [], node: h('div', 'events') };
       el.col.append(view.events.node);
+      const events = view.events;
+      // A summary that counts instead of naming opens to the whole list on a click.
+      events.node.addEventListener('click', () => {
+        events.open = !events.open;
+        renderEvents(events);
+      });
     }
     view.events.list.push(l);
-    view.events.node.textContent = summarize(view.events.list);
+    renderEvents(view.events);
     view.events.node.dataset.tip = clock(l.ts);
     view.group = null;
   } else if (CHAT_KINDS.has(l.kind) && answersCommand(l, prev)) {

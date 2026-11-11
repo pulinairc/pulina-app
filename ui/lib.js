@@ -59,9 +59,9 @@ function andList(list) {
 }
 
 /** `verb` is a template like "{who} joined"; Finnish has a plural form of each. */
-function names(list, verb) {
+function names(list, verb, all) {
   const unique = [...new Set(list)];
-  if (unique.length > NAMES_SHOWN) {
+  if (unique.length > NAMES_SHOWN && !all) {
     return tv(verb, 'many', { who: unique.length });
   }
   return tv(verb, unique.length > 1 ? 'plural' : '', { who: andList(unique) });
@@ -77,8 +77,8 @@ export function quitReason(text = '') {
     .slice(0, QUIT_REASON_CHARS);
 }
 
-/** One readable line for a run of joins, parts, quits and nick changes. */
-export function summarize(events) {
+/** One readable line for a run of joins, parts, quits and nick changes; `all` names every one of them. */
+export function summarize(events, all = false) {
   const by = { join: [], part: [], quit: [] };
   const extra = [];
   for (const e of events) {
@@ -101,15 +101,15 @@ export function summarize(events) {
   }
   const parts = [];
   if (by.join.length) {
-    parts.push(names(by.join, '{who} joined'));
+    parts.push(names(by.join, '{who} joined', all));
   }
   if (by.part.length) {
-    parts.push(names(by.part, '{who} left'));
+    parts.push(names(by.part, '{who} left', all));
   }
   if (by.quit.length) {
-    parts.push(names(by.quit, '{who} quit'));
+    parts.push(names(by.quit, '{who} quit', all));
   }
-  if (extra.length > NAMES_SHOWN) {
+  if (extra.length > NAMES_SHOWN && !all) {
     parts.push(t('{n} changes', { n: extra.length }));
   } else {
     parts.push(...extra);

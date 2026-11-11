@@ -71,6 +71,7 @@ test('summarizes joins and quits', () => {
   const ev = (kind, nick, text = '') => ({ kind, nick, text });
   assert.equal(summarize([ev('join', 'pekka'), ev('quit', 'a'), ev('quit', 'b')]), 'pekka joined, a and b quit');
   assert.equal(summarize(['a', 'b', 'c', 'd'].map((n) => ev('quit', n))), '4 quit');
+  assert.equal(summarize(['a', 'b', 'c', 'd'].map((n) => ev('quit', n)), true), 'a, b, c and d quit');
   assert.equal(summarize([ev('nick', 'kaisla', 'Kaisla_')]), 'kaisla is now Kaisla_');
   // A quit with a reason says it; a bare "Quit:" says nothing more.
   assert.equal(

@@ -8,6 +8,7 @@
 * Fix Cmd+Q on Mac quitting without the quit message
 * Change Finnish highlights to highlight
 * Add shared profile pictures between Lobby and Pulina users
+* Change "N changes" to open the full list on a click
 
 ### 1.9.1: 2026-11-11
 
