@@ -87,6 +87,15 @@ MAX_BODY = 4096
 SCRYPT = dict(n=2 ** 14, r=8, p=1, dklen=32)
 
 
+
+def port_free(port):
+    with socket.socket() as probe:
+        try:
+            probe.bind(('127.0.0.1', port))
+        except OSError:
+            return False
+    return True
+
 def db():
     conn = sqlite3.connect(DB)
     conn.row_factory = sqlite3.Row
@@ -377,10 +386,11 @@ class Handler(BaseHTTPRequestHandler):
                 return self.decision_page(token)
             if decision != 'approve':
                 return self.decision_page(token)
-            used = [r[0] for r in conn.execute("SELECT port FROM accounts WHERE status = 'approved'")]
+            # Shell users' and every other row's ports too, and nothing another process holds.
+            used = {r[0] for r in conn.execute("SELECT port FROM accounts WHERE port IS NOT NULL")}
             if len(used) >= MAX_ACCOUNTS:
                 return self.decision_page(token, f'<p>Tunnuksia on jo {MAX_ACCOUNTS}, enempää ei voi nyt hyväksyä.</p>')
-            port = next(p for p in range(FIRST_PORT, FIRST_PORT + 1000) if p not in used)
+            port = next(p for p in range(FIRST_PORT, FIRST_PORT + 1000) if p not in used and port_free(p))
             token_ws = secrets.token_urlsafe(32)
             done = subprocess.run(['sudo', '-n', CREATE, row['name'], str(port), token_ws], capture_output=True, text=True, timeout=120)
             if done.returncode != 0:
