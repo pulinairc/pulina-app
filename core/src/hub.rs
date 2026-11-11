@@ -464,6 +464,11 @@ impl Hub {
         match out {
             Out::Line(line) => {
                 self.track_members(&line);
+                // Your own join is news only the first time. Coming back, as through irssiproxy after
+                // a restart, IRC saw nothing, so no "you joined" line either.
+                if line.kind == "join" && line.own && self.store.has_nick(&line.net, &line.buffer, &line.nick).unwrap_or(false) {
+                    return;
+                }
                 self.deliver(line);
             }
             Out::Buffer(info) => {

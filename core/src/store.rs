@@ -138,6 +138,15 @@ impl Store {
         self.conn().query_row("SELECT MAX(ts) FROM lines WHERE net = ?1 AND buffer = ?2 COLLATE NOCASE", params![net, buffer], |r| r.get(0))
     }
 
+    /// Whether this nick has any line in the buffer: said something, joined, anything.
+    pub fn has_nick(&self, net: &str, buffer: &str, nick: &str) -> rusqlite::Result<bool> {
+        self.conn().query_row(
+            "SELECT EXISTS (SELECT 1 FROM lines WHERE net = ?1 AND buffer = ?2 COLLATE NOCASE AND nick = ?3 COLLATE NOCASE)",
+            params![net, buffer, nick],
+            |r| r.get(0),
+        )
+    }
+
     /// Whether a line with this nick and text was written between two times.
     pub fn has_line(&self, net: &str, buffer: &str, nick: &str, text: &str, from: i64, to: i64) -> rusqlite::Result<bool> {
         self.conn().query_row(
