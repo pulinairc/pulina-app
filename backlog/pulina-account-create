@@ -41,6 +41,7 @@ chown -R "$NAME:$NAME" "$CONF" "$DATA"
 chmod 600 "$CONF/config.toml" "$DATA/history.db"
 
 systemctl enable --now "lobby-server@$NAME.service"
+/usr/local/sbin/pulina-upload-key "$NAME" >/dev/null
 touch "$MAP"
 grep -q "^$NAME " "$MAP" || echo "$NAME $PORT;" >> "$MAP"
 nginx -t -q && systemctl reload nginx

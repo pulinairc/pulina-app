@@ -59,6 +59,7 @@ def main(name, port):
                      'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
                      (name, b'', b'', '', 'shell', secrets.token_urlsafe(24), int(time.time()), int(port), token))
     subprocess.run(['systemctl', 'enable', '--now', f'lobby-server@{name}.service'], check=True)
+    subprocess.run(['/usr/local/sbin/pulina-upload-key', name], check=True, capture_output=True)
     with open(MAP) as f:
         known = f.read()
     if not re.search(rf'^{name} ', known, re.M):

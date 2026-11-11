@@ -1,0 +1,22 @@
+#!/bin/sh
+# pulina-upload-key <account>: lets an account's lobby-server put files on up.pulina.fi.
+# Each account gets its own key in /etc/up-pulina-keys ("account:key"), so one can be revoked
+# by deleting its line. The key goes into the account's lobby-server config, written as that
+# user so nothing in their home can redirect root. Run as root.
+set -eu
+NAME=$1
+case "$NAME" in [a-z]*) ;; *) echo "bad name" >&2; exit 1 ;; esac
+case "$NAME" in *[!a-z0-9_-]*) echo "bad name" >&2; exit 1 ;; esac
+KEYS=/etc/up-pulina-keys
+HOME_DIR=$(getent passwd "$NAME" | cut -d: -f6)
+CONF="$HOME_DIR/.config/lobby-server/config.toml"
+runuser -u "$NAME" -- grep -q '^\[upload\]' "$CONF" && { echo "$NAME already has uploads"; exit 0; }
+KEY=$(head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n')
+touch "$KEYS"
+chown root:www-data "$KEYS"
+chmod 640 "$KEYS"
+sed -i "/^$NAME:/d" "$KEYS"
+echo "$NAME:$KEY" >> "$KEYS"
+printf '\n[upload]\nkind = "filehost"\nurl = "https://up.pulina.fi/fh.php?k=%s"\n' "$KEY" | runuser -u "$NAME" -- sh -c 'cat >> "$1"' sh "$CONF"
+systemctl try-restart "lobby-server@$NAME.service"
+echo "$NAME can upload"

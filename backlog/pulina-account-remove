@@ -13,4 +13,5 @@ grep -q "^$NAME " "$MAP" || { echo "not an account" >&2; exit 1; }
 systemctl disable --now "lobby-server@$NAME.service" || true
 sed -i "/^$NAME /d" "$MAP"
 nginx -t -q && systemctl reload nginx
+sed -i "/^$NAME:/d" /etc/up-pulina-keys 2>/dev/null || true
 userdel --remove "$NAME" 2>/dev/null || true
