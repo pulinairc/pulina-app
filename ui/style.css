@@ -400,7 +400,8 @@ a:focus-visible {
 }
 /* Your name in a line meant for you: a soft shine crosses it now and then. */
 .text.for-me .mention {
-  background: linear-gradient(110deg, var(--mention-bg) 35%, color-mix(in srgb, var(--mention) 38%, transparent) 50%, var(--mention-bg) 65%) no-repeat;
+  background: linear-gradient(110deg, var(--mention-bg) 35%, color-mix(in srgb, var(--mention) 38%, transparent) 50%, var(--mention-bg) 65%)
+    no-repeat;
   background-size: 300% 100%;
   animation: glimmer 2.6s ease-in-out infinite;
 }
