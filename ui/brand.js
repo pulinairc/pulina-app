@@ -2,6 +2,8 @@
 // `lang` is the UI language until one is picked in Settings: 'en' or 'fi', English when left out.
 export const BRAND = {
   name: 'Lobby',
+  // The name for "Tervetuloa …" in Finnish.
+  fiInto: 'Lobbyyn',
   site: 'https://github.com/rollecode/lobby',
   // The first is the bundle's own icon, as src-tauri/icons/default.txt names it.
   icons: [

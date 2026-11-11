@@ -245,7 +245,7 @@ export const FI = {
   'Edit person': 'Muokkaa henkilöä',
 
   // Welcome
-  'Welcome to Lobby': 'Tervetuloa Lobby-sovellukseen',
+  'Welcome to {app}': 'Tervetuloa {app}',
   'How do you want to chat? You can change this later in Settings.': 'Miten haluat keskustella? Voit muuttaa tätä myöhemmin asetuksista.',
   'How to connect': 'Yhteystapa',
   'Start chatting now': 'Aloita heti',
