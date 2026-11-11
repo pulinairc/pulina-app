@@ -34,9 +34,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYyOEMxMzdGMTdEOTRGNDMKUldSRFQ5a1hmeE9NWWlYREZpMEF3YWpKUDBSTjdqdTJUMDZxem1DQ0JuMDJ6SUJDY0srUDFqYkUK",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM5NzQwMjMyQzAxRjM2QzUKUldURk5oL0FNZ0owT2J5VVp1N1ZKcCszTUMrWGJpYis1SmkxWnJYdDhFSGloNzJBbStLcEEzaTUK",
       "endpoints": [
-        "https://github.com/rollecode/lobby/releases/latest/download/latest.json"
+        "https://github.com/pulinairc/pulina-app/releases/latest/download/latest.json"
       ]
     }
   }
