@@ -556,6 +556,9 @@ a:hover {
 :root {
   --media-w: min(72%, 320px);
   --media-h: 260px;
+  /* Videos a size smaller than pictures, Threads-like. */
+  --video-w: min(72%, 280px);
+  --video-h: 300px;
 }
 
 .pic {
@@ -575,7 +578,7 @@ a:hover {
 /* Videos: a muted loop while on screen, sound and controls on click. */
 .vid {
   position: relative;
-  width: var(--media-w);
+  width: var(--video-w);
   aspect-ratio: 16 / 9;
   margin: 4px 0;
   overflow: hidden;
@@ -585,8 +588,9 @@ a:hover {
 }
 
 .vid.portrait {
-  width: auto;
-  height: var(--media-h);
+  /* A block's auto width fills the column whatever its aspect ratio: the width comes from the height. */
+  width: calc(var(--video-h) * 9 / 16);
+  height: var(--video-h);
   aspect-ratio: 9 / 16;
 }
 
@@ -622,14 +626,14 @@ a:hover {
 
 .vid.native {
   width: fit-content;
-  max-width: var(--media-w);
+  max-width: var(--video-w);
   aspect-ratio: auto;
 }
 
 .vid.native video {
   display: block;
   max-width: 100%;
-  max-height: var(--media-h);
+  max-height: var(--video-h);
 }
 
 .vid-title {
@@ -1415,6 +1419,8 @@ dialog:focus {
   :root {
     --media-w: min(80%, 260px);
     --media-h: 220px;
+    --video-w: min(80%, 240px);
+    --video-h: 260px;
   }
 }
 
