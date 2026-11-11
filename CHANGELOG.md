@@ -1,6 +1,8 @@
 ### [Unreleased]
 
 * Fix the hidden Restart button after an update
+* Fix the start light showing over the chat
+* Add the build date to the version in About
 
 ### 1.8.2: 2026-11-11
 
