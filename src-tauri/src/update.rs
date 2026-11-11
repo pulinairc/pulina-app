@@ -36,7 +36,8 @@ pub async fn check_update(app: AppHandle) -> Result<Option<Available>, String> {
         return Ok(None);
     }
     let url = app.config().plugins.0.get("updater").and_then(|u| u["endpoints"][0].as_str()).ok_or("No update address")?.to_string();
-    let latest: serde_json::Value = reqwest::get(url).await.map_err(|e| e.to_string())?.json().await.map_err(|e| e.to_string())?;
+    let client = lobby_core::http().build().map_err(|e| e.to_string())?;
+    let latest: serde_json::Value = client.get(url).send().await.map_err(|e| e.to_string())?.json().await.map_err(|e| e.to_string())?;
     let version = latest["version"].as_str().unwrap_or_default().trim_start_matches('v').to_string();
     Ok(newer(&version, env!("CARGO_PKG_VERSION")).then_some(Available { version, installable: false }))
 }

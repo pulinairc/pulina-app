@@ -2843,6 +2843,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "webpki-root-certs",
 ]
 
 [[package]]

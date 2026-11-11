@@ -3,6 +3,7 @@
 * Add updates from inside the app
 * Add a welcome and a setup checklist
 * Add a lamp that lights the way in on start
+* Fix web requests crashing on Android
 
 ### 1.7.0: 2026-11-11
 

@@ -19,7 +19,7 @@ pub struct Playing {
 pub async fn now_playing(user: &str, key: &str) -> Result<Option<Playing>, String> {
     let params = [("method", "user.getrecenttracks"), ("user", user), ("api_key", key), ("format", "json"), ("limit", "1")];
     let url = reqwest::Url::parse_with_params(API, &params).map_err(|e| e.to_string())?;
-    let res = reqwest::Client::builder()
+    let res = lobby_core::http()
         .timeout(TIMEOUT)
         .build()
         .map_err(|e| e.to_string())?

@@ -7,6 +7,16 @@ pub mod protocol;
 pub mod store;
 pub mod upload;
 
+/// The start of every HTTP client. Android keeps its certificates where Rust cannot read them
+/// (the default verifier panics there), so it trusts Mozilla's roots instead.
+pub fn http() -> reqwest::ClientBuilder {
+    let builder = reqwest::Client::builder();
+    #[cfg(target_os = "android")]
+    let builder =
+        builder.tls_certs_only(webpki_root_certs::TLS_SERVER_ROOT_CERTS.iter().filter_map(|c| reqwest::Certificate::from_der(c).ok()));
+    builder
+}
+
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
