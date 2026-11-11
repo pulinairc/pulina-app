@@ -45,3 +45,11 @@ systemctl enable --now "lobby-server@$NAME.service"
 touch "$MAP"
 grep -q "^$NAME " "$MAP" || echo "$NAME $PORT;" >> "$MAP"
 nginx -t -q && systemctl reload nginx
+# A reload nginx refuses is only logged: wait until the new route really answers.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  code=$(curl -sk -o /dev/null -w '%{http_code}' --resolve chat.pulina.fi:443:127.0.0.1 "https://chat.pulina.fi/u/$NAME/")
+  [ "$code" != 404 ] && exit 0
+  sleep 1
+done
+echo "nginx did not take the route for $NAME" >&2
+exit 1

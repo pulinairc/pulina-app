@@ -388,7 +388,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self.decision_page(token)
             # Shell users' and every other row's ports too, and nothing another process holds.
             used = {r[0] for r in conn.execute("SELECT port FROM accounts WHERE port IS NOT NULL")}
-            if len(used) >= MAX_ACCOUNTS:
+            if conn.execute("SELECT COUNT(*) FROM accounts WHERE status = 'approved'").fetchone()[0] >= MAX_ACCOUNTS:
                 return self.decision_page(token, f'<p>Tunnuksia on jo {MAX_ACCOUNTS}, enempää ei voi nyt hyväksyä.</p>')
             port = next(p for p in range(FIRST_PORT, FIRST_PORT + 1000) if p not in used and port_free(p))
             token_ws = secrets.token_urlsafe(32)
