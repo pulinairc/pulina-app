@@ -4570,13 +4570,14 @@ dialog.welcome::backdrop {
   display: none;
 }
 :root[data-only] .welcome-more {
-  flex: 1;
+  flex: 1 0 auto;
   width: 100%;
 }
 .welcome-fill {
   flex: 1;
 }
 .rules-list {
+  flex-shrink: 0;
   margin: 0;
   padding: 0;
   list-style: none;

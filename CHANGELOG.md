@@ -15,6 +15,7 @@
 * Fix long messages splitting too early and mid-word
 * Add pictures from Dropbox share links
 * Add rules, notification and picture steps for forks
+* Change replies to keep the addressed nick
 
 ### 1.8.1: 2026-11-11
 
