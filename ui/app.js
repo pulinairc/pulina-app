@@ -1751,9 +1751,9 @@ function renderLog() {
 // never shows it dark. Once there is a chat, it shows through the beam, then lamp and beam go together.
 const SPLASH_MIN_MS = 900;
 const SPLASH_MAX_MS = 3000;
-const SPLASH_OPEN_MS = 450;
-const SPLASH_HOLD_MS = 650;
-const SPLASH_OUT_MS = 400;
+const SPLASH_OPEN_MS = 300;
+const SPLASH_HOLD_MS = 150;
+const SPLASH_OUT_MS = 300;
 const splashStart = performance.now();
 let splashDone = false;
 setTimeout(splashReady, SPLASH_MAX_MS);
@@ -1787,7 +1787,8 @@ function openSplash() {
   cover.style.transition = `opacity ${SPLASH_OPEN_MS}ms ease-out`;
   cover.style.opacity = '0';
   setTimeout(() => {
-    // The beam's own animation holds its opacity, so it hands over to a plain transition first.
+    // The beam's own animation holds its shape and opacity, so it hands over to plain styles first.
+    light.style.clipPath = getComputedStyle(light).clipPath;
     light.style.animation = 'none';
     light.style.opacity = '1';
     light.getBoundingClientRect();
