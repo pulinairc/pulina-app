@@ -1,5 +1,7 @@
-### [Unreleased]
+### 1.13.8: 2026-11-12
 
+* Fix a fresh sign-in showing old lines as unread
+* Change videos to a smaller, Threads-like size
 * Remove "Today so far" from yesterday's podium
 
 ### 1.13.7: 2026-11-12

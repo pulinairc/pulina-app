@@ -528,6 +528,19 @@ function lastId(b) {
   return 0;
 }
 
+/** This device's first run: nothing it has never shown counts as unread here. */
+const FRESH_DEVICE_KEY = 'lobby.readSeeded';
+const FRESH_DEVICE = (() => {
+  try {
+    const fresh = !localStorage.getItem(FRESH_DEVICE_KEY);
+    localStorage.setItem(FRESH_DEVICE_KEY, '1');
+    return fresh;
+  } catch {
+    return false;
+  }
+})();
+const seededHere = new Set();
+
 function saveReadSoon() {
   clearTimeout(readSaveTimer);
   readSaveTimer = setTimeout(flushRead, READ_SAVE_DELAY_MS);
@@ -638,11 +651,14 @@ function buffer(net, name) {
 
 async function loadHistory(b) {
   const lines = await invoke('history', { net: b.net, buffer: b.name }).catch(() => []);
-  // First time this channel is seen anywhere: its old history counts as read.
-  // An empty answer sets nothing: the public log may still be on its way, and it is old talk too.
+  // First time this channel is seen anywhere, or on this device: its old history counts as read,
+  // even when another device left an older marker. An empty answer sets nothing: the public log may
+  // still be on its way, and it is old talk too.
   const newest = lines.reduce((max, l) => Math.max(max, l.id || 0), 0);
-  if (readMap[b.key] === undefined && newest) {
-    readMap[b.key] = newest;
+  const firstHere = FRESH_DEVICE && !seededHere.has(b.key);
+  if ((readMap[b.key] === undefined || firstHere) && newest) {
+    seededHere.add(b.key);
+    readMap[b.key] = Math.max(readMap[b.key] || 0, newest);
     saveReadSoon();
   }
   const fresh = lines.filter((l) => !b.ids.has(l.id));
@@ -8328,7 +8344,7 @@ armed($('sign-out'), 'Sign out', async () => {
   const nick = (await invoke('get_connection').catch(() => null))?.nick ?? '';
   const connection = { mode: '', ssh: '', ssh_port: null, port: null, url: '', token: '', nick, networks: [], key_line: '' };
   await invoke('save_connection', { connection });
-  for (const key of [CHAT_SHOWN_KEY, ACCOUNT_WAITING_KEY]) {
+  for (const key of [CHAT_SHOWN_KEY, ACCOUNT_WAITING_KEY, FRESH_DEVICE_KEY]) {
     storeFlag(key, '');
   }
   location.reload();
