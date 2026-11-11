@@ -455,6 +455,7 @@
       <button id="welcome-next" class="welcome-go" type="button">Continue</button>
     </div>
     <form id="welcome-quick" class="welcome-step" hidden>
+      <div id="welcome-applied" class="applied-card" hidden><span class="applied-mark" aria-hidden="true">✓</span><span><b>Application sent.</b> <span id="welcome-applied-text"></span> <button id="welcome-cancel-apply" class="link-btn" type="button">Cancel application</button></span></div>
       <div class="welcome-top welcome-top-left">
         <h1>Say hi to IRC</h1>
         <p class="welcome-lead">Three things and you are in.</p>
@@ -479,8 +480,80 @@
         <input id="welcome-chans" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="#channel">
       </div>
       <p id="welcome-error" class="hint error" hidden></p>
+      <button id="welcome-account-link" class="link-btn account-link" type="button" hidden></button>
       <button id="welcome-join" class="welcome-go" type="submit">Join</button>
       <button id="welcome-back" class="link-btn welcome-back any-net" type="button">Back</button>
+    </form>
+    <div id="welcome-accounts" class="welcome-step welcome-more" hidden>
+      <div class="welcome-top welcome-top-left">
+        <button class="link-btn step-back" type="button" data-back="quick">← Back</button>
+        <h1 id="accounts-title"></h1>
+        <p id="accounts-lead" class="welcome-lead"></p>
+      </div>
+      <div class="account-cards">
+        <div class="account-card">
+          <div class="account-card-top"><b>Join directly</b><span>Works right away</span></div>
+          <ul>
+            <li class="yes">No sign-up</li>
+            <li class="yes">History comes from the channel's public log</li>
+            <li class="no">Connected only while the app is open</li>
+            <li class="no">Others see your connection's address</li>
+          </ul>
+          <button id="accounts-direct" class="account-btn" type="button">Join directly</button>
+        </div>
+        <div class="account-card own">
+          <div class="account-card-top"><b id="accounts-own-title"></b><span>For the channel's regulars</span></div>
+          <ul>
+            <li class="yes">You stay on the channel even when the app is closed</li>
+            <li class="yes">Highlights and messages wait for you</li>
+            <li class="yes">The same conversation on all your devices</li>
+            <li class="yes" id="accounts-mask-line"></li>
+          </ul>
+          <button id="accounts-apply" class="account-btn go" type="button">Apply for an account</button>
+        </div>
+      </div>
+      <button id="accounts-signin" class="link-btn account-link" type="button">I already have an account</button>
+    </div>
+    <form id="welcome-apply" class="welcome-step welcome-more" hidden>
+      <div class="welcome-top welcome-top-left">
+        <button class="link-btn step-back" type="button" data-back="accounts">← Back</button>
+        <h1 id="apply-title"></h1>
+        <p class="welcome-lead">The admins review applications. When your account is approved, the app signs in with it by itself. Until then you can join directly.</p>
+      </div>
+      <div class="welcome-field">
+        <label class="field-label" for="apply-account">Account</label>
+        <input id="apply-account" class="field narrow" type="text" maxlength="10" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="e.g. aurora">
+        <span id="apply-mask" class="hint"></span>
+      </div>
+      <div class="welcome-field">
+        <label class="field-label" for="apply-password">Password</label>
+        <input id="apply-password" class="field narrow" type="password" autocomplete="new-password">
+        <span class="hint">At least 10 characters.</span>
+      </div>
+      <div class="welcome-field">
+        <label class="field-label" for="apply-known">The nick people know you by on the channel</label>
+        <textarea id="apply-known" class="field" rows="3" maxlength="200" placeholder="A nick or a few words about you"></textarea>
+      </div>
+      <p id="apply-error" class="hint error" hidden></p>
+      <span class="welcome-fill"></span>
+      <button id="apply-send" class="welcome-go" type="submit">Send application</button>
+    </form>
+    <form id="welcome-signin" class="welcome-step welcome-more" hidden>
+      <div class="welcome-top welcome-top-left">
+        <button class="link-btn step-back" type="button" data-back="accounts">← Back</button>
+        <h1 id="signin-title"></h1>
+      </div>
+      <div class="welcome-field">
+        <label class="field-label" for="signin-account">Account</label>
+        <input id="signin-account" class="field narrow" type="text" maxlength="10" autocomplete="username" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="welcome-field">
+        <label class="field-label" for="signin-password">Password</label>
+        <input id="signin-password" class="field narrow" type="password" autocomplete="current-password">
+      </div>
+      <p id="signin-error" class="hint error" hidden></p>
+      <span class="welcome-fill"></span>
+      <button class="welcome-go" type="submit">Sign in</button>
     </form>
     <div id="welcome-rules" class="welcome-step welcome-more" hidden>
       <div class="welcome-top welcome-top-left">

@@ -4633,6 +4633,7 @@ function openWelcome() {
   el.welcomeQuick.querySelector('.welcome-lead').textContent = t(BRAND.startNote ?? '');
   openQuickStart();
   showPeek();
+  showAccountChoice();
 }
 
 /** The channel's latest talk, blurred behind the welcome: it is already going on. */
@@ -4693,7 +4694,153 @@ function openQuickStart() {
   el.welcomeNick.focus();
 }
 
-const WELCOME_STEPS = ['ways', 'quick', 'rules', 'notify', 'photo'];
+// A fork's own accounts (BRAND.accounts): apply in the welcome, get an always-on connection
+// once an admin approves. The app keeps only a waiting key, never the password.
+const ACCOUNT_WAITING_KEY = 'lobby.accountWaiting';
+const ACCOUNT_CHECK_MS = 2 * 60 * 1000;
+const ACCOUNT_ERRORS = {
+  taken: 'That account is already taken.',
+  bad_name: 'An account can have letters, digits, - and _.',
+  short_password: 'The password needs at least 10 characters.',
+  wrong: 'Wrong account or password.',
+};
+
+function accountWaiting() {
+  try {
+    return JSON.parse(storedFlag(ACCOUNT_WAITING_KEY) || 'null');
+  } catch {
+    return null;
+  }
+}
+
+function showAccountChoice() {
+  const acc = BRAND.accounts;
+  if (!acc) {
+    return;
+  }
+  const host = acc.host;
+  const link = $('welcome-account-link');
+  link.hidden = false;
+  link.textContent = t('I want my own {host} account →', { host });
+  $('accounts-title').textContent = acc.title;
+  $('accounts-lead').textContent = acc.lead;
+  $('accounts-own-title').textContent = t('Own {host} account', { host });
+  $('accounts-mask-line').textContent = t('Others see you as nick!account@{host}, your own address stays hidden', { host });
+  $('apply-title').textContent = t('Apply for a {host} account', { host });
+  $('signin-title').textContent = t('Sign in with your {host} account', { host });
+  showApplied();
+}
+
+function showApplied() {
+  const waiting = accountWaiting();
+  $('welcome-applied').hidden = !waiting;
+  if (waiting) {
+    $('welcome-applied-text').textContent = t('When the admins approve it, the app signs in with your account by itself.');
+    el.welcomeQuick.querySelector('h1').textContent = t('Join directly in the meantime');
+  }
+}
+
+$('welcome-account-link').addEventListener('click', () => showWelcomeStep('accounts'));
+$('accounts-direct').addEventListener('click', () => {
+  showWelcomeStep('quick');
+  el.welcomeNick.focus();
+});
+$('accounts-apply').addEventListener('click', () => {
+  showWelcomeStep('apply');
+  $('apply-account').focus();
+});
+$('accounts-signin').addEventListener('click', () => {
+  showWelcomeStep('signin');
+  $('signin-account').focus();
+});
+$('apply-account').addEventListener('input', () => {
+  const name = $('apply-account').value.trim().toLowerCase();
+  $('apply-mask').textContent = name ? t('Others see you like this: {mask}', { mask: `${name}!${name}@${BRAND.accounts.host}` }) : '';
+});
+
+function accountError(box, answer) {
+  box.hidden = false;
+  box.textContent = t(ACCOUNT_ERRORS[answer?.error] ?? 'Sending the application failed. Try again in a moment.');
+}
+
+$('welcome-apply').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const account = $('apply-account').value.trim().toLowerCase();
+  const body = { account, password: $('apply-password').value, known: $('apply-known').value.trim() };
+  const answer = await invoke('account_call', { action: 'apply', body }).catch(() => null);
+  if (answer?.status !== 'pending') {
+    return accountError($('apply-error'), answer);
+  }
+  storeFlag(ACCOUNT_WAITING_KEY, JSON.stringify({ account, check: answer.check }));
+  showApplied();
+  showWelcomeStep('quick');
+});
+
+$('welcome-signin').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const account = $('signin-account').value.trim().toLowerCase();
+  const answer = await invoke('account_call', { action: 'status', body: { account, password: $('signin-password').value } }).catch(
+    () => null,
+  );
+  if (answer?.status !== 'approved') {
+    return accountError($('signin-error'), answer?.error ? answer : { error: 'wrong' });
+  }
+  useAccount(account, answer);
+});
+
+$('welcome-cancel-apply').addEventListener('click', async () => {
+  const waiting = accountWaiting();
+  if (waiting) {
+    await invoke('account_call', { action: 'cancel', body: waiting }).catch(() => {});
+  }
+  storeFlag(ACCOUNT_WAITING_KEY, '');
+  el.welcomeQuick.querySelector('h1').textContent = $('welcome-title').textContent;
+  showApplied();
+});
+
+/** An approved account: from now on the app talks to that account's always-on connection. */
+async function useAccount(account, answer) {
+  renderStatus(t('Your account {account} is approved. Connecting to the always-on connection…', { account }));
+  const connection = {
+    mode: 'url',
+    ssh: '',
+    ssh_port: null,
+    port: null,
+    url: answer.url,
+    token: answer.token,
+    nick: account,
+    networks: [],
+    key_line: '',
+  };
+  try {
+    await invoke('save_connection', { connection });
+    storeFlag(ACCOUNT_WAITING_KEY, '');
+    storeFlag(CHAT_SHOWN_KEY, '1');
+    location.reload();
+  } catch (err) {
+    renderStatus(String(err));
+  }
+}
+
+/** While an application waits, ask now and then; the app moves over by itself once approved. */
+async function checkApplication() {
+  const waiting = accountWaiting();
+  if (!waiting || !BRAND.accounts) {
+    return;
+  }
+  const answer = await invoke('account_call', { action: 'status', body: waiting }).catch(() => null);
+  if (answer?.status === 'approved') {
+    useAccount(waiting.account, answer);
+  } else if (answer?.status === 'rejected' || answer?.error === 'wrong') {
+    storeFlag(ACCOUNT_WAITING_KEY, '');
+    renderStatus(t('Your application was not approved. You can still join directly.'));
+  }
+}
+
+setTimeout(checkApplication, 5000);
+setInterval(checkApplication, ACCOUNT_CHECK_MS);
+
+const WELCOME_STEPS = ['ways', 'quick', 'rules', 'notify', 'photo', 'accounts', 'apply', 'signin'];
 
 function showWelcomeStep(step) {
   for (const name of WELCOME_STEPS) {

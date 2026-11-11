@@ -300,6 +300,8 @@ async fn preview(state: State<'_, AppState>, url: String) -> Result<Option<previ
 #[derive(serde::Deserialize, Default)]
 struct Brand {
     backlog: Option<lobby_core::backlog::Backlog>,
+    /// A fork's account service: apply, check and sign in for an always-on connection.
+    accounts: Option<String>,
 }
 
 fn brand() -> Brand {
@@ -307,6 +309,19 @@ fn brand() -> Brand {
 }
 
 const PEEK_LINES: usize = 40;
+const ACCOUNT_ACTIONS: [&str; 3] = ["apply", "status", "cancel"];
+
+/// One call to the fork's account service. The answer comes back as JSON, errors included.
+#[tauri::command]
+async fn account_call(action: String, body: serde_json::Value) -> Result<serde_json::Value, String> {
+    let base = brand().accounts.ok_or("No accounts here")?;
+    if !ACCOUNT_ACTIONS.contains(&action.as_str()) {
+        return Err("Unknown action".into());
+    }
+    let client = lobby_core::http().build().map_err(|e| e.to_string())?;
+    let res = client.post(format!("{base}/{action}")).json(&body).send().await.map_err(|e| e.to_string())?;
+    res.json().await.map_err(|e| e.to_string())
+}
 
 /// The newest lines of the fork's public log, for the welcome to show behind its form.
 #[tauri::command]
@@ -787,7 +802,8 @@ pub fn run() {
             delete_server_network,
             app_info,
             set_quit_message,
-            share_avatar
+            share_avatar,
+            account_call
         ])
         .build(tauri::generate_context!())
         .expect("failed to start Lobby")

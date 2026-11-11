@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Add own accounts for forks: apply, wait and sign in
+
 ### 1.10.0: 2026-11-11
 
 * Fix the update check saying up to date without update files
