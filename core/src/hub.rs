@@ -31,6 +31,9 @@ pub enum Event {
     Me {
         net: String,
         nick: String,
+        /// user@host as others see it, once a join has shown it; sets how long a message may be.
+        #[serde(default, skip_serializing_if = "String::is_empty")]
+        mask: String,
     },
     Conn {
         net: String,
@@ -62,6 +65,8 @@ pub struct NetStatus {
     pub name: String,
     pub state: String,
     pub nick: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub mask: String,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -89,6 +94,7 @@ pub struct Hub {
     events: broadcast::Sender<Event>,
     tasks: Mutex<HashMap<String, tokio::task::JoinHandle<()>>>,
     backlog: Mutex<Option<Backlog>>,
+    masks: Mutex<HashMap<String, String>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -110,6 +116,7 @@ impl Hub {
             events,
             tasks: Mutex::default(),
             backlog: Mutex::default(),
+            masks: Mutex::default(),
         })
     }
 
@@ -224,12 +231,14 @@ impl Hub {
     pub fn snapshot(&self) -> Snapshot {
         let conn = lock(&self.conn);
         let me = lock(&self.me);
+        let masks = lock(&self.masks);
         let networks = lock(&self.networks)
             .iter()
             .map(|n| NetStatus {
                 name: n.name.clone(),
                 state: conn.get(&n.name).cloned().unwrap_or_default(),
                 nick: me.get(&n.name).cloned().unwrap_or_default(),
+                mask: masks.get(&n.name).cloned().unwrap_or_default(),
             })
             .collect();
         let channels = lock(&self.channels).values().cloned().collect();
@@ -297,7 +306,11 @@ impl Hub {
         let me = lock(&self.me).get(net).cloned().unwrap_or_else(|| self.nick.clone());
         let per_line = lock(&self.modes_per_line).get(net).copied().unwrap_or(DEFAULT_MODES_PER_LINE);
 
-        for (raw, echo) in irc::outgoing(buffer, text, per_line)? {
+        let prefix = match lock(&self.masks).get(net) {
+            Some(mask) => format!("{me}!{mask}"),
+            None => me.clone(),
+        };
+        for (raw, echo) in irc::outgoing(buffer, text, per_line, &prefix)? {
             tx.send(raw).map_err(|_| "Not connected")?;
             let Some(echo) = echo else { continue };
             self.deliver(Line {
@@ -417,7 +430,16 @@ impl Hub {
             }
             Out::Me(nick) => {
                 lock(&self.me).insert(net.into(), nick.clone());
-                self.emit(Event::Me { net: net.into(), nick });
+                let mask = lock(&self.masks).get(net).cloned().unwrap_or_default();
+                self.emit(Event::Me { net: net.into(), nick, mask });
+            }
+            Out::Mask(mask) => {
+                if mask.is_empty() || lock(&self.masks).get(net) == Some(&mask) {
+                    return;
+                }
+                lock(&self.masks).insert(net.into(), mask.clone());
+                let nick = lock(&self.me).get(net).cloned().unwrap_or_else(|| self.nick.clone());
+                self.emit(Event::Me { net: net.into(), nick, mask });
             }
             Out::Send(line) => {
                 let _ = tx.send(line);

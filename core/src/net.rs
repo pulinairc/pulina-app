@@ -52,6 +52,8 @@ pub enum Out {
     Line(Line),
     Buffer(BufferInfo),
     Me(String),
+    /// Our own user@host, as the server shows it to others.
+    Mask(String),
     Send(String),
     Whois(Whois),
     ModesPerLine(usize),
@@ -247,7 +249,7 @@ impl Session {
                     let chan = Chan { name: name.clone(), ..Default::default() };
                     let out = self.info(&chan, true);
                     self.chans.insert(key, chan);
-                    return vec![out];
+                    return vec![out, Out::Mask(msg.mask().to_string())];
                 }
                 let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
                 chan.members.insert(nick.to_lowercase(), nick.clone());

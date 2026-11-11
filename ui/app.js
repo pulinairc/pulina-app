@@ -313,7 +313,7 @@ function translatePage() {
   }
 }
 
-const state = { networks: [], buffers: new Map(), current: null, me: {}, conn: {}, configPath: '', people: [], settings: {} };
+const state = { networks: [], buffers: new Map(), current: null, me: {}, masks: {}, conn: {}, configPath: '', people: [], settings: {} };
 const previews = new Map();
 let view = null;
 let completion = null;
@@ -3756,7 +3756,7 @@ function roomLeft() {
   if (!b || b.name === '' || !el.input.value.trim()) {
     return null;
   }
-  return messageRoom(el.input.value, state.me[b.net] || '', b.name);
+  return messageRoom(el.input.value, state.me[b.net] || '', b.name, state.masks[b.net]);
 }
 
 function renderRoom() {
@@ -4368,6 +4368,9 @@ function applyStatus(st) {
     if (n.nick) {
       state.me[n.name] = n.nick;
     }
+    if (n.mask) {
+      state.masks[n.name] = n.mask;
+    }
   }
   state.people = st.people || [];
   state.settings = st.settings || {};
@@ -4892,6 +4895,7 @@ async function start() {
   await listen('buffer', (e) => onBuffer(e.payload));
   await listen('me', (e) => {
     state.me[e.payload.net] = e.payload.nick;
+    state.masks[e.payload.net] = e.payload.mask || state.masks[e.payload.net];
     // The server takes JOIN only once it has welcomed the nick.
     joinAfterSetup(e.payload.net);
     loadHighlightsSoon();

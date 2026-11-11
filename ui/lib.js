@@ -978,18 +978,17 @@ export function npLine(format, track) {
 }
 
 // An IRC line is at most 512 bytes with its CR-LF. When the server passes a message on, it puts
-// ":nick!ident@host" in front, so that counts too. The ident and host are not known here, so the
-// longest ones are assumed. MESSAGE_BYTES matches MAX_TEXT_BYTES in core/src/irc.rs, where longer
-// lines are split.
+// ":nick!ident@host" in front, so that counts too. Until a join shows our ident and host the
+// longest ones are assumed. Same sums as text_room in core/src/irc.rs, which splits longer lines.
 const LINE_BYTES = 510;
-const IDENT_BYTES = 10;
-const HOST_BYTES = 63;
-const MESSAGE_BYTES = 400;
+const UNKNOWN_MASK_BYTES = 1 + 10 + 1 + 63;
+const SPARE_BYTES = 16;
+const MIN_TEXT_BYTES = 100;
 const ACTION_BYTES = '\u0001ACTION \u0001'.length;
 const bytes = (text) => new TextEncoder().encode(text).length;
 
 /** Bytes left in the longest line of a message, below zero when too long; null for a command. */
-export function messageRoom(text, nick, target) {
+export function messageRoom(text, nick, target, mask = '') {
   let body = text;
   let extra = 0;
   if (text.startsWith('/') && !text.startsWith('//')) {
@@ -1000,8 +999,9 @@ export function messageRoom(text, nick, target) {
     body = text.slice(me[0].length);
     extra = ACTION_BYTES;
   }
-  const around = bytes(`:${nick}!@ PRIVMSG ${target} :`) + IDENT_BYTES + HOST_BYTES;
-  const room = Math.min(MESSAGE_BYTES, LINE_BYTES - around) - extra;
+  const prefix = mask ? `${nick}!${mask}` : nick;
+  const around = bytes(`:${prefix} PRIVMSG ${target} :`) + (mask ? 0 : UNKNOWN_MASK_BYTES);
+  const room = Math.max(MIN_TEXT_BYTES, LINE_BYTES - around - SPARE_BYTES) - extra;
   const longest = Math.max(0, ...body.split('\n').map(bytes));
   return room - longest;
 }

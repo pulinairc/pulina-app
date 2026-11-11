@@ -82,7 +82,7 @@ pub fn emit_event(app: &AppHandle, event: Event) {
     let _ = match event {
         Event::Line(line) => app.emit("line", line),
         Event::Buffer(info) => app.emit("buffer", info),
-        Event::Me { net, nick } => app.emit("me", serde_json::json!({ "net": net, "nick": nick })),
+        Event::Me { net, nick, mask } => app.emit("me", serde_json::json!({ "net": net, "nick": nick, "mask": mask })),
         Event::Conn { net, state } => app.emit("conn", serde_json::json!({ "net": net, "state": state })),
         Event::People { people } => app.emit("people", people),
         Event::Setting { key, value } => app.emit("setting", serde_json::json!({ "key": key, "value": value })),
