@@ -550,7 +550,10 @@ function markRead(b) {
 /** Count what is newer than the read marker; a channel never seen before counts as read. */
 function recountUnread(b) {
   if (readMap[b.key] === undefined) {
-    readMap[b.key] = lastId(b);
+    // Nothing loaded yet: marking 0 here would make all of the history, once it arrives, unread.
+    if (lastId(b)) {
+      readMap[b.key] = lastId(b);
+    }
     return;
   }
   const seen = readMap[b.key];
@@ -620,8 +623,10 @@ function buffer(net, name) {
 async function loadHistory(b) {
   const lines = await invoke('history', { net: b.net, buffer: b.name }).catch(() => []);
   // First time this channel is seen anywhere: its old history counts as read.
-  if (readMap[b.key] === undefined) {
-    readMap[b.key] = lines.reduce((max, l) => Math.max(max, l.id || 0), 0);
+  // An empty answer sets nothing: the public log may still be on its way, and it is old talk too.
+  const newest = lines.reduce((max, l) => Math.max(max, l.id || 0), 0);
+  if (readMap[b.key] === undefined && newest) {
+    readMap[b.key] = newest;
     saveReadSoon();
   }
   const fresh = lines.filter((l) => !b.ids.has(l.id));
