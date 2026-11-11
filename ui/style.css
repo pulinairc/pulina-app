@@ -4429,8 +4429,7 @@ dialog.welcome::backdrop {
   align-self: flex-start;
 }
 
-/* Cold start: a lamp switches on and the chat opens through its light. app.js moves the
-   hole in this cover from the bulb to the cone to the whole window, then removes it. */
+/* Cold start: a lamp switches on, its light grows and the cover fades into the chat. */
 .splash {
   position: fixed;
   inset: 0;

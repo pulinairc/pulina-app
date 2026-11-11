@@ -5,6 +5,8 @@
 * Change the unread count to a number on phones
 * Add a note in a channel with no messages yet
 * Fix the start lamp splitting from its light
+* Change the cursor to sit before a sent file's link
+* Add Settings to the Mac app menu
 
 ### 1.8.1: 2026-11-11
 
