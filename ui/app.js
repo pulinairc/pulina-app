@@ -128,6 +128,7 @@ const el = {
   statusAction: $('status-action'),
   splash: $('splash'),
   splashLight: $('splash-light'),
+  splashLamp: $('splash-lamp'),
   welcome: $('welcome'),
   welcomeWays: $('welcome-ways'),
   welcomeQuick: $('welcome-quick'),
@@ -1670,7 +1671,7 @@ const CONE_TOP_HALF_PX = 24;
 const CONE_SPREAD = 0.41;
 const splashStart = performance.now();
 let splashDone = false;
-requestAnimationFrame(() => el.splash.classList.add('lit'));
+requestAnimationFrame(() => el.splashLamp.classList.add('lit'));
 setTimeout(splashReady, SPLASH_MAX_MS);
 
 function splashReady() {
@@ -1694,15 +1695,18 @@ function splashHole(points) {
 function openSplash() {
   const cover = el.splash;
   const light = el.splashLight;
+  const lamp = el.splashLamp;
+  const done = () => {
+    cover.remove();
+    light.remove();
+    lamp.remove();
+  };
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    cover.style.opacity = '0';
-    setTimeout(() => {
-      cover.remove();
-      light.remove();
-    }, 250);
+    cover.style.opacity = lamp.style.opacity = '0';
+    setTimeout(done, 250);
     return;
   }
-  const bulb = cover.querySelector('.splash-bulb').getBoundingClientRect();
+  const bulb = lamp.querySelector('.splash-bulb').getBoundingClientRect();
   const x = bulb.left + bulb.width / 2;
   const y = bulb.top + bulb.height / 2;
   const foot = Math.min(innerHeight * 0.85, y + 330);
@@ -1733,16 +1737,15 @@ function openSplash() {
     cover.style.transition = `clip-path ${open}`;
     light.style.transition = `clip-path ${open}, opacity ${open}`;
     light.style.opacity = '0';
+    // The lamp rises only now, so the cone grows from the bulb itself.
+    lamp.classList.add('opening');
     shape([
       [-far, -far],
       [innerWidth + far, -far],
       [innerWidth + far, innerHeight + far],
       [-far, innerHeight + far],
     ]);
-    setTimeout(() => {
-      cover.remove();
-      light.remove();
-    }, SPLASH_OPEN_MS + 50);
+    setTimeout(done, SPLASH_OPEN_MS + 50);
   }, SPLASH_CONE_MS + 80);
 }
 
