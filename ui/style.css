@@ -4515,3 +4515,13 @@ dialog.welcome::backdrop {
 :root[data-only] .any-net {
   display: none !important;
 }
+
+.log-empty {
+  margin: auto 0 12px;
+  color: var(--dim);
+  text-align: center;
+}
+/* Gone with the first message. */
+.log-empty:not(:last-child) {
+  display: none;
+}
