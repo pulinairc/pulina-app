@@ -8,6 +8,8 @@
 * Change the cursor to sit before a sent file's link
 * Add Settings to the Mac app menu
 * Fix the maker's name in About
+* Change the first window to 700 × 950 with people beside the chat
+* Add a shown network name for forks
 
 ### 1.8.1: 2026-11-11
 

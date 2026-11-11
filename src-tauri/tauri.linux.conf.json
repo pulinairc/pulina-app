@@ -3,9 +3,9 @@
     "windows": [
       {
         "label": "main",
-        "title": "Pulina",
-        "width": 440,
-        "height": 800,
+        "title": "Lobby",
+        "width": 700,
+        "height": 950,
         "minWidth": 300,
         "minHeight": 320,
         "dragDropEnabled": false,

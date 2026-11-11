@@ -2,7 +2,7 @@
   <img src="docs/logo.png" width="96" alt="Pulina">
 </p>
 
-<h1 align="center">Pulina app for #pulina on QuakeNet</h1>
+<h1 align="center">Pulina app for #pulina</h1>
 
 <p align="center">
   <a href="https://github.com/pulinairc/pulina-app/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/pulinairc/pulina-app/check.yml?branch=main&style=for-the-badge&label=build" alt="Build"></a>
@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  The chat app for <a href="https://www.pulina.fi">#pulina</a> on QuakeNet, made for that one channel.<br>
+  The chat app for <a href="https://www.pulina.fi">#pulina</a>, made for that one channel.<br>
   Pick a nick and you are in, on your computer or your phone. In Finnish, or in English if you like.
 </p>
 
@@ -25,7 +25,7 @@
 
 ### 👋 In without setup
 
-The welcome asks for a nick and takes you to #pulina on QuakeNet. No server, no config file, no other networks.
+The welcome asks for a nick and takes you to #pulina. No server, no config file, no other channels to set up.
 
 ### 🇫🇮 Finnish first
 
@@ -69,7 +69,7 @@ Linux, macOS, Windows and Android. iPhone follows through TestFlight.
 
 ## Built on Lobby
 
-Pulina is [Lobby](https://github.com/rollecode/lobby) with Pulina's name, look and language, locked to #pulina on QuakeNet. For other networks, servers and [lobby-server](https://github.com/rollecode/lobby#lobby-server), use Lobby.
+Pulina is [Lobby](https://github.com/rollecode/lobby) with Pulina's name, look and language, locked to #pulina. For other networks, servers and [lobby-server](https://github.com/rollecode/lobby#lobby-server), use Lobby.
 
 Pulina's own changes live in a few files: `ui/brand.js` (name, icons, the welcome's #pulina preset, the default language), `ui/brand.css` (the pulina.fi colours), `src-tauri/icons` and the app's identity in `src-tauri/tauri.conf.json`.
 
