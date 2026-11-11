@@ -30,6 +30,7 @@ import secrets
 import sqlite3
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
 from base64 import b64encode
@@ -53,13 +54,23 @@ MAX_PASSWORD = 256
 MAX_EMAIL = 254
 EMAIL_RE = re.compile(r'^[^\s@]+@[^\s@]+\.[^\s@]+$')
 MAILGUN_KEY = os.environ.get('MAILGUN_KEY', '')
-MAILGUN_DOMAIN = os.environ.get('MAILGUN_DOMAIN', 'mg.chat.pulina.fi')
+MAILGUN_DOMAIN = os.environ.get('MAILGUN_DOMAIN', 'mg.pulina.fi')
 MAILGUN_API = os.environ.get('MAILGUN_API', 'https://api.eu.mailgun.net')
 MAIL_FROM = os.environ.get('MAIL_FROM', f'Pulina <tunnukset@{MAILGUN_DOMAIN}>')
 PWNED_API = 'https://api.pwnedpasswords.com/range/'
 CLIENT = 'pulina-accounts/1.0 (+https://github.com/pulinairc/pulina-app)'
 RESET_SECONDS = 3600
 RESET_GAP = 600
+TOKEN_SCRIPT = os.environ.get('ACCOUNT_TOKEN', '/usr/local/sbin/pulina-account-token')
+MAX_PENDING = int(os.environ.get('MAX_PENDING', '20'))
+# Wrong passwords per account before it waits, and for how long.
+MAX_FAILURES = 10
+FAILURE_WINDOW = 900
+CONTROL_RE = re.compile(r'[\x00-\x1f\x7f]')
+# scrypt takes 16 MiB a time: a few at once, not one per request.
+HASHING = threading.BoundedSemaphore(4)
+FAILURES = {}
+FAILURES_LOCK = threading.Lock()
 MAX_KNOWN = 200
 MAX_BODY = 4096
 SCRYPT = dict(n=2 ** 14, r=8, p=1, dklen=32)
@@ -80,7 +91,21 @@ def db():
 
 
 def hashed(password, salt):
-    return hashlib.scrypt(password.encode(), salt=salt, **SCRYPT)
+    with HASHING:
+        return hashlib.scrypt(password.encode(), salt=salt, **SCRYPT)
+
+
+def failed_recently(name):
+    now = time.time()
+    with FAILURES_LOCK:
+        recent = [t for t in FAILURES.get(name, []) if now - t < FAILURE_WINDOW]
+        FAILURES[name] = recent
+        return len(recent) >= MAX_FAILURES
+
+
+def note_failure(name):
+    with FAILURES_LOCK:
+        FAILURES.setdefault(name, []).append(time.time())
 
 
 def pwned(password):
@@ -122,6 +147,11 @@ def send_mail(to, subject, text):
         print(f'mail to {to} failed: {e}', file=sys.stderr)
 
 
+def send_later(to, subject, text):
+    """Off the request: an answer that waits for Mailgun would tell which accounts exist."""
+    threading.Thread(target=send_mail, args=(to, subject, text), daemon=True).start()
+
+
 def reset_hash(token):
     return hashlib.sha256(token.encode()).hexdigest()
 
@@ -144,6 +174,7 @@ def check(conn, name, password, check_token=''):
         return row
     if password and hmac.compare_digest(row['hash'], hashed(password, row['salt'])):
         return row
+    note_failure(name)
     return None
 
 
@@ -225,7 +256,8 @@ class Handler(BaseHTTPRequestHandler):
     def apply(self, data):
         name = str(data.get('account', '')).strip().lower()
         password = str(data.get('password', ''))
-        known = str(data.get('known', '')).strip()[:MAX_KNOWN]
+        # No colour codes or line breaks: this text goes to IRC in Kummitus' message.
+        known = CONTROL_RE.sub('', str(data.get('known', ''))).strip()[:MAX_KNOWN]
         email = str(data.get('email', '')).strip()
         if not NAME_RE.fullmatch(name):
             return self.json(400, {'error': 'bad_name'})
@@ -237,6 +269,8 @@ class Handler(BaseHTTPRequestHandler):
         with db() as conn:
             if system_user(name) or conn.execute('SELECT 1 FROM accounts WHERE name = ?', (name,)).fetchone():
                 return self.json(409, {'error': 'taken'})
+            if conn.execute("SELECT COUNT(*) FROM accounts WHERE status = 'pending'").fetchone()[0] >= MAX_PENDING:
+                return self.json(503, {'error': 'busy'})
             salt = secrets.token_bytes(16)
             # The app keeps this to ask about the application without storing the password.
             waiting = secrets.token_urlsafe(24)
@@ -245,18 +279,26 @@ class Handler(BaseHTTPRequestHandler):
         self.json(200, {'status': 'pending', 'check': waiting})
 
     def status(self, data):
+        name = str(data.get('account', '')).strip().lower()
+        if failed_recently(name):
+            return self.json(429, {'error': 'locked'})
         with db() as conn:
-            row = check(conn, str(data.get('account', '')).strip().lower(), str(data.get('password', '')), str(data.get('check', '')))
-        if not row:
-            return self.json(401, {'error': 'wrong'})
-        answer = {'status': row['status']}
-        if row['status'] == 'approved':
-            answer.update(url=f"wss://chat.pulina.fi/u/{row['name']}/", token=row['token'])
+            row = check(conn, name, str(data.get('password', '')), str(data.get('check', '')))
+            if not row:
+                return self.json(401, {'error': 'wrong'})
+            answer = {'status': row['status']}
+            if row['status'] == 'approved':
+                answer.update(url=f"wss://chat.pulina.fi/u/{row['name']}/", token=row['token'])
+                # The waiting key has done its job; from now on only the password signs in.
+                conn.execute('UPDATE accounts SET "check" = NULL WHERE name = ?', (row['name'],))
         self.json(200, answer)
 
     def cancel(self, data):
+        name = str(data.get('account', '')).strip().lower()
+        if failed_recently(name):
+            return self.json(429, {'error': 'locked'})
         with db() as conn:
-            row = check(conn, str(data.get('account', '')).strip().lower(), str(data.get('password', '')), str(data.get('check', '')))
+            row = check(conn, name, str(data.get('password', '')), str(data.get('check', '')))
             if not row or row['status'] != 'pending':
                 return self.json(401, {'error': 'wrong'})
             conn.execute('DELETE FROM accounts WHERE name = ?', (row['name'],))
@@ -303,7 +345,7 @@ class Handler(BaseHTTPRequestHandler):
             if done.returncode != 0:
                 return self.decision_page(token, f'<p>Luominen epäonnistui: {html.escape(done.stderr[-300:])}</p>')
             conn.execute("UPDATE accounts SET status = 'approved', port = ?, token = ? WHERE name = ?", (port, token_ws, row['name']))
-        send_mail(row['email'], 'Pulina-tunnuksesi on valmis',
+        send_later(row['email'], 'Pulina-tunnuksesi on valmis',
                   f"Hei!\n\nTunnuksesi {row['name']} on hyväksytty. Avaa Pulina, niin sovellus kirjautuu sillä itse.\n\n"
                   'Jos vaihdat laitetta, kirjaudu tunnuksellasi ja salasanallasi.\n\n– Pulina')
         self.decision_page(token)
@@ -318,7 +360,7 @@ class Handler(BaseHTTPRequestHandler):
                 token = secrets.token_urlsafe(32)
                 conn.execute('UPDATE accounts SET reset = ?, reset_until = ?, reset_sent = ? WHERE name = ?',
                              (reset_hash(token), now + RESET_SECONDS, now, name))
-                send_mail(row['email'], 'Uusi salasana Pulina-tunnukselle',
+                send_later(row['email'], 'Uusi salasana Pulina-tunnukselle',
                           f'Hei!\n\nTunnukselle {name} pyydettiin uutta salasanaa. Jos pyysit sitä itse, aseta uusi salasana '
                           f'tunnin kuluessa tästä:\n\n{PUBLIC}/accounts/reset/{token}\n\n'
                           'Jos et pyytänyt sitä, voit jättää viestin huomiotta. Salasanasi pysyy ennallaan.\n\n– Pulina')
@@ -355,8 +397,17 @@ class Handler(BaseHTTPRequestHandler):
             if problem:
                 return self.reset_page(token, errors[problem])
             salt = secrets.token_bytes(16)
-            conn.execute('UPDATE accounts SET salt = ?, hash = ?, reset = NULL, reset_until = NULL WHERE name = ?',
-                         (salt, hashed(password, salt), row['name']))
+            # A new password also locks out whoever had the old one: their app's token stops working.
+            token_ws = row['token']
+            if row['status'] == 'approved':
+                fresh = secrets.token_urlsafe(32)
+                done = subprocess.run(['sudo', '-n', TOKEN_SCRIPT, row['name'], fresh], capture_output=True, text=True, timeout=60)
+                if done.returncode != 0:
+                    print(f"token change for {row['name']} failed: {done.stderr[-300:]}", file=sys.stderr)
+                    return self.reset_page(token, 'Vaihto epäonnistui. Yritä hetken päästä uudelleen.')
+                token_ws = fresh
+            conn.execute('UPDATE accounts SET salt = ?, hash = ?, token = ?, "check" = NULL, reset = NULL, reset_until = NULL WHERE name = ?',
+                         (salt, hashed(password, salt), token_ws, row['name']))
         self.html(200, 'Salasana vaihdettu', '<h1>Salasana vaihdettu</h1><p>Voit nyt kirjautua sovelluksessa uudella salasanalla.</p>')
 
     def admin_page(self, key):

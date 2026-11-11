@@ -3,9 +3,14 @@
 # its own lobby-server on #pulina and the nginx route /u/<account>/. Run as root by pulina-accounts.
 set -eu
 NAME=$1 PORT=$2 TOKEN=$3
-printf '%s\n' "$NAME" | grep -Eq '^[a-z][a-z0-9_-]{1,14}$' || { echo "bad name" >&2; exit 1; }
-printf '%s\n' "$PORT" | grep -Eq '^[0-9]{4,5}$' || { echo "bad port" >&2; exit 1; }
-printf '%s\n' "$TOKEN" | grep -Eq '^[A-Za-z0-9_-]{32,}$' || { echo "bad token" >&2; exit 1; }
+# case, not grep: grep checks line by line, so a value with a newline in it would pass.
+case "$NAME" in [a-z]*) ;; *) echo "bad name" >&2; exit 1 ;; esac
+case "$NAME" in *[!a-z0-9_-]*) echo "bad name" >&2; exit 1 ;; esac
+[ "${#NAME}" -ge 2 ] && [ "${#NAME}" -le 15 ] || { echo "bad name" >&2; exit 1; }
+case "$PORT" in '' | *[!0-9]*) echo "bad port" >&2; exit 1 ;; esac
+[ "${#PORT}" -ge 4 ] && [ "${#PORT}" -le 5 ] || { echo "bad port" >&2; exit 1; }
+case "$TOKEN" in '' | *[!A-Za-z0-9_-]*) echo "bad token" >&2; exit 1 ;; esac
+[ "${#TOKEN}" -ge 32 ] || { echo "bad token" >&2; exit 1; }
 id "$NAME" >/dev/null 2>&1 && { echo "user exists" >&2; exit 1; }
 MAP=/etc/nginx/pulina-accounts.map
 

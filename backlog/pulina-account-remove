@@ -2,10 +2,14 @@
 # pulina-account-remove <account>: stops its lobby-server, drops the route and the user with its history.
 set -eu
 NAME=$1
-printf '%s\n' "$NAME" | grep -Eq '^[a-z][a-z0-9_-]{1,14}$' || { echo "bad name" >&2; exit 1; }
+# case, not grep: grep checks line by line, so a name with a newline in it would pass.
+case "$NAME" in [a-z]*) ;; *) echo "bad name" >&2; exit 1 ;; esac
+case "$NAME" in *[!a-z0-9_-]*) echo "bad name" >&2; exit 1 ;; esac
+[ "${#NAME}" -ge 2 ] && [ "${#NAME}" -le 15 ] || { echo "bad name" >&2; exit 1; }
 MAP=/etc/nginx/pulina-accounts.map
-# Only users this system made: they run a lobby-server@ unit.
-systemctl cat "lobby-server@$NAME.service" >/dev/null 2>&1 || { echo "not an account" >&2; exit 1; }
+# Only users this system made: each has a route line, and never a system account.
+grep -q "^$NAME " "$MAP" || { echo "not an account" >&2; exit 1; }
+[ "$(id -u "$NAME")" -ge 1000 ] || { echo "not an account" >&2; exit 1; }
 systemctl disable --now "lobby-server@$NAME.service" || true
 sed -i "/^$NAME /d" "$MAP"
 nginx -t -q && systemctl reload nginx

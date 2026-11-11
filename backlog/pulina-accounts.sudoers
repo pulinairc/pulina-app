@@ -1,2 +1,2 @@
-# /etc/sudoers.d/pulina-accounts: the accounts service may run these two scripts and nothing else.
-pulina-accounts ALL=(root) NOPASSWD: /usr/local/sbin/pulina-account-create, /usr/local/sbin/pulina-account-remove
+# /etc/sudoers.d/pulina-accounts: the accounts service may run these three scripts and nothing else.
+pulina-accounts ALL=(root) NOPASSWD: /usr/local/sbin/pulina-account-create, /usr/local/sbin/pulina-account-remove, /usr/local/sbin/pulina-account-token

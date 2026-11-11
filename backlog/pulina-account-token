@@ -1,0 +1,14 @@
+#!/bin/sh
+# pulina-account-token <account> <token>: gives an account's lobby-server a new token, so every
+# old one stops working. Run as root by pulina-accounts after a password reset.
+set -eu
+NAME=$1 TOKEN=$2
+case "$NAME" in '' | *[!a-z0-9_-]*) echo "bad name" >&2; exit 1 ;; esac
+case "$TOKEN" in '' | *[!A-Za-z0-9_-]*) echo "bad token" >&2; exit 1 ;; esac
+[ "${#TOKEN}" -ge 32 ] || { echo "bad token" >&2; exit 1; }
+grep -q "^$NAME " /etc/nginx/pulina-accounts.map || { echo "not an account" >&2; exit 1; }
+CONF="$(getent passwd "$NAME" | cut -d: -f6)/.config/lobby-server/config.toml"
+# Only the real file, never something a symlink points at.
+[ "$(readlink -f "$CONF")" = "$CONF" ] && [ -f "$CONF" ] || { echo "odd config" >&2; exit 1; }
+sed -i "s/^token = \".*\"$/token = \"$TOKEN\"/" "$CONF"
+systemctl restart "lobby-server@$NAME.service"

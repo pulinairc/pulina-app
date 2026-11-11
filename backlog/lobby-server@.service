@@ -13,8 +13,19 @@ Restart=always
 RestartSec=10
 NoNewPrivileges=true
 ProtectSystem=strict
-ReadWritePaths=/home/%i
+# Only its own home is there at all; other users' homes and the accounts' secrets are not.
+ProtectHome=tmpfs
+BindPaths=/home/%i
+InaccessiblePaths=-/etc/pulina-accounts.env -/var/lib/pulina-accounts
 PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0077
 MemoryMax=96M
 
 [Install]
