@@ -4652,7 +4652,7 @@ dialog.welcome::backdrop {
   flex-direction: column;
   justify-content: flex-end;
   gap: 14px;
-  padding: 24px 28px 300px;
+  padding: 24px 28px 28px;
   overflow: hidden;
   filter: blur(2.5px);
   opacity: 0.55;
@@ -4681,7 +4681,8 @@ dialog.welcome::backdrop {
   /* Lined up with the messages above it, no card: the talk fades into the welcome. */
   padding: 96px 28px calc(env(safe-area-inset-bottom) + 40px);
   gap: 18px;
-  background: linear-gradient(transparent, var(--bg) 34%);
+  /* The talk carries on faintly behind the form down to the window's edge. */
+  background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 82%, transparent) 34%);
 }
 :root[data-only] #welcome-quick h1 {
   font-size: 26px;
@@ -4706,10 +4707,13 @@ dialog.welcome::backdrop {
   display: none;
 }
 .talking-dot {
+  flex-shrink: 0;
   width: 8px;
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
+  /* Centred on the letters, not on the line box above them. */
+  transform: translateY(1px);
 }
 .welcome-talking .pill-faces {
   margin-left: 2px;

@@ -3,6 +3,7 @@
 * Add own accounts for forks: apply, wait and sign in
 * Add more smileys, like :| and ^^
 * Fix "nick:" showing in reply quotes
+* Fix welcome talk ending mid-window and the talking dot
 
 ### 1.10.0: 2026-11-11
 
