@@ -1,0 +1,19 @@
+# The #pulina log for the Pulina app; nginx proxies chat.pulina.fi/backlog here.
+# Install: /etc/systemd/system/pulina-backlog.service
+[Unit]
+Description=Serve #pulina's public log to the Pulina app
+After=network.target
+
+[Service]
+User=rolle
+Group=www-data
+ExecStart=/usr/bin/python3 -I /var/www/pulina.fi/scripts/pulina-backlog.py
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
