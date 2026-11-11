@@ -4719,8 +4719,8 @@ dialog.welcome::backdrop {
   display: inline-block;
   margin-right: 8px;
   background: var(--accent);
-  /* Inside the text, centred on its lowercase letters whatever the font. */
-  vertical-align: middle;
+  /* Inside the text, centred on the height of its capitals and digits whatever the font. */
+  vertical-align: calc(0.36em - 4px);
 }
 .welcome-talking .pill-faces {
   margin-left: 2px;
