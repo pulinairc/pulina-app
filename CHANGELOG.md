@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Add updates from inside the app
+
 ### 1.7.0: 2026-11-11
 
 * Fix a blank chat while lobby-server is unreachable

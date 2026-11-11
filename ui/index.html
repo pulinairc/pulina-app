@@ -37,6 +37,13 @@
     <span id="status-text"></span>
     <button id="status-action" class="status-action" type="button">Connection</button>
   </div>
+  <div id="update-bar" class="update-bar" role="status" hidden>
+    <span id="update-text"></span>
+    <button id="update-go" class="status-action" type="button"></button>
+    <button id="update-close" class="update-close" type="button" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
   <div id="logwrap">
     <div id="toast" class="glass toast" role="status" hidden></div>
     <div id="window-bar" class="window-bar" hidden>
@@ -180,6 +187,15 @@
     <section id="icon-section" data-tab="general">
       <h3>App icon</h3>
       <div id="icon-choices" class="icon-choices" role="radiogroup" aria-label="App icon"></div>
+    </section>
+    <section id="update-section" data-tab="general">
+      <h3>Updates</h3>
+      <label id="update-auto-row" class="switch-row" for="update-auto">
+        <span>Install updates automatically</span>
+        <input id="update-auto" class="switch" type="checkbox" role="switch">
+      </label>
+      <button id="update-check" class="link-btn" type="button">Check for updates</button>
+      <p id="update-result" class="hint" hidden></p>
     </section>
     <section id="shortcut-section" data-tab="general">
       <h3>Keyboard shortcuts</h3>
