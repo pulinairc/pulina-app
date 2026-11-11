@@ -4737,11 +4737,52 @@ dialog.welcome::backdrop {
   display: flex;
   align-items: center;
   gap: 18px;
-  cursor: pointer;
 }
 .photo-face {
   --avatar: 96px;
+  position: relative;
   display: flex;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+.photo-face:hover {
+  transform: scale(1.04) rotate(-2deg);
+}
+.photo-face:active {
+  transform: scale(0.94);
+}
+.photo-face .photo-badge {
+  right: -2px;
+  bottom: -2px;
+  width: 30px;
+  height: 30px;
+  border-color: var(--bg);
+}
+.photo-face:hover .photo-badge {
+  transform: rotate(90deg);
+}
+.photo-badge {
+  transition: transform 0.25s ease;
+}
+/* A new animal lands with a little pop. */
+.rolled {
+  animation: animal-pop 0.32s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+@keyframes animal-pop {
+  0% {
+    transform: scale(0.7);
+  }
+  100% {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rolled {
+    animation: none;
+  }
 }
 .photo-face img {
   width: 96px;
@@ -4758,7 +4799,16 @@ dialog.welcome::backdrop {
   color: var(--strong);
   font-size: 20px;
 }
-.photo-pick-text span {
+.photo-file {
+  align-self: flex-start;
   color: var(--accent);
   font-size: 15px;
+  cursor: pointer;
+}
+.photo-file:hover {
+  text-decoration: underline;
+}
+.photo-hint {
+  color: var(--faint);
+  font-size: 13px;
 }

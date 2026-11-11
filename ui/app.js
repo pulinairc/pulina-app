@@ -11,6 +11,7 @@ import {
   continues,
   dayLabel,
   defaultShortcuts,
+  ANIMALS,
   animalFor,
   colonQuery,
   comboLabel,
@@ -87,6 +88,8 @@ const ROUND_INNER = 0.7;
 const SWATCHES = ['#f7768e', '#ff9e64', '#e0af68', '#9ece6a', '#73daca', '#7dcfff', '#bb9af7', '#d6d6da'];
 const PERSON_ICON =
   '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>';
+const DICE_ICON =
+  '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r="1.2" fill="currentColor"/><circle cx="15" cy="15" r="1.2" fill="currentColor"/><circle cx="15" cy="9" r="1.2" fill="currentColor"/><circle cx="9" cy="15" r="1.2" fill="currentColor"/></svg>';
 const CAMERA_ICON =
   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.
@@ -429,9 +432,45 @@ function avatar(nick, mask, cls = 'av') {
 /** No photo: an animal on a soft gradient of the person's colour. */
 function animalInto(node, nick, color) {
   node.classList.add('animal');
-  node.textContent = animalFor(nick);
+  node.textContent = shownAnimal(nick);
   node.style.background = `linear-gradient(color-mix(in srgb, ${color} 45%, white), ${color})`;
   return node;
+}
+
+// Your own animal can be picked; everyone else keeps the one their nick gives.
+const ANIMAL_SETTING = 'animal';
+const ROLL_STEPS = 7;
+const ROLL_STEP_MS = 45;
+
+function isMyNick(nick) {
+  const n = nick.toLowerCase();
+  return n === onboarding?.connection?.nick?.toLowerCase() || Object.values(state.me).some((m) => m?.toLowerCase() === n);
+}
+
+function shownAnimal(nick) {
+  const mine = isMyNick(nick) && (onboarding?.plan.animal || state.settings[ANIMAL_SETTING]);
+  return mine || animalFor(nick);
+}
+
+const randomAnimal = () => ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+
+/** A short slot-machine spin through animals, landing on a new one with a pop. */
+async function rollAnimal(node) {
+  let pick = node.textContent;
+  while (pick === node.textContent) {
+    pick = randomAnimal();
+  }
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    for (let i = 0; i < ROLL_STEPS; i += 1) {
+      node.textContent = randomAnimal();
+      await new Promise((r) => setTimeout(r, ROLL_STEP_MS + i * 12));
+    }
+  }
+  node.textContent = pick;
+  node.classList.remove('rolled');
+  node.offsetWidth;
+  node.classList.add('rolled');
+  return pick;
 }
 
 // Read markers: the last line id seen per channel, stored as a setting so every device agrees.
@@ -4662,7 +4701,13 @@ function showPhotoStep() {
     'People using {app} or Lobby see it next to your messages. Other IRC programs show just your nick. Without a picture you get an animal.',
     { app: BRAND.name },
   );
-  $('welcome-photo-face').replaceChildren(onboarding.plan.photo ? image(onboarding.plan.photo) : avatar(nick, ''));
+  const face = $('welcome-photo-face');
+  face.replaceChildren(onboarding.plan.photo ? image(onboarding.plan.photo) : avatar(nick, ''), h('span', 'photo-badge'));
+  face.lastChild.append(svg(onboarding.plan.photo ? CAMERA_ICON : DICE_ICON));
+  face.setAttribute('aria-label', onboarding.plan.photo ? t('Use an animal instead') : t('Another animal'));
+  $('welcome-photo-hint').textContent = onboarding.plan.photo
+    ? t('Tap the picture to go back to an animal')
+    : t('Tap the animal for another one');
   showWelcomeStep('photo');
 }
 
@@ -4697,6 +4742,15 @@ $('welcome-photo-file').addEventListener('change', async (e) => {
     showPhotoStep();
   }
 });
+$('welcome-photo-face').addEventListener('click', async () => {
+  if (onboarding.plan.photo) {
+    delete onboarding.plan.photo;
+    showPhotoStep();
+    return;
+  }
+  const face = $('welcome-photo-face').firstChild;
+  onboarding.plan.animal = await rollAnimal(face);
+});
 $('welcome-photo').addEventListener('submit', (e) => {
   e.preventDefault();
   finishWelcome();
@@ -4728,6 +4782,9 @@ function joinAfterSetup(net) {
   // What the welcome asked for, kept until there was somewhere to save it.
   if (plan.words) {
     saveSetting(NOTIFY_WORDS_SETTING, plan.words);
+  }
+  if (plan.animal) {
+    saveSetting(ANIMAL_SETTING, plan.animal);
   }
   const me = state.me[net];
   if (plan.photo && me) {
@@ -5092,6 +5149,10 @@ async function start() {
     if (e.payload.key === QUIT_SETTING) {
       syncQuit();
     }
+    if (e.payload.key === ANIMAL_SETTING) {
+      renderHeader();
+      renderLog();
+    }
     if (e.payload.key === READ_SETTING) {
       applyReadSetting(e.payload.value);
     }
@@ -5413,6 +5474,7 @@ function renderEditor() {
   el.personPhoto.append(h('span', 'photo-badge'));
   el.personPhoto.lastChild.append(svg(CAMERA_ICON));
   el.personPhotoRemove.hidden = !p.photo;
+  $('person-animal').hidden = Boolean(p.photo || p.channel || !p.nicks.some(isMyNick));
 
   const swatches = [swatch(auto, t('Automatic'), !p.color, h('span', 'swatch-mark', 'A'))];
   for (const c of SWATCHES) {
@@ -5625,6 +5687,19 @@ el.people.addEventListener('paste', (e) => {
   }
   e.preventDefault();
   setPhoto(file);
+});
+$('person-animal').addEventListener('click', () => {
+  let pick = shownAnimal(editing.nicks.find(isMyNick));
+  while (pick === shownAnimal(editing.nicks.find(isMyNick))) {
+    pick = randomAnimal();
+  }
+  saveSetting(ANIMAL_SETTING, pick);
+  renderEditor();
+  el.personPhoto.classList.remove('rolled');
+  el.personPhoto.offsetWidth;
+  el.personPhoto.classList.add('rolled');
+  renderHeader();
+  renderLog();
 });
 el.personPhotoRemove.addEventListener('click', () => {
   editing.photo = '';
