@@ -386,7 +386,8 @@ fn ios_icon(wanted: Option<&str>) {
     ui.setAlternateIconName_completionHandler(name.as_deref(), None);
 }
 
-/// The highlight count on the app icon: the Dock on macOS, the home screen on iPhone.
+/// The unread count on the app icon: the Dock on macOS, the home screen on iPhone, and on Linux
+/// docks that read the Unity launcher API. Windows and Android have no number badge.
 #[tauri::command]
 fn set_badge(app: AppHandle, count: u32) -> Result<(), String> {
     #[cfg(target_os = "macos")]
@@ -397,7 +398,11 @@ fn set_badge(app: AppHandle, count: u32) -> Result<(), String> {
         objc2_user_notifications::UNUserNotificationCenter::currentNotificationCenter()
             .setBadgeCount_withCompletionHandler(count as _, None);
     }
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(target_os = "linux")]
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.set_badge_count((count > 0).then_some(count.into()));
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "linux")))]
     let _ = (app, count);
     Ok(())
 }

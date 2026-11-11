@@ -7,6 +7,7 @@
 * Add a swipe from the right edge for people
 * Fix the channel list raising the iPhone keyboard
 * Fix the iPhone keyboard hiding the newest message
+* Add the unread badge on Linux docks
 
 ### 1.6.0: 2026-11-10
 
