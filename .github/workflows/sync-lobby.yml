@@ -1,0 +1,42 @@
+name: Sync Lobby
+
+"on":
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # A clean merge goes straight to main. A conflict, or Lobby changing its workflows (which this
+      # token may not push), opens an issue for a merge by hand.
+      - name: Merge Lobby's main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config merge.ours.driver true
+          git remote add lobby https://github.com/rollecode/lobby.git
+          git fetch --quiet lobby main
+          if git merge-base --is-ancestor lobby/main HEAD; then
+            echo "Already has Lobby's main"
+            exit 0
+          fi
+          if git merge --no-edit -m "Merge Lobby's latest main" lobby/main && git push origin HEAD:main; then
+            exit 0
+          fi
+          git merge --abort 2>/dev/null || true
+          title="Merge Lobby by hand"
+          if [ -z "$(gh issue list --state open --search "in:title \"$title\"" --json number -q '.[].number')" ]; then
+            gh issue create --title "$title" --body "Lobby's main could not be merged on its own: a conflict, or a change to Lobby's workflows. Run \`git fetch upstream && git merge upstream/main\`, sort it out and push."
+          fi
