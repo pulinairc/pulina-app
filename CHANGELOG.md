@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.9.0: 2026-11-11
 
 * Change the update bar to Update, Restart and Dismiss
 * Fix the start light showing over the chat
