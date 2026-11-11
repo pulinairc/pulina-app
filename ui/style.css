@@ -940,8 +940,8 @@ dialog {
   background: var(--panel);
   color: var(--text);
   padding: 0;
-  width: min(420px, calc(100vw - 24px));
-  max-height: min(560px, calc(100vh - 80px));
+  width: min(420px, calc(var(--view-w, 100vw) - 24px));
+  max-height: min(560px, calc(var(--view-h, 100vh) - 80px));
   box-shadow: 0 16px 48px rgb(0 0 0 / 45%);
 }
 
@@ -1120,8 +1120,8 @@ dialog:focus {
   display: grid;
   grid-template-columns: auto 1fr;
   grid-template-rows: auto 1fr;
-  width: min(620px, calc(100vw - 24px));
-  height: min(560px, calc(100vh - 80px));
+  width: min(620px, calc(var(--view-w, 100vw) - 24px));
+  height: min(560px, calc(var(--view-h, 100vh) - 80px));
   overflow: hidden;
 }
 #settings .sheet-head {
@@ -1198,7 +1198,7 @@ dialog:focus {
   background: color-mix(in srgb, var(--new) 14%, transparent);
 }
 #notify-guide {
-  width: min(380px, calc(100vw - 24px));
+  width: min(380px, calc(var(--view-w, 100vw) - 24px));
 }
 #notify-guide .hint {
   margin: 8px 18px 0;
@@ -1431,7 +1431,7 @@ dialog:focus {
 .tip {
   position: fixed;
   z-index: 100;
-  max-width: min(360px, calc(100vw - 8px));
+  max-width: min(360px, calc(var(--view-w, 100vw) - 8px));
   padding: 4px 9px;
   border: 1px solid var(--line-strong);
   border-radius: 8px;
@@ -1450,7 +1450,7 @@ dialog:focus {
 
 /* The person card: tinted from the top with their own colour. */
 .tip.person {
-  max-width: min(300px, calc(100vw - 8px));
+  max-width: min(300px, calc(var(--view-w, 100vw) - 8px));
   padding: 9px 11px;
   border-radius: 11px;
   white-space: normal;
@@ -3410,8 +3410,8 @@ body.docked #update-bar {
   position: absolute;
   top: 54px;
   left: 12px;
-  width: min(380px, calc(100vw - 24px));
-  max-height: min(560px, calc(100vh - 80px));
+  width: min(380px, calc(var(--view-w, 100vw) - 24px));
+  max-height: min(560px, calc(var(--view-h, 100vh) - 80px));
   display: flex;
   flex-direction: column;
   border-radius: 14px;
@@ -3582,8 +3582,8 @@ body.docked #update-bar {
 }
 @media (min-width: 520px) and (min-height: 560px) {
   .inbox-panel {
-    width: min(480px, calc(100vw - 24px));
-    max-height: min(680px, calc(100vh - 80px));
+    width: min(480px, calc(var(--view-w, 100vw) - 24px));
+    max-height: min(680px, calc(var(--view-h, 100vh) - 80px));
   }
   .inbox-row .av {
     --avatar: 34px;
@@ -3609,7 +3609,7 @@ body.docked #update-bar {
     right: 0;
     bottom: 0;
     width: auto;
-    max-height: 72vh;
+    max-height: calc(var(--view-h, 100vh) * 0.72);
     border-radius: 18px 18px 0 0;
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -4310,10 +4310,12 @@ body.docked #update-bar {
 
 /* First start: the welcome fills the window, one step at a time. */
 dialog.welcome {
-  width: 100vw;
-  max-width: 100vw;
-  height: 100dvh;
-  max-height: 100dvh;
+  /* Filled by its edges, not its size: true under any page or own zoom. */
+  inset: 0;
+  width: auto;
+  max-width: none;
+  height: auto;
+  max-height: none;
   margin: 0;
   border: 0;
   border-radius: 0;
@@ -4322,6 +4324,12 @@ dialog.welcome {
 }
 dialog.welcome::backdrop {
   background: var(--bg);
+}
+/* A phone has no room for desktop-sized onboarding: all of it a size smaller. */
+@media (max-width: 520px) {
+  dialog.welcome {
+    zoom: 0.86;
+  }
 }
 /* Faint IRC signs drifting behind every welcome step. */
 .welcome-signs {
