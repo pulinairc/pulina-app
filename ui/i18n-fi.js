@@ -373,7 +373,8 @@ export const FI = {
   'lobby-server unreachable': 'lobby-server ei vastaa',
 
   // Updates
-  '{name} is installed.': '{name} on asennettu.',
+  '{name} is ready. Restart to start using it.': '{name} on valmiina. Käynnistä uudelleen, niin se otetaan käyttöön.',
+  'Restart now': 'Käynnistä uudelleen',
   Restart: 'Käynnistä uudelleen',
   'Installing {name}…': 'Asennetaan {name}…',
   '{name} is out.': '{name} on julkaistu.',
