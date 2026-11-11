@@ -11,6 +11,8 @@
 * Fix the start light detached from the lamp on iPhone
 * Add picking your own animal by tapping it
 * Change the start lamp cord to reach the top
+* Fix reactions landing on the nick's latest message
+* Add Dropbox video and audio playback
 
 ### 1.8.2: 2026-11-11
 
