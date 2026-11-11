@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.11.0: 2026-11-11
 
 * Add own accounts for forks: apply, wait and sign in
 * Add more smileys, like :| and ^^
