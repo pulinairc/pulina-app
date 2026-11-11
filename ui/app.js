@@ -3474,7 +3474,7 @@ window.addEventListener('message', (e) => {
 function videoCard(p) {
   const box = h('div', 'vid native');
   const v = h('video');
-  Object.assign(v, { src: p.url, muted: true, loop: true, playsInline: true, preload: 'metadata' });
+  Object.assign(v, { src: directLink(p.url), muted: true, loop: true, playsInline: true, preload: 'metadata' });
   v.addEventListener('error', () => box.replaceWith(pageLink(p)));
   box.append(v, openButton(p.url));
   box.visible = (on) => {
@@ -3511,7 +3511,7 @@ function pageLink(p) {
 function audioCard(p) {
   const box = h('div', 'aud');
   const audio = h('audio');
-  Object.assign(audio, { src: p.url, preload: 'metadata' });
+  Object.assign(audio, { src: directLink(p.url), preload: 'metadata' });
   const play = h('button', 'aud-play');
   play.type = 'button';
   play.innerHTML = ICONS.play;
@@ -6894,7 +6894,7 @@ function shelfTile(l, url, kind) {
     const v = h('video');
     v.muted = true;
     v.preload = 'metadata';
-    v.src = `${url}#t=0.5`;
+    v.src = `${directLink(url)}#t=0.5`;
     tile.append(v);
   }
   if (kind !== 'image') {
