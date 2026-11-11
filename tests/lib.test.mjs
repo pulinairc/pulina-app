@@ -217,6 +217,8 @@ test('turns standalone emoticons into emoji', () => {
   assert.equal(convertEmoticons('nice :D see you :)'), 'nice 😁 see you 🙂');
   assert.equal(convertEmoticons('https://example.org:D'), 'https://example.org:D');
   assert.equal(convertEmoticons('<3 xD'), '❤️ 😆');
+  assert.equal(convertEmoticons(':| :-) ^^ -_- >:( </3'), '😐 🙂 😊 😑 😠 💔');
+  assert.equal(convertEmoticons('a:|b'), 'a:|b');
 });
 
 test('finds the colon word before the caret', () => {
