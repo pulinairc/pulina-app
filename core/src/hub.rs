@@ -141,6 +141,13 @@ impl Hub {
         *lock(&self.backlog) = Some(backlog);
     }
 
+    /// Say goodbye on every network, with the user's quit message.
+    pub fn quit_all(&self, reason: &str) {
+        for tx in lock(&self.writers).values() {
+            let _ = tx.send(format!("QUIT :{reason}"));
+        }
+    }
+
     /// Close every connection, for when the setup changes.
     pub fn stop(&self) {
         for (_, task) in lock(&self.tasks).drain() {

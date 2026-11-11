@@ -67,12 +67,26 @@ function names(list, verb) {
   return tv(verb, unique.length > 1 ? 'plural' : '', { who: andList(unique) });
 }
 
+const QUIT_REASON_CHARS = 120;
+
+/** What someone said on quitting, without the "Quit:" servers put in front. */
+export function quitReason(text = '') {
+  return text
+    .replace(/^Quit:\s*/i, '')
+    .trim()
+    .slice(0, QUIT_REASON_CHARS);
+}
+
 /** One readable line for a run of joins, parts, quits and nick changes. */
 export function summarize(events) {
   const by = { join: [], part: [], quit: [] };
   const extra = [];
   for (const e of events) {
-    if (by[e.kind]) {
+    // Someone who left a quit message gets a line of their own with it.
+    const reason = e.kind === 'quit' ? quitReason(e.text) : '';
+    if (reason) {
+      extra.push(t('{nick} quit ({reason})', { nick: e.nick, reason }));
+    } else if (by[e.kind]) {
       by[e.kind].push(e.nick);
     }
     if (e.kind === 'nick') {
