@@ -1,5 +1,6 @@
 // What a fork such as the Pulina app changes: its name, where it links, its icons. Its look is brand.css.
 // `lang` is the UI language until one is picked in Settings: 'en' or 'fi', English when left out.
+// `startNote` replaces the history line under "Start chatting now" in the welcome.
 // `reportEmail` gets reported messages and Settings > About's "Report a problem".
 export const BRAND = {
   name: 'Lobby',
