@@ -55,7 +55,7 @@ pub async fn fetch(raw: &str) -> Option<Preview> {
         return None;
     }
 
-    let client = reqwest::Client::builder().timeout(TIMEOUT).user_agent(USER_AGENT).build().ok()?;
+    let client = lobby_core::http().timeout(TIMEOUT).user_agent(USER_AGENT).build().ok()?;
     if is_youtube(&url) {
         return youtube(&client, raw).await;
     }

@@ -75,7 +75,7 @@ pub async fn send(target: &Target, file: File) -> Result<String, String> {
 }
 
 fn client() -> Result<reqwest::Client, String> {
-    reqwest::Client::builder().timeout(TIMEOUT).build().map_err(|e| e.to_string())
+    crate::http().timeout(TIMEOUT).build().map_err(|e| e.to_string())
 }
 
 /// "Holiday photo.PNG" sent as image/png is kept as "<random>/Holiday-photo.png".
