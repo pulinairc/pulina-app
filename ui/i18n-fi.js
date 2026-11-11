@@ -579,7 +579,6 @@ export const FI = {
   'Yesterday in {name}': 'Eilen kanavalla {name}',
   '{n} person said {words} words': '{n} henkilö sanoi {words} sanaa',
   '{n} people said {words} words': '{n} henkilöä sanoi yhteensä {words} sanaa',
-  'Today so far': 'Tänään tähän mennessä',
   'Counting…': 'Lasketaan…',
   'Your lobby-server needs an update to count this.': 'Tämän laskeminen vaatii lobby-serverin päivityksen.',
   'Nobody has said anything here today.': 'Kukaan ei ole sanonut täällä tänään mitään.',
