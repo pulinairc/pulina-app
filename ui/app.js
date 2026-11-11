@@ -4566,12 +4566,49 @@ async function showPeek() {
       return row;
     }),
   );
+  showTalking(lines);
 }
+
+/** Who spoke in the channel lately, as the header's people pill shows them. */
+function showTalking(lines) {
+  const now = Date.now();
+  const speakers = (within) => [
+    ...new Set(
+      lines
+        .filter((l) => now - l.ts < within)
+        .map((l) => l.nick)
+        .reverse(),
+    ),
+  ];
+  const recent = speakers(TALKING_MS);
+  const shown = recent.length ? recent : speakers(Number.POSITIVE_INFINITY);
+  const box = $('welcome-talking');
+  box.hidden = !shown.length;
+  if (!shown.length) {
+    return;
+  }
+  const faces = h('span', 'pill-faces');
+  faces.append(...shown.slice(0, PILL_FACES).map((n) => avatar(n, '')));
+  const text = recent.length ? t('{count} chatting now', { count: recent.length }) : t('Talked last');
+  box.replaceChildren(h('span', 'talking-dot'), h('span', null, text), faces);
+}
+
+function showNickFace() {
+  const nick = el.welcomeNick.value.trim();
+  $('welcome-nick-face').replaceChildren(...(nick ? [avatar(nick, '')] : []));
+  $('welcome-nick-go').disabled = !nick;
+  if (ONLY) {
+    el.welcomeNick.style.color = nick ? identity(nick, '').color : '';
+  }
+}
+
+el.welcomeNick.addEventListener('input', showNickFace);
 
 function openQuickStart() {
   renderWelcomeNets();
   el.welcomeChans.value ||= BRAND.start?.channels ?? '';
   showWelcomeStep('quick');
+  showNickFace();
   el.welcomeNick.focus();
 }
 
