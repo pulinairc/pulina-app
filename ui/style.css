@@ -4553,7 +4553,10 @@ dialog.welcome::backdrop {
 :root[data-only] dialog.welcome[open] {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
+}
+/* The nick sheet sits at the bottom; the later steps start from the top. */
+:root[data-only] #welcome-quick {
+  margin-top: auto;
 }
 :root[data-only] #welcome-quick {
   position: relative;
@@ -4589,6 +4592,64 @@ dialog.welcome::backdrop {
 :root[data-only] .welcome-more {
   flex: 1 0 auto;
   width: 100%;
+  /* The same room above every step, clear of the window buttons. */
+  padding-top: calc(env(safe-area-inset-top) + 64px);
+}
+.step-back {
+  align-self: flex-start;
+  margin-bottom: 6px;
+  padding: 4px 0;
+  color: var(--dim);
+  font-size: 14px;
+}
+.step-back:hover {
+  color: var(--strong);
+}
+/* The rules fill the window and scroll inside their own box, the button always in view. */
+#welcome-rules {
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.rules-scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: 18px;
+}
+.rules-more {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  height: 72px;
+  margin-top: -72px;
+  padding-bottom: 12px;
+  box-sizing: border-box;
+  background: linear-gradient(transparent, var(--bg) 85%);
+  color: var(--dim);
+  font-size: 13px;
+  font-weight: 500;
+  pointer-events: none;
+}
+.rules-more[hidden] {
+  display: none;
+}
+.welcome-go {
+  transition:
+    box-shadow 0.18s ease,
+    filter 0.18s ease;
+}
+.welcome-go:not(:disabled):hover,
+.welcome-go:focus-visible {
+  box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 50%, transparent);
+  filter: brightness(1.07);
+}
+.welcome-go:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 .welcome-fill {
   flex: 1;

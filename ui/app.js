@@ -4598,7 +4598,23 @@ function showRules() {
     }),
   );
   showWelcomeStep('rules');
+  const box = $('rules-scroll');
+  box.scrollTop = 0;
+  rulesRead();
 }
+
+/** Like terms of service: accepting waits until the list has been scrolled to its end. */
+function rulesRead() {
+  const box = $('rules-scroll');
+  const end = box.scrollTop + box.clientHeight >= box.scrollHeight - RULES_END_SLACK_PX;
+  $('rules-more').hidden = end;
+  if (end) {
+    $('rules-accept').disabled = false;
+  }
+}
+
+const RULES_END_SLACK_PX = 8;
+$('rules-scroll').addEventListener('scroll', rulesRead, { passive: true });
 
 function showNotifyStep() {
   showWelcomeStep('notify');
@@ -4616,6 +4632,19 @@ function showPhotoStep() {
 }
 
 $('rules-accept').addEventListener('click', showNotifyStep);
+// Back a step; the rules once read stay accepted.
+for (const b of el.welcome.querySelectorAll('.step-back')) {
+  b.addEventListener('click', () => {
+    if (b.dataset.back === 'rules') {
+      showWelcomeStep('rules');
+      return;
+    }
+    showWelcomeStep(b.dataset.back);
+    if (b.dataset.back === 'quick') {
+      el.welcomeNick.focus();
+    }
+  });
+}
 $('welcome-notify').addEventListener('submit', (e) => {
   e.preventDefault();
   onboarding.plan.words = $('welcome-words').value.trim();

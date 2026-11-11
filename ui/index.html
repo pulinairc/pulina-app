@@ -462,15 +462,20 @@
     </form>
     <div id="welcome-rules" class="welcome-step welcome-more" hidden>
       <div class="welcome-top welcome-top-left">
+        <button class="link-btn step-back" type="button" data-back="quick">← Back</button>
         <h1 id="rules-title">Rules</h1>
         <p id="rules-intro" class="welcome-lead"></p>
       </div>
-      <ol id="rules-list" class="rules-list"></ol>
-      <button id="rules-accept" class="welcome-go" type="button">I accept the rules</button>
+      <div id="rules-scroll" class="rules-scroll">
+        <ol id="rules-list" class="rules-list"></ol>
+        <div id="rules-more" class="rules-more">Scroll down</div>
+      </div>
+      <button id="rules-accept" class="welcome-go" type="button" disabled>I accept the rules</button>
       <a id="rules-link" class="rules-link" target="_blank" rel="noopener">Read all the rules</a>
     </div>
     <form id="welcome-notify" class="welcome-step welcome-more" hidden>
       <div class="welcome-top welcome-top-left">
+        <button class="link-btn step-back" type="button" data-back="rules">← Back</button>
         <h1>Know when someone talks to you</h1>
         <p class="welcome-lead">You get a notification when someone mentions your nick or sends you a private message.</p>
       </div>
@@ -485,6 +490,7 @@
     </form>
     <form id="welcome-photo" class="welcome-step welcome-more" hidden>
       <div class="welcome-top welcome-top-left">
+        <button class="link-btn step-back" type="button" data-back="notify">← Back</button>
         <h1>Choose a profile picture</h1>
         <p id="welcome-photo-lead" class="welcome-lead"></p>
       </div>
