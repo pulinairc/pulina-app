@@ -1,0 +1,18 @@
+# Pulina account applications and approvals; nginx proxies chat.pulina.fi/accounts/ here.
+# Install: /etc/systemd/system/pulina-accounts.service, keys in /etc/pulina-accounts.env
+[Unit]
+Description=Pulina account applications and approvals
+After=network.target
+
+[Service]
+User=pulina-accounts
+Group=pulina-accounts
+EnvironmentFile=/etc/pulina-accounts.env
+StateDirectory=pulina-accounts
+ExecStart=/usr/bin/python3 -I /var/www/pulina.fi/scripts/pulina-accounts.py
+Restart=always
+RestartSec=2
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

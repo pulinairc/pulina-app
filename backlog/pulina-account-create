@@ -1,0 +1,41 @@
+#!/bin/sh
+# pulina-account-create <account> <port> <token>: a system user (identd answers with its name),
+# its own lobby-server on #pulina and the nginx route /u/<account>/. Run as root by pulina-accounts.
+set -eu
+NAME=$1 PORT=$2 TOKEN=$3
+printf '%s\n' "$NAME" | grep -Eq '^[a-z][a-z0-9_-]{1,9}$' || { echo "bad name" >&2; exit 1; }
+printf '%s\n' "$PORT" | grep -Eq '^[0-9]{4,5}$' || { echo "bad port" >&2; exit 1; }
+printf '%s\n' "$TOKEN" | grep -Eq '^[A-Za-z0-9_-]{32,}$' || { echo "bad token" >&2; exit 1; }
+id "$NAME" >/dev/null 2>&1 && { echo "user exists" >&2; exit 1; }
+MAP=/etc/nginx/pulina-accounts.map
+
+useradd --create-home --shell /usr/sbin/nologin --user-group "$NAME"
+HOME_DIR=$(getent passwd "$NAME" | cut -d: -f6)
+CONF="$HOME_DIR/.config/lobby-server"
+DATA="$HOME_DIR/.local/share/lobby-server"
+install -d -o "$NAME" -g "$NAME" -m 700 "$HOME_DIR/.config" "$CONF" "$HOME_DIR/.local" "$HOME_DIR/.local/share" "$DATA"
+cat > "$CONF/config.toml" <<CONFIG
+listen = "127.0.0.1:$PORT"
+nick = "$NAME"
+token = "$TOKEN"
+
+[[network]]
+name = "Pulina"
+host = "irc.quakenet.org"
+port = 6667
+CONFIG
+# Joins #pulina on its first start, as the app would remember it.
+python3 - "$DATA/history.db" <<'PY'
+import sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+c.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+c.execute("INSERT OR REPLACE INTO settings VALUES ('rejoin.Pulina', '[\"#pulina\"]')")
+c.commit()
+PY
+chown -R "$NAME:$NAME" "$CONF" "$DATA"
+chmod 600 "$CONF/config.toml" "$DATA/history.db"
+
+systemctl enable --now "lobby-server@$NAME.service"
+touch "$MAP"
+grep -q "^$NAME " "$MAP" || echo "$NAME $PORT;" >> "$MAP"
+nginx -t -q && systemctl reload nginx

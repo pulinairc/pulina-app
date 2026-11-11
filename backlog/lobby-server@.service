@@ -1,0 +1,21 @@
+# One always-on IRC connection per Pulina account, run as that account' own user so identd names it.
+# Install: /etc/systemd/system/lobby-server@.service
+[Unit]
+Description=lobby-server for Pulina account %i
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=%i
+Group=%i
+ExecStart=/usr/local/bin/lobby-server
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/home/%i
+PrivateTmp=true
+MemoryMax=96M
+
+[Install]
+WantedBy=multi-user.target

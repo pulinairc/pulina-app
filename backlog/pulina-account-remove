@@ -1,0 +1,12 @@
+#!/bin/sh
+# pulina-account-remove <account>: stops its lobby-server, drops the route and the user with its history.
+set -eu
+NAME=$1
+printf '%s\n' "$NAME" | grep -Eq '^[a-z][a-z0-9_-]{1,9}$' || { echo "bad name" >&2; exit 1; }
+MAP=/etc/nginx/pulina-accounts.map
+# Only users this system made: they run a lobby-server@ unit.
+systemctl cat "lobby-server@$NAME.service" >/dev/null 2>&1 || { echo "not an account" >&2; exit 1; }
+systemctl disable --now "lobby-server@$NAME.service" || true
+sed -i "/^$NAME /d" "$MAP"
+nginx -t -q && systemctl reload nginx
+userdel --remove "$NAME" 2>/dev/null || true

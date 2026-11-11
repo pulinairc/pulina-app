@@ -1,3 +1,7 @@
 {
-  "backlog": { "url": "https://chat.pulina.fi/backlog", "channel": "#pulina" }
+  "backlog": {
+    "url": "https://chat.pulina.fi/backlog",
+    "channel": "#pulina"
+  },
+  "accounts": "https://chat.pulina.fi/accounts"
 }
