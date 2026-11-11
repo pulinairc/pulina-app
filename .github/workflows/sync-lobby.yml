@@ -8,6 +8,7 @@ name: Sync Lobby
 permissions:
   contents: write
   issues: write
+  actions: write
 
 jobs:
   sync:
@@ -33,6 +34,8 @@ jobs:
             exit 0
           fi
           if git merge --no-edit -m "Merge Lobby's latest main" lobby/main && git push origin HEAD:main; then
+            # A push by this workflow starts no other workflow; a new Lobby version releases Pulina too.
+            gh workflow run release.yml --ref main
             exit 0
           fi
           git merge --abort 2>/dev/null || true
