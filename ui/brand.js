@@ -8,6 +8,7 @@ export const BRAND = {
   lang: 'fi',
   // Only #pulina on QuakeNet: the welcome asks the nick and nothing else.
   start: { network: 'QuakeNet', channels: '#pulina', only: true },
+  welcome: 'Welcome to IRC chat',
   startNote: 'The #pulina history is kept in the background.',
   icons: [
     ['pulina-neon', 'Pulina neon'],
