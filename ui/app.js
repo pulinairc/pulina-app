@@ -4712,6 +4712,8 @@ const ACCOUNT_ERRORS = {
   name_in_password: "The password can't contain the account name.",
   breached_password: 'This password has turned up in a data breach. Pick another one.',
   locked: 'Too many wrong tries. Try again in 15 minutes.',
+  no_shell: 'No shell account with that name is set up for the app. Ask the admins.',
+  expired: 'The code ran out. Press Continue for a new one.',
   busy: 'Too many applications are waiting right now. Try again later.',
   wrong: 'Wrong account or password.',
 };
@@ -4729,10 +4731,10 @@ async function passwordEstimator() {
   return passwordCheck;
 }
 
-/** Score, verdict and what to fix for the password in the apply form. */
-async function judgePassword() {
-  const password = $('apply-password').value;
-  const account = $('apply-account').value.trim().toLowerCase();
+/** Score, verdict and what to fix for the password in a form: `form` is the ids' prefix. */
+async function judgePassword(form) {
+  const password = $(`${form}-password`).value;
+  const account = $(`${form}-account`).value.trim().toLowerCase();
   if (!password) {
     return { score: -1, text: t('At least 10 characters. A longer one is better.') };
   }
@@ -4740,7 +4742,7 @@ async function judgePassword() {
     return { score: 0, text: t("The password can't contain the account name.") };
   }
   const est = await passwordEstimator();
-  const hints = [account, $('apply-email').value, $('apply-known').value, BRAND.accounts?.host, BRAND.name].filter(Boolean);
+  const hints = [account, $('apply-email')?.value, $('apply-known')?.value, BRAND.accounts?.host, BRAND.name].filter(Boolean);
   const r = est.check(password, hints);
   const score = password.length < PASSWORD_MIN ? Math.min(r.score, 1) : r.score;
   const level = t(PASSWORD_LEVELS[score]);
@@ -4758,14 +4760,38 @@ async function judgePassword() {
   return { score, text: `${level} · ${why}` };
 }
 
-async function renderPasswordMeter() {
-  const verdict = await judgePassword();
-  $('pw-meter').dataset.level = String(
-    verdict.score < 0 ? 0 : verdict.score < PASSWORD_OK_SCORE ? Math.max(1, verdict.score) : verdict.score,
-  );
-  $('pw-meter').classList.toggle('ok', verdict.score >= PASSWORD_OK_SCORE);
-  $('pw-verdict').textContent = verdict.text;
+async function renderPasswordMeter(form) {
+  const verdict = await judgePassword(form);
+  const meter = $(`${form}-meter`);
+  meter.dataset.level = String(verdict.score < 0 ? 0 : verdict.score < PASSWORD_OK_SCORE ? Math.max(1, verdict.score) : verdict.score);
+  meter.classList.toggle('ok', verdict.score >= PASSWORD_OK_SCORE);
+  $(`${form}-verdict`).textContent = verdict.text;
   return verdict;
+}
+
+/** The meter, the tip and Show/Hide for one form's password field. */
+function wirePassword(form) {
+  $(`${form}-password`).addEventListener('input', () => {
+    $(`${form}-tip`).hidden = false;
+    renderPasswordMeter(form);
+  });
+  $(`${form}-show`).addEventListener('click', () => {
+    const field = $(`${form}-password`);
+    const shown = field.type === 'text';
+    field.type = shown ? 'password' : 'text';
+    $(`${form}-show`).textContent = t(shown ? 'Show' : 'Hide');
+  });
+}
+
+/** Refuses a password the meter calls weak, with the reason in `box`. */
+async function passwordOk(form, box) {
+  const verdict = await renderPasswordMeter(form);
+  if (verdict.score >= PASSWORD_OK_SCORE) {
+    return true;
+  }
+  const error = $(`${form}-password`).value.length < PASSWORD_MIN ? 'short_password' : 'weak_password';
+  accountError(box, { error });
+  return false;
 }
 
 function accountWaiting() {
@@ -4793,6 +4819,8 @@ function showAccountChoice() {
   const whole = (text) => text.replaceAll(`${host}-`, `${host}\u2011`);
   $('apply-title').textContent = whole(t('Apply for a {host} account', { host }));
   $('signin-title').textContent = whole(t('Sign in with your {host} account', { host }));
+  $('shell-title').textContent = whole(t('Sign in with your {host} shell', { host }));
+  $('accounts-shell').hidden = !acc.shell;
   showApplied();
 }
 
@@ -4814,6 +4842,10 @@ $('accounts-apply').addEventListener('click', () => {
   showWelcomeStep('apply');
   $('apply-account').focus();
 });
+$('accounts-shell').addEventListener('click', () => {
+  showWelcomeStep('shell');
+  $('shell-account').focus();
+});
 $('accounts-signin').addEventListener('click', () => {
   showWelcomeStep('signin');
   $('signin-account').focus();
@@ -4830,16 +4862,8 @@ function accountError(box, answer) {
   box.textContent = t(ACCOUNT_ERRORS[answer?.error] ?? 'Sending the application failed. Try again in a moment.');
 }
 
-$('apply-password').addEventListener('input', () => {
-  $('pw-tip').hidden = false;
-  renderPasswordMeter();
-});
-$('apply-show').addEventListener('click', () => {
-  const field = $('apply-password');
-  const shown = field.type === 'text';
-  field.type = shown ? 'password' : 'text';
-  $('apply-show').textContent = t(shown ? 'Show' : 'Hide');
-});
+wirePassword('apply');
+wirePassword('shell');
 
 $('welcome-apply').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -4848,10 +4872,8 @@ $('welcome-apply').addEventListener('submit', async (e) => {
   if (!EMAIL_RE.test(email)) {
     return accountError($('apply-error'), { error: 'bad_email' });
   }
-  const verdict = await renderPasswordMeter();
-  if (verdict.score < PASSWORD_OK_SCORE) {
-    const error = $('apply-password').value.length < PASSWORD_MIN ? 'short_password' : 'weak_password';
-    return accountError($('apply-error'), { error });
+  if (!(await passwordOk('apply', $('apply-error')))) {
+    return;
   }
   const body = { account, email, password: $('apply-password').value, known: $('apply-known').value.trim() };
   const answer = await invoke('account_call', { action: 'apply', body }).catch(() => null);
@@ -4873,6 +4895,49 @@ $('welcome-signin').addEventListener('submit', async (e) => {
     return accountError($('signin-error'), answer?.error ? answer : { error: 'wrong' });
   }
   useAccount(account, answer);
+});
+
+// A shell user proves the shell is theirs with pulina-verify; the app waits for it here.
+const SHELL_POLL_MS = 2500;
+let shellPoll = null;
+
+function stopShellWait() {
+  clearInterval(shellPoll);
+  shellPoll = null;
+  $('shell-proof').hidden = true;
+  $('shell-go').hidden = false;
+}
+
+$('welcome-shell').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const error = $('shell-error');
+  error.hidden = true;
+  if (shellPoll || !(await passwordOk('shell', error))) {
+    return;
+  }
+  const account = $('shell-account').value.trim().toLowerCase();
+  const answer = await invoke('account_call', { action: 'shell', body: { account, password: $('shell-password').value } }).catch(
+    () => null,
+  );
+  if (!answer?.code) {
+    return accountError(error, answer);
+  }
+  $('shell-command').textContent = `pulina-verify ${answer.code}`;
+  $('shell-proof').hidden = false;
+  $('shell-go').hidden = true;
+  shellPoll = setInterval(async () => {
+    if ($('welcome-shell').hidden) {
+      return stopShellWait();
+    }
+    const state = await invoke('account_call', { action: 'shell/check', body: { account, code: answer.code } }).catch(() => null);
+    if (state?.status === 'approved') {
+      stopShellWait();
+      useAccount(account, state);
+    } else if (state?.error) {
+      stopShellWait();
+      accountError(error, state);
+    }
+  }, SHELL_POLL_MS);
 });
 
 $('signin-forgot').addEventListener('click', async () => {
@@ -4940,7 +5005,7 @@ async function checkApplication() {
 setTimeout(checkApplication, 5000);
 setInterval(checkApplication, ACCOUNT_CHECK_MS);
 
-const WELCOME_STEPS = ['ways', 'quick', 'rules', 'notify', 'photo', 'accounts', 'apply', 'signin'];
+const WELCOME_STEPS = ['ways', 'quick', 'rules', 'notify', 'photo', 'accounts', 'apply', 'signin', 'shell'];
 
 function showWelcomeStep(step) {
   for (const name of WELCOME_STEPS) {

@@ -5189,3 +5189,21 @@ dialog.welcome::backdrop {
   align-self: flex-start;
   font-size: 14px;
 }
+.shell-proof {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.shell-command {
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--raised);
+  color: var(--strong);
+  font:
+    600 17px ui-monospace,
+    "SF Mono",
+    Menlo,
+    monospace;
+  user-select: all;
+}

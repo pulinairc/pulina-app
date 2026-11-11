@@ -513,6 +513,7 @@
         </div>
       </div>
       <button id="accounts-signin" class="link-btn account-link" type="button">I already have an account</button>
+      <button id="accounts-shell" class="link-btn account-link" type="button" hidden>I have a shell account</button>
     </div>
     <form id="welcome-apply" class="welcome-step welcome-more" hidden>
       <div class="welcome-top welcome-top-left">
@@ -536,9 +537,9 @@
           <input id="apply-password" class="field" type="password" maxlength="256" autocomplete="new-password" autocapitalize="off" spellcheck="false">
           <button id="apply-show" class="password-show" type="button">Show</button>
         </div>
-        <div id="pw-meter" class="pw-meter" data-level="0" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-        <span id="pw-verdict" class="hint pw-verdict" aria-live="polite">At least 10 characters. A longer one is better.</span>
-        <span id="pw-tip" class="hint pw-tip" hidden>A password manager such as Bitwarden makes up a strong password and remembers it for you.</span>
+        <div id="apply-meter" class="pw-meter" data-level="0" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <span id="apply-verdict" class="hint pw-verdict" aria-live="polite">At least 10 characters. A longer one is better.</span>
+        <span id="apply-tip" class="hint pw-tip" hidden>A password manager such as Bitwarden makes up a strong password and remembers it for you.</span>
       </div>
       <div class="welcome-field">
         <label class="field-label" for="apply-known">The nick people know you by on the channel</label>
@@ -547,6 +548,36 @@
       <p id="apply-error" class="hint error" hidden></p>
       <span class="welcome-fill"></span>
       <button id="apply-send" class="welcome-go" type="submit">Send application</button>
+    </form>
+    <form id="welcome-shell" class="welcome-step welcome-more" hidden>
+      <div class="welcome-top welcome-top-left">
+        <button class="link-btn step-back" type="button" data-back="accounts">← Back</button>
+        <h1 id="shell-title"></h1>
+        <p class="welcome-lead">The app connects through your own irssi, so you see the same chat with your own nick. Your irssi stays as it is.</p>
+      </div>
+      <div class="welcome-field">
+        <label class="field-label" for="shell-account">Shell account</label>
+        <input id="shell-account" class="field" type="text" maxlength="15" autocomplete="username" autocapitalize="off" spellcheck="false">
+      </div>
+      <div class="welcome-field">
+        <label class="field-label" for="shell-password">A password for the app</label>
+        <div class="password-box">
+          <input id="shell-password" class="field" type="password" maxlength="256" autocomplete="new-password" autocapitalize="off" spellcheck="false">
+          <button id="shell-show" class="password-show" type="button">Show</button>
+        </div>
+        <div id="shell-meter" class="pw-meter" data-level="0" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <span id="shell-verdict" class="hint pw-verdict" aria-live="polite">At least 10 characters. A longer one is better.</span>
+        <span id="shell-tip" class="hint pw-tip" hidden>A password manager such as Bitwarden makes up a strong password and remembers it for you.</span>
+        <span class="hint">Only for the app. Your shell password stays as it is.</span>
+      </div>
+      <div id="shell-proof" class="shell-proof" hidden>
+        <p class="hint">Log in to your shell and run this within 10 minutes:</p>
+        <code id="shell-command" class="shell-command"></code>
+        <p id="shell-waiting" class="hint">Waiting for your shell…</p>
+      </div>
+      <p id="shell-error" class="hint error" hidden></p>
+      <span class="welcome-fill"></span>
+      <button id="shell-go" class="welcome-go" type="submit">Continue</button>
     </form>
     <form id="welcome-signin" class="welcome-step welcome-more" hidden>
       <div class="welcome-top welcome-top-left">
