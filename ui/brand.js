@@ -14,7 +14,7 @@ export const BRAND = {
   // The name for "Tervetuloa …" in Finnish.
   fiInto: 'Lobbyyn',
   site: 'https://github.com/rollecode/lobby',
-  reportEmail: 'rolle.laukkarinen@gmail.com',
+  reportEmail: 'rolle@dude.fi',
   // The first is the bundle's own icon, as src-tauri/icons/default.txt names it.
   icons: [
     ['pendant-lamp', 'Pendant lamp'],
