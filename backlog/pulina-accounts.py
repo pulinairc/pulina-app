@@ -5,7 +5,7 @@ POST /accounts/apply    {account, email, password, known} -> {status: "pending",
 POST /accounts/status   {account, password or check} -> {status} and, once approved, {url, token}
 POST /accounts/cancel   {account, password}         -> {status: "cancelled"}
 POST /accounts/forgot   {account}                   -> {status: "sent"}, mails a reset link if it can
-POST /accounts/shell    {account, password}         -> {status: "verifying", code} for a shell user set up beforehand
+POST /accounts/shell    {account}                   -> {status: "verifying", code} for a shell user set up beforehand
 POST /accounts/shell/check {account, code}          -> {status} and, once proven, {url, token}
 unix socket VERIFY_SOCK  <code>                      -> pulina-verify, run in the shell, proves the account is theirs
 GET  /accounts/reset/<token>                            -> the page for a new password
@@ -307,23 +307,17 @@ class Handler(BaseHTTPRequestHandler):
         self.json(200, answer)
 
     def shell_start(self, data):
-        """A shell user picks an app password; it counts once pulina-verify proves the shell is theirs."""
+        """A shell user signs in a device: pulina-verify in their shell proves it is them. No password."""
         name = str(data.get('account', '')).strip().lower()
-        password = str(data.get('password', ''))
         if failed_recently('shell:' + name):
             return self.json(429, {'error': 'locked'})
         note_failure('shell:' + name)
         with db() as conn:
-            row = conn.execute("SELECT * FROM accounts WHERE name = ? AND shell = 1", (name,)).fetchone()
-            if not row:
+            if not conn.execute('SELECT 1 FROM accounts WHERE name = ? AND shell = 1', (name,)).fetchone():
                 return self.json(404, {'error': 'no_shell'})
-            problem = password_problem(name, password)
-            if problem:
-                return self.json(400, {'error': problem})
             code = ''.join(secrets.choice(CODE_CHARS) for _ in range(CODE_LEN))
-            salt = secrets.token_bytes(16)
-            conn.execute('UPDATE accounts SET code = ?, code_until = ?, code_ok = 0, pending_salt = ?, pending_hash = ? WHERE name = ?',
-                         (code, int(time.time()) + CODE_SECONDS, salt, hashed(password, salt), name))
+            conn.execute('UPDATE accounts SET code = ?, code_until = ?, code_ok = 0 WHERE name = ?',
+                         (code, int(time.time()) + CODE_SECONDS, name))
         self.json(200, {'status': 'verifying', 'code': code})
 
     def shell_check(self, data):
@@ -486,25 +480,14 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def verify(name, code):
-    """pulina-verify from the shell of `name`: the waiting app password becomes the real one."""
-    now = int(time.time())
+    """pulina-verify from the shell of `name`: the device waiting with this code may sign in."""
     with db() as conn:
         row = conn.execute('SELECT * FROM accounts WHERE name = ? AND shell = 1', (name,)).fetchone()
         if not row or not row['code'] or not hmac.compare_digest(row['code'], code):
             return 'Koodi ei käy. Tarkista se Pulina-sovelluksesta.'
-        if row['code_until'] < now:
+        if row['code_until'] < time.time():
             return 'Koodi on vanhentunut. Aloita alusta Pulina-sovelluksessa.'
-        token_ws = row['token']
-        if row['status'] == 'approved':
-            # A second proof is a new password: whoever had the old one is shut out.
-            fresh = secrets.token_urlsafe(32)
-            done = subprocess.run(['sudo', '-n', TOKEN_SCRIPT, name, fresh], capture_output=True, text=True, timeout=60)
-            if done.returncode != 0:
-                print(f'token change for {name} failed: {done.stderr[-300:]}', file=sys.stderr)
-                return 'Jokin meni vikaan. Yritä hetken päästä uudelleen.'
-            token_ws = fresh
-        conn.execute("UPDATE accounts SET salt = pending_salt, hash = pending_hash, pending_salt = NULL, pending_hash = NULL, "
-                     "status = 'approved', code_ok = 1, token = ? WHERE name = ?", (token_ws, name))
+        conn.execute("UPDATE accounts SET status = 'approved', code_ok = 1 WHERE name = ?", (name,))
     return 'Valmis! Palaa Pulina-sovellukseen.'
 
 
