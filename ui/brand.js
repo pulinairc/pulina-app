@@ -1,6 +1,10 @@
 // Pulina's name, links and icons over Lobby's; the look is brand.css.
 export const BRAND = {
   name: 'Pulina',
+  quitName: 'pulina-app',
+  fiQuitName: 'pulina-appia',
+  // The #pulina logo as the channel's picture; anyone can pick another.
+  channels: { '#pulina': { photo: 'icons/pulina-channel.png' } },
   // The name for "Tervetuloa …" in Finnish.
   fiInto: 'Pulinaan',
   site: 'https://github.com/pulinairc/pulina-app',
