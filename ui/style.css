@@ -539,6 +539,16 @@ a:hover {
   color: var(--faint);
   padding-left: calc(var(--avatar) + 10px);
 }
+/* "4 changes" opens to say what they were. */
+.events.expandable {
+  cursor: pointer;
+}
+.events.expandable:hover {
+  color: var(--dim);
+}
+.events.expandable:not(.open)::after {
+  content: " ›";
+}
 
 /* Link previews */
 
