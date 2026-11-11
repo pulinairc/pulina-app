@@ -1,3 +1,7 @@
+### 1.13.3: 2026-11-11
+
+* Fix own join showing again after reconnecting
+
 ### 1.13.2: 2026-11-11
 
 * Fix catbox.moe uploads failing over HTTP/2
