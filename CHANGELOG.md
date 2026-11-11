@@ -6,7 +6,7 @@
 * Fix messages sent before joining being lost; show joining and own join
 * Fix the start lamp flashing before the welcome
 * Fix Cmd+Q on Mac quitting without the quit message
-* Change Finnish highlights to hailaitti
+* Change Finnish highlights to highlight
 * Add shared profile pictures between Lobby and Pulina users
 
 ### 1.9.1: 2026-11-11
