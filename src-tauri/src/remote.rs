@@ -9,7 +9,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
+use std::time::{Duration, SystemTime};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
@@ -31,6 +31,8 @@ pub struct Remote {
     next_id: AtomicU64,
     snapshot: Mutex<Snapshot>,
     task: Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
+    /// Wall clock, which keeps running while the phone sleeps, unlike the timers.
+    heard: Mutex<Option<SystemTime>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -46,6 +48,7 @@ impl Remote {
             next_id: AtomicU64::new(1),
             snapshot: Mutex::default(),
             task: Mutex::default(),
+            heard: Mutex::default(),
         })
     }
 
@@ -84,6 +87,21 @@ impl Remote {
             task.abort();
         }
         *lock(&self.out) = None;
+    }
+
+    /// Back from the background. A live link hears a pong every few seconds, so one quiet for longer
+    /// was cut while the app slept: connect again now instead of waiting for the silence limit.
+    pub fn wake(self: &Arc<Self>, app: AppHandle) {
+        let quiet = lock(&self.heard).and_then(|t| t.elapsed().ok()).is_some_and(|d| d > SILENCE_LIMIT);
+        if !quiet {
+            return;
+        }
+        self.stop();
+        *lock(&self.heard) = None;
+        for (_, tx) in lock(&self.pending).drain() {
+            let _ = tx.send(Err(UNREACHABLE.into()));
+        }
+        self.start(app);
     }
 
     pub fn start(self: &Arc<Self>, app: AppHandle) {
@@ -171,6 +189,7 @@ impl Link {
                 Ok(frame) => frame,
                 Err(e) => break Err(e.to_string()),
             };
+            *lock(&remote.heard) = Some(SystemTime::now());
             let Message::Text(text) = frame else { continue };
             let Ok(msg) = serde_json::from_str::<ServerMsg>(text.as_str()) else { continue };
             remote.handle(app, msg);

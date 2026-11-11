@@ -682,10 +682,13 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("failed to start Lobby")
-        .run(|_app, _event| {
-            #[cfg(target_os = "ios")]
-            if let tauri::RunEvent::Resumed = _event {
-                ios_volume::resumed(_app);
+        .run(|app, event| {
+            if let tauri::RunEvent::Resumed = event {
+                #[cfg(target_os = "ios")]
+                ios_volume::resumed(app);
+                if let Some(Source::Remote(remote)) = app.try_state::<AppState>().map(|s| s.source()) {
+                    remote.wake(app.clone());
+                }
             }
         });
 }
