@@ -296,6 +296,9 @@ startLang(BRAND.lang ?? 'en');
 // A fork made for one channel, such as Pulina, hides every network choice.
 const ONLY = Boolean(BRAND.start?.only);
 document.documentElement.toggleAttribute('data-only', ONLY);
+// The one-field welcome: a fork's own channel, or Lobby's QuakeNet start.
+const SHEET = ONLY || Boolean(BRAND.start?.sheet);
+document.documentElement.toggleAttribute('data-sheet', SHEET);
 translatePage();
 
 /** The page's own text and labels in the chosen language, once at start. */
@@ -4629,10 +4632,11 @@ function openWelcome() {
     el.welcome.querySelector('[data-way="irc"] span').textContent = t(BRAND.startNote);
   }
   el.welcome.showModal();
-  if (!ONLY) {
+  if (!SHEET) {
     showWelcomeStep('ways');
     return;
   }
+  $('welcome-other-ways').hidden = ONLY;
   el.welcomeQuick.querySelector('h1').textContent = $('welcome-title').textContent;
   el.welcomeQuick.querySelector('.welcome-lead').textContent = t(BRAND.startNote ?? '');
   openQuickStart();
@@ -4642,7 +4646,9 @@ function openWelcome() {
 
 /** The channel's latest talk, blurred behind the welcome: it is already going on. */
 async function showPeek() {
-  const lines = await invoke('backlog_peek').catch(() => []);
+  const real = await invoke('backlog_peek').catch(() => []);
+  // Made-up talk only sets the mood: nobody is counted as chatting now.
+  const lines = real.length ? real : (BRAND.peek ?? []).map(([nick, text]) => ({ nick, text, ts: 0 }));
   $('welcome-peek').replaceChildren(
     ...lines.map((l) => {
       const row = h('div', 'peek-line');
@@ -4652,7 +4658,7 @@ async function showPeek() {
       return row;
     }),
   );
-  showTalking(lines);
+  showTalking(real);
 }
 
 /** Who spoke in the channel lately, as the header's people pill shows them. */
@@ -5029,6 +5035,10 @@ for (const b of el.welcome.querySelectorAll('.way')) {
 el.welcomeNext.addEventListener('click', async () => {
   storeFlag(CHECKLIST_KEY, 'show');
   if (welcomeWay === 'irc') {
+    // Chosen from the other ways: the full form, with every network and channels.
+    if (!ONLY) {
+      document.documentElement.removeAttribute('data-sheet');
+    }
     openQuickStart();
     return;
   }
@@ -8261,3 +8271,5 @@ armed($('reset-app'), 'Reset the app', async () => {
   }
   await invoke('reset_app');
 });
+
+$('welcome-other-ways').addEventListener('click', () => showWelcomeStep('ways'));
