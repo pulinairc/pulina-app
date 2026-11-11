@@ -4504,3 +4504,7 @@ dialog.welcome::backdrop {
     padding: 14px 16px;
   }
 }
+
+:root[data-only] .any-net {
+  display: none !important;
+}

@@ -4409,6 +4409,9 @@ const CHECK_OPEN =
 const CHECK_DONE =
   '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--mention)"/><path d="M7.5 12.5l3 3 6-6.5" stroke="var(--bg)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 let welcomeWay = 'irc';
+// A fork made for one channel, such as Pulina, hides every network choice.
+const ONLY = Boolean(BRAND.start?.only);
+document.documentElement.toggleAttribute('data-only', ONLY);
 let welcomeNet = BRAND.start?.network ?? START_NETWORKS[0][0];
 
 function openWelcome() {
@@ -4419,8 +4422,21 @@ function openWelcome() {
   if (BRAND.startNote) {
     el.welcome.querySelector('[data-way="irc"] span').textContent = t(BRAND.startNote);
   }
-  showWelcomeStep('ways');
   el.welcome.showModal();
+  if (!ONLY) {
+    showWelcomeStep('ways');
+    return;
+  }
+  el.welcomeQuick.querySelector('h1').textContent = $('welcome-title').textContent;
+  el.welcomeQuick.querySelector('.welcome-lead').textContent = t(BRAND.startNote ?? '');
+  openQuickStart();
+}
+
+function openQuickStart() {
+  renderWelcomeNets();
+  el.welcomeChans.value ||= BRAND.start?.channels ?? '';
+  showWelcomeStep('quick');
+  el.welcomeNick.focus();
 }
 
 function showWelcomeStep(step) {
@@ -4440,10 +4456,7 @@ for (const b of el.welcome.querySelectorAll('.way')) {
 el.welcomeNext.addEventListener('click', async () => {
   storeFlag(CHECKLIST_KEY, 'show');
   if (welcomeWay === 'irc') {
-    renderWelcomeNets();
-    el.welcomeChans.value ||= BRAND.start?.channels ?? '';
-    showWelcomeStep('quick');
-    el.welcomeNick.focus();
+    openQuickStart();
     return;
   }
   el.welcome.close();
