@@ -4711,6 +4711,8 @@ const ACCOUNT_ERRORS = {
   weak_password: 'That password is too easy to guess.',
   name_in_password: "The password can't contain the account name.",
   breached_password: 'This password has turned up in a data breach. Pick another one.',
+  locked: 'Too many wrong tries. Try again in 15 minutes.',
+  busy: 'Too many applications are waiting right now. Try again later.',
   wrong: 'Wrong account or password.',
 };
 // zxcvbn scores 0-4; 3 is the least the form takes. It guesses like a cracker would, against
