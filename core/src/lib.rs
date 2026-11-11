@@ -1,5 +1,6 @@
 //! Shared by the Lobby app and lobby-server: the IRC side, history and the events both pass on.
 
+pub mod backlog;
 pub mod hub;
 pub mod irc;
 pub mod net;

@@ -118,6 +118,35 @@ impl Store {
         Ok(conn.last_insert_rowid())
     }
 
+    /// Many lines in one go, as one write.
+    pub fn insert_all(&self, lines: &[Line]) -> rusqlite::Result<usize> {
+        let mut conn = self.conn();
+        let tx = conn.transaction()?;
+        {
+            let mut stmt =
+                tx.prepare("INSERT INTO lines (net, buffer, ts, kind, nick, mask, text, own) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)")?;
+            for l in lines {
+                stmt.execute(params![l.net, l.buffer, l.ts, l.kind, l.nick, l.mask, l.text, l.own])?;
+            }
+        }
+        tx.commit()?;
+        Ok(lines.len())
+    }
+
+    /// When the newest line in a buffer was written, if it has any.
+    pub fn newest_ts(&self, net: &str, buffer: &str) -> rusqlite::Result<Option<i64>> {
+        self.conn().query_row("SELECT MAX(ts) FROM lines WHERE net = ?1 AND buffer = ?2 COLLATE NOCASE", params![net, buffer], |r| r.get(0))
+    }
+
+    /// Whether a line with this nick and text was written between two times.
+    pub fn has_line(&self, net: &str, buffer: &str, nick: &str, text: &str, from: i64, to: i64) -> rusqlite::Result<bool> {
+        self.conn().query_row(
+            "SELECT EXISTS (SELECT 1 FROM lines WHERE net = ?1 AND buffer = ?2 COLLATE NOCASE AND nick = ?3 COLLATE NOCASE AND text = ?4 AND ts BETWEEN ?5 AND ?6)",
+            params![net, buffer, nick, text, from, to],
+            |r| r.get(0),
+        )
+    }
+
     /// Latest `limit` lines before `before` (an id), oldest first.
     pub fn history(&self, net: &str, buffer: &str, before: i64, limit: i64) -> rusqlite::Result<Vec<Line>> {
         let conn = self.conn();

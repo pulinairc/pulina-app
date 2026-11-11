@@ -1,6 +1,7 @@
 //! The hub keeps every IRC connection running, stores what arrives and hands it on as events.
 //! The app uses it directly, lobby-server serves it to apps over WebSocket.
 
+use crate::backlog::Backlog;
 use crate::net::{BufferInfo, DEFAULT_MODES_PER_LINE, Out, Session, Whois};
 use crate::store::{BufferRef, Line, Person, Store};
 use crate::{Network, irc, now_ms};
@@ -87,6 +88,7 @@ pub struct Hub {
     modes_per_line: Mutex<HashMap<String, usize>>,
     events: broadcast::Sender<Event>,
     tasks: Mutex<HashMap<String, tokio::task::JoinHandle<()>>>,
+    backlog: Mutex<Option<Backlog>>,
 }
 
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
@@ -107,7 +109,13 @@ impl Hub {
             modes_per_line: Mutex::default(),
             events,
             tasks: Mutex::default(),
+            backlog: Mutex::default(),
         })
+    }
+
+    /// A public log to fill each connection's gap from before it connects.
+    pub fn set_backlog(&self, backlog: Backlog) {
+        *lock(&self.backlog) = Some(backlog);
     }
 
     /// Close every connection, for when the setup changes.
@@ -187,6 +195,17 @@ impl Hub {
         let task = tokio::spawn(async move {
             loop {
                 hub.set_conn(&net.name, "connecting");
+                let backlog = lock(&hub.backlog).clone();
+                if let Some(backlog) = backlog {
+                    match backlog.fill(&hub.store, &net.name, &hub.nick).await {
+                        // Windows already open fetch their history again.
+                        Ok(added) if added > 0 => {
+                            let _ = hub.events.send(Event::Networks);
+                        }
+                        Ok(_) => {}
+                        Err(e) => eprintln!("backlog: {e}"),
+                    }
+                }
                 let state = match hub.run(&net).await {
                     Ok(()) => "disconnected".to_string(),
                     Err(e) => format!("disconnected: {e}"),
