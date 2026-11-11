@@ -1,3 +1,7 @@
+### 1.13.1: 2026-11-11
+
+* Fix a first join showing the channel log as unread
+
 ### 1.13.0: 2026-11-11
 
 * Add Sign out and Reset the app to Settings
