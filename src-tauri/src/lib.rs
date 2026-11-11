@@ -622,6 +622,7 @@ pub fn run() {
             #[cfg(target_os = "macos")]
             app.set_menu(mac_menu(app.handle())?)?;
 
+            config::use_name(&app.package_info().name);
             let data = app.path().app_data_dir()?;
             std::fs::create_dir_all(&data)?;
             #[cfg(target_os = "android")]

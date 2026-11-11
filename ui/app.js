@@ -1,7 +1,6 @@
+import { BRAND } from './brand.js';
 import {
-  APP_ICONS,
   CHAT_KINDS,
-  DEFAULT_ICON,
   colonOpensPicker,
   notifyAdvice,
   popupSpot,
@@ -872,7 +871,7 @@ function renderHeader() {
     'mention',
     others.some((x) => x.mention),
   );
-  document.title = total ? `Lobby (${total})` : 'Lobby';
+  document.title = total ? `${BRAND.name} (${total})` : BRAND.name;
 
   if (el.switcher.open) {
     renderList();
@@ -915,7 +914,7 @@ function hideToast() {
 
 function connectionText() {
   if (state.setupError) {
-    return { level: 'error', text: 'Lobby is not connected to anything yet.' };
+    return { level: 'error', text: `${BRAND.name} is not connected to anything yet.` };
   }
   if (state.serverDown) {
     return { level: 'warn', text: `Can't reach lobby-server (${state.serverDown}). Trying again every few seconds.` };
@@ -1235,7 +1234,7 @@ el.settingsTabs.addEventListener('click', (e) => {
   }
 });
 // About: the version and the commit it was built from, linked to that commit.
-const REPO_URL = 'https://github.com/rollecode/lobby';
+const REPO_URL = BRAND.site;
 
 async function showVersion() {
   const info = await invoke('app_info').catch(() => null);
@@ -1243,7 +1242,7 @@ async function showVersion() {
     return;
   }
   const link = $('about-version');
-  link.textContent = `Lobby ${info.version}${info.commit ? `-${info.commit}` : ''}`;
+  link.textContent = `${BRAND.name} ${info.version}${info.commit ? `-${info.commit}` : ''}`;
   link.href = info.commit ? `${REPO_URL}/commit/${info.commit}` : REPO_URL;
 }
 
@@ -3916,17 +3915,28 @@ function applyStatus(st) {
   }
 }
 
+// The page's own text names the app; a fork renames it there once.
+if (BRAND.name !== 'Lobby') {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    node.nodeValue = node.nodeValue.replace(/\bLobby\b/g, BRAND.name);
+  }
+  for (const node of document.querySelectorAll('[aria-label*="Lobby"]')) {
+    node.setAttribute('aria-label', node.getAttribute('aria-label').replace(/\bLobby\b/g, BRAND.name));
+  }
+}
+
 // Connection setup: the same choices on every device, saved to the config file.
 
 const PROJECT_LINKS = {
-  Lobby: 'https://github.com/rollecode/lobby',
+  [BRAND.name]: BRAND.site,
   'lobby-server': 'https://github.com/rollecode/lobby#lobby-server',
 };
 
-/** The text with the first mention of Lobby and of lobby-server linked to the project. */
+/** The text with the first mention of the app and of lobby-server linked to the project. */
 function linkNames(text) {
   const linked = new Set();
-  return text.split(/(lobby-server|Lobby)/).map((part) => {
+  return text.split(new RegExp(`(lobby-server|${BRAND.name})`)).map((part) => {
     if (!PROJECT_LINKS[part] || linked.has(part)) {
       return part;
     }
@@ -3938,9 +3948,9 @@ function linkNames(text) {
 }
 
 const CONNECTION_ABOUT = {
-  ssh: 'Lobby signs in to the machine where lobby-server runs and reaches it from there. Your whole history, and nothing on the server is opened to the internet.',
+  ssh: `${BRAND.name} signs in to the machine where lobby-server runs and reaches it from there. Your whole history, and nothing on the server is opened to the internet.`,
   url: 'lobby-server behind a web server with TLS, at an address of its own. Your whole history.',
-  irc: 'Lobby connects to IRC servers or irssiproxy itself. History only covers the time Lobby is open.',
+  irc: `${BRAND.name} connects to IRC servers or irssiproxy itself. History only covers the time ${BRAND.name} is open.`,
 };
 let connectionMode = 'ssh';
 /** The way Lobby is connected now, as saved; the dialog's tabs may show another. */
@@ -5151,6 +5161,7 @@ applyTextSize(textSize());
 
 // The app icon, chosen per device: Dock on macOS, window icon elsewhere.
 const ICONS_KEY = 'lobby.icon';
+const DEFAULT_ICON = BRAND.icons[0][0];
 
 function chosenIcon() {
   // An icon that has since been removed falls back to the default.
@@ -5160,7 +5171,7 @@ function chosenIcon() {
   } catch {
     /* storage may be unavailable */
   }
-  return APP_ICONS.some(([name]) => name === saved) ? saved : DEFAULT_ICON;
+  return BRAND.icons.some(([name]) => name === saved) ? saved : DEFAULT_ICON;
 }
 
 function useIcon(name) {
@@ -5170,7 +5181,7 @@ function useIcon(name) {
 function renderIconChoices() {
   const current = chosenIcon();
   el.iconChoices.replaceChildren(
-    ...APP_ICONS.map(([name, label]) => {
+    ...BRAND.icons.map(([name, label]) => {
       const b = h('button', 'icon-choice');
       b.type = 'button';
       b.setAttribute('role', 'radio');
@@ -5942,9 +5953,9 @@ async function showNotification(title, body, icon, target = null) {
 // hide a notification the system took, so the green line says where to look.
 el.notifyTest.addEventListener('click', async () => {
   let ok = true;
-  let text = IS_MAC ? 'Sent. Not seeing it? A Focus mode may be hiding Lobby.' : 'Sent';
+  let text = IS_MAC ? `Sent. Not seeing it? A Focus mode may be hiding ${BRAND.name}.` : 'Sent';
   try {
-    await showNotification('Lobby', 'Notifications work.', null);
+    await showNotification(BRAND.name, 'Notifications work.', null);
   } catch (e) {
     ok = false;
     text = `Not sent: ${e}`;

@@ -77,12 +77,20 @@ pub fn use_app_dir(dir: PathBuf) {
     let _ = APP_DIR.set(dir);
 }
 
+/// The app's name in lower case, so a fork such as the Pulina app keeps its own folder.
+static NAME: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+
+pub fn use_name(name: &str) {
+    let _ = NAME.set(name.to_lowercase());
+}
+
 pub fn dir() -> PathBuf {
     #[cfg(target_os = "android")]
     if let Some(dir) = APP_DIR.get() {
         return dir.clone();
     }
-    dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join("lobby")
+    let name = NAME.get().map_or("lobby", String::as_str);
+    dirs::config_dir().unwrap_or_else(|| PathBuf::from(".")).join(name)
 }
 
 /// Lobby's SSH key and the hosts it has learned.

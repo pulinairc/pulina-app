@@ -9,6 +9,8 @@ name: Release
 
 jobs:
   release:
+    # Forks such as the Pulina app release on their own terms.
+    if: github.repository == 'rollecode/lobby'
     runs-on: ubuntu-latest
     permissions:
       contents: write
