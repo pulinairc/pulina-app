@@ -116,9 +116,12 @@ jobs:
       - name: Start the app and see it stay up
         shell: pwsh
         run: |
-          $app = Start-Process -FilePath target\release\lobby.exe -PassThru
+          # A fork such as the Pulina app names its own program.
+          $name = (Get-Content src-tauri\tauri.conf.json -Raw | ConvertFrom-Json).mainBinaryName
+          if (-not $name) { $name = 'lobby' }
+          $app = Start-Process -FilePath "target\release\$name.exe" -PassThru
           Start-Sleep -Seconds 20
-          if ($app.HasExited) { throw "Lobby exited with code $($app.ExitCode)" }
+          if ($app.HasExited) { throw "$name exited with code $($app.ExitCode)" }
           Stop-Process -Id $app.Id
 
   android:
