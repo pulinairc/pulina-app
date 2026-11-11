@@ -716,19 +716,6 @@ export function notifyAdvice(permission) {
   return null;
 }
 
-/** The app icons, by file name in ui/icons, with their names in Settings. The first is the default. */
-export const APP_ICONS = [
-  ['pendant-lamp', 'Pendant lamp'],
-  ['coffee-chat', 'Coffee chat'],
-  ['teal-night', 'Teal night'],
-  ['neon-night', 'Neon night'],
-  ['sunset', 'Sunset'],
-  ['mint-glass', 'Mint glass'],
-  ['porcelain', 'Porcelain'],
-  ['neon-glow', 'Neon glow'],
-];
-export const DEFAULT_ICON = APP_ICONS[0][0];
-
 // The people list: ops first, then everyone by when they last spoke.
 
 const MINUTE_MS = 60 * 1000;

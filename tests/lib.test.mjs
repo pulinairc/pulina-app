@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { BRAND } from '../ui/brand.js';
 import {
-  APP_ICONS,
   mediaKind,
   inboxSplit,
   defaultShortcuts,
@@ -17,7 +17,6 @@ import {
   peopleGroups,
   quietFor,
   roleOf,
-  DEFAULT_ICON,
   colonOpensPicker,
   notifyAdvice,
   popupSpot,
@@ -350,8 +349,9 @@ test('every app icon exists for each platform', () => {
       .filter((f) => f.endsWith('.png'))
       .map((f) => f.slice(0, -4))
       .sort();
-  const names = APP_ICONS.map(([name]) => name).sort();
-  assert.equal(DEFAULT_ICON, 'pendant-lamp');
+  const names = BRAND.icons.map(([name]) => name).sort();
+  const bundled = readFileSync(new URL('../src-tauri/icons/default.txt', import.meta.url), 'utf8').trim();
+  assert.equal(BRAND.icons[0][0], bundled);
   assert.deepEqual(pngs('ui/icons'), names);
   assert.deepEqual(pngs('ui/icons/mac'), names);
   assert.deepEqual(pngs('src-tauri/icons/ios'), names);
