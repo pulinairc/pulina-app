@@ -1008,9 +1008,9 @@ function renderHeader() {
   const total = others.reduce((n, x) => n + attentionCount(x), 0);
   el.unread.hidden = total === 0;
   // Phones show the number alone, so the channel name keeps its room.
-  const label = t('{n} unread', { n: total });
-  el.unread.setAttribute('aria-label', label);
-  el.unread.replaceChildren(String(total), h('span', 'unread-word', label.replace(String(total), '')));
+  const unreadText = t('{n} unread', { n: total });
+  el.unread.setAttribute('aria-label', unreadText);
+  el.unread.replaceChildren(String(total), h('span', 'unread-word', unreadText.replace(String(total), '')));
   el.unread.classList.toggle(
     'mention',
     others.some((x) => x.mention),
