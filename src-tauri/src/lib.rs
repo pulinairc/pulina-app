@@ -601,16 +601,17 @@ fn player() -> String {
     embed::base()
 }
 
-/// The version and the commit it was built from, for the About section in Settings.
+/// The version, the commit it was built from and that commit's date, for the About section in Settings.
 #[derive(Serialize)]
 struct AppInfo {
     version: &'static str,
     commit: &'static str,
+    date: &'static str,
 }
 
 #[tauri::command]
 fn app_info() -> AppInfo {
-    AppInfo { version: env!("CARGO_PKG_VERSION"), commit: env!("LOBBY_COMMIT") }
+    AppInfo { version: env!("CARGO_PKG_VERSION"), commit: env!("LOBBY_COMMIT"), date: env!("LOBBY_COMMIT_DATE") }
 }
 
 #[cfg(desktop)]

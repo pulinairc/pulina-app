@@ -1568,7 +1568,7 @@ async function showVersion() {
     return;
   }
   const link = $('about-version');
-  link.textContent = `${BRAND.name} ${info.version}${info.commit ? `-${info.commit}` : ''}`;
+  link.textContent = `${BRAND.name} ${info.version}${info.commit ? `-${info.commit}` : ''}${info.date ? ` (${info.date})` : ''}`;
   link.href = info.commit ? `${REPO_URL}/commit/${info.commit}` : REPO_URL;
 }
 
@@ -1675,7 +1675,8 @@ function renderLog() {
 const SPLASH_MIN_MS = 700;
 const SPLASH_MAX_MS = 3000;
 const SPLASH_CONE_MS = 300;
-const SPLASH_OPEN_MS = 650;
+const SPLASH_OUT_MS = 220;
+const SPLASH_OPEN_MS = 320;
 const CONE_TOP_HALF_PX = 24;
 const CONE_SPREAD = 0.41;
 const splashStart = performance.now();
@@ -1704,7 +1705,7 @@ function openSplash() {
     lamp.remove();
   };
   // Whatever a slow frame does, nothing of the splash outlives this.
-  setTimeout(done, SPLASH_CONE_MS + SPLASH_OPEN_MS + 400);
+  setTimeout(done, SPLASH_CONE_MS + SPLASH_OUT_MS + SPLASH_OPEN_MS + 400);
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     cover.style.opacity = lamp.style.opacity = '0';
     setTimeout(done, 250);
@@ -1729,15 +1730,18 @@ function openSplash() {
   light.style.transform = 'none';
   light.style.opacity = '1';
   setTimeout(() => {
-    const open = `${SPLASH_OPEN_MS}ms cubic-bezier(0.65, 0, 0.35, 1)`;
-    cover.classList.add('opening');
-    cover.style.transition = `opacity ${open}`;
-    cover.style.opacity = '0';
-    light.style.transition = `transform ${open}, opacity ${open}`;
-    light.style.transform = 'scale(2.4, 2.2)';
+    // The lamp and its light go first, so they never hang over the chat.
+    light.style.transition = `opacity ${SPLASH_OUT_MS}ms ease-in`;
     light.style.opacity = '0';
     lamp.classList.add('opening');
-    setTimeout(done, SPLASH_OPEN_MS + 50);
+    setTimeout(() => {
+      lamp.remove();
+      light.remove();
+      cover.classList.add('opening');
+      cover.style.transition = `opacity ${SPLASH_OPEN_MS}ms ease-out`;
+      cover.style.opacity = '0';
+      setTimeout(done, SPLASH_OPEN_MS + 50);
+    }, SPLASH_OUT_MS);
   }, SPLASH_CONE_MS + 80);
 }
 
