@@ -4434,6 +4434,21 @@ function openWelcome() {
   el.welcomeQuick.querySelector('h1').textContent = $('welcome-title').textContent;
   el.welcomeQuick.querySelector('.welcome-lead').textContent = t(BRAND.startNote ?? '');
   openQuickStart();
+  showPeek();
+}
+
+/** The channel's latest talk, blurred behind the welcome: it is already going on. */
+async function showPeek() {
+  const lines = await invoke('backlog_peek').catch(() => []);
+  $('welcome-peek').replaceChildren(
+    ...lines.map((l) => {
+      const row = h('div', 'peek-line');
+      const nick = h('b', null, l.nick);
+      nick.style.color = nickColor(l.nick);
+      row.append(nick, h('span', null, stripFormatting(l.text)));
+      return row;
+    }),
+  );
 }
 
 function openQuickStart() {

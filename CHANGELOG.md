@@ -11,6 +11,7 @@
 * Change the first window to 700 × 950 with people beside the chat
 * Add a shown network name for forks
 * Add a public log backlog for forks
+* Add the channel's latest talk behind a one-channel welcome
 
 ### 1.8.1: 2026-11-11
 

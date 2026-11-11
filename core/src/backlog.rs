@@ -1,7 +1,7 @@
 //! A channel's public log, loaded before connecting so its history has no hole.
 
 use crate::store::{Line, Store};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -10,7 +10,7 @@ pub struct Backlog {
     pub channel: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct LogLine {
     pub ts: i64,
     pub nick: String,
@@ -33,10 +33,21 @@ impl Backlog {
     /// Fetch and store what the log holds after the newest line here; how many were added.
     pub async fn fill(&self, store: &Store, net: &str, me: &str) -> Result<usize, String> {
         let newest = store.newest_ts(net, &self.channel).map_err(|e| e.to_string())?;
-        let mut url = format!("{}?limit={FIRST_LINES}", self.url);
+        let mut query = format!("limit={FIRST_LINES}");
         if let Some(ts) = newest {
-            url.push_str(&format!("&after={}", ts - SAME_LINE_MS));
+            query.push_str(&format!("&after={}", ts - SAME_LINE_MS));
         }
+        let lines = self.get(&query).await?;
+        Ok(self.store_lines(store, net, me, newest, lines))
+    }
+
+    /// The newest `limit` lines, oldest first.
+    pub async fn peek(&self, limit: usize) -> Result<Vec<LogLine>, String> {
+        self.get(&format!("limit={limit}")).await
+    }
+
+    async fn get(&self, query: &str) -> Result<Vec<LogLine>, String> {
+        let url = format!("{}?{query}", self.url);
         let client = crate::http().timeout(TIMEOUT).build().map_err(|e| e.to_string())?;
         let text = client
             .get(url)
@@ -48,7 +59,7 @@ impl Backlog {
             .await
             .map_err(|e| e.to_string())?;
         let page: Page = serde_json::from_str(&text).map_err(|e| e.to_string())?;
-        Ok(self.store_lines(store, net, me, newest, page.lines))
+        Ok(page.lines)
     }
 
     fn store_lines(&self, store: &Store, net: &str, me: &str, newest: Option<i64>, lines: Vec<LogLine>) -> usize {

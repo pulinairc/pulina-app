@@ -300,6 +300,17 @@ fn brand() -> Brand {
     serde_json::from_str(include_str!("../brand.json")).unwrap_or_default()
 }
 
+const PEEK_LINES: usize = 40;
+
+/// The newest lines of the fork's public log, for the welcome to show behind its form.
+#[tauri::command]
+async fn backlog_peek() -> Result<Vec<lobby_core::backlog::LogLine>, String> {
+    match brand().backlog {
+        Some(backlog) => backlog.peek(PEEK_LINES).await,
+        None => Ok(Vec::new()),
+    }
+}
+
 /// Pass hub events to the window. A lagging window reloads instead of missing lines.
 fn forward(app: AppHandle, hub: Arc<Hub>) {
     let mut rx = hub.subscribe();
@@ -678,6 +689,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             status,
+            backlog_peek,
             recent_buffers,
             history,
             around,
