@@ -52,6 +52,9 @@ import {
   youtube,
   mediaKind,
   inboxSplit,
+  maskWords,
+  OFFENSIVE_WORDS,
+  reportMail,
 } from './lib.js';
 
 const { invoke } = window.__TAURI__.core;
@@ -257,6 +260,18 @@ const el = {
   serverNetNew: $('server-net-new'),
   serverNetAdd: $('server-net-add'),
   langChoices: $('lang-choices'),
+  maskToggle: $('mask-toggle'),
+  filterField: $('filter-field'),
+  blockedList: $('blocked-list'),
+  aboutReport: $('about-report'),
+  report: $('report'),
+  reportQuote: $('report-quote'),
+  reportNote: $('report-note'),
+  reportBlock: $('report-block'),
+  reportBlockLabel: $('report-block-label'),
+  reportTo: $('report-to'),
+  reportCancel: $('report-cancel'),
+  reportSend: $('report-send'),
 };
 
 // A dialog opens with focus on itself, not on its first button: WebKit draws the keyboard ring on a
@@ -468,7 +483,7 @@ function recountUnread(b) {
     return;
   }
   const seen = readMap[b.key];
-  const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own);
+  const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l));
   b.unread = (b.unreadGap || 0) + fresh.length;
   b.mention = fresh.length > 0 && (isPrivate(b) || fresh.some((l) => mentions(l.text, myWords(l.net))));
 }
@@ -629,6 +644,9 @@ function onLine(l) {
   if (b.key === state.current) {
     schedulePeople();
   }
+  if (isMuffled(l)) {
+    return;
+  }
 
   const visible = state.current === b.key;
   if (visible && !b.window) {
@@ -708,6 +726,55 @@ const NOTIFY_ALL_SETTING = 'notifyAll';
 // People and words that notify and count on the app icon in every channel, without highlighting.
 const NOTIFY_NICKS_SETTING = 'notifyNicks';
 const NOTIFY_WORDS_SETTING = 'notifyWords';
+
+// Blocked nicks, lower-case: their lines are left out everywhere. Filter words hide whole messages.
+const BLOCKED_SETTING = 'blocked';
+const FILTER_WORDS_SETTING = 'filterWords';
+// Offensive words show as •••, off unless turned on.
+const MASK_SETTING = 'maskOffensive';
+
+function isBlocked(nick) {
+  return keySet(BLOCKED_SETTING).has((nick || '').toLowerCase());
+}
+
+/** Left out of the chat, highlights, shelf, counts and notifications. */
+function isMuffled(l) {
+  return isBlocked(l.nick) || (!l.own && CHAT_KINDS.has(l.kind) && mentions(l.text, wordList(state.settings[FILTER_WORDS_SETTING])));
+}
+
+/** Text as it is shown, never as it is sent. */
+function shownText(text) {
+  return state.settings[MASK_SETTING] === 'on' ? maskWords(text, OFFENSIVE_WORDS) : text;
+}
+
+function block(nick) {
+  setKey(BLOCKED_SETTING, nick.toLowerCase(), true);
+  refilter();
+}
+
+function unblock(nick) {
+  setKey(BLOCKED_SETTING, nick.toLowerCase(), false);
+  refilter();
+}
+
+/** Draw again whatever blocking, filtering or masking leaves out or changes. */
+function refilter() {
+  for (const b of state.buffers.values()) {
+    if (b.key !== state.current) {
+      recountUnread(b);
+    }
+  }
+  renderLog();
+  renderInbox();
+  renderHeader();
+  schedulePeople();
+  if (!el.shelf.hidden) {
+    renderShelf();
+  }
+  if (el.settings.open) {
+    renderBlocked();
+  }
+}
 
 function notifyMatch() {
   const nicks = new Set(wordList(state.settings[NOTIFY_NICKS_SETTING]));
@@ -789,7 +856,7 @@ function attentionCount(b) {
     return 0;
   }
   const seen = readMap[b.key] ?? Infinity;
-  return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && mentions(l.text, myWords(l.net))).length || 1;
+  return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l) && mentions(l.text, myWords(l.net))).length || 1;
 }
 
 const BELL =
@@ -897,7 +964,9 @@ function badgeCount() {
     }
     // Chosen people and words not already counted as highlights.
     const seen = readMap[b.key] ?? Infinity;
-    n += b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !mentions(l.text, myWords(l.net)) && chosen(l)).length;
+    n += b.lines.filter(
+      (l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l) && !mentions(l.text, myWords(l.net)) && chosen(l),
+    ).length;
   }
   return n;
 }
@@ -1688,6 +1757,9 @@ function toSeparator() {
 
 /** Draw one line at the end of the chat; returns a row it added inside an existing group, if any. */
 function appendLine(l) {
+  if (isMuffled(l)) {
+    return null;
+  }
   const prev = view.lastLine;
   let fresh = null;
 
@@ -1958,7 +2030,7 @@ function row(l) {
     } else if (t.type === 'nick') {
       r.append(nickRef(l.net, t));
     } else {
-      r.append(t.value);
+      r.append(shownText(t.value));
     }
   }
   // A message that is only a link gets replaced by its card.
@@ -2118,7 +2190,7 @@ function quoteNode(target) {
   q.classList.toggle('mine', target.line.own || target.line.nick === state.me[target.line.net]);
   const name = h('span', 'quote-nick', target.line.nick);
   name.style.color = identity(target.line.nick, target.line.mask).color;
-  q.append(name, h('span', 'quote-text', stripFormatting(target.line.text).slice(0, QUOTE_CHARS)));
+  q.append(name, h('span', 'quote-text', shownText(stripFormatting(target.line.text)).slice(0, QUOTE_CHARS)));
   q.addEventListener('click', () => {
     if (!target.row?.isConnected) {
       return;
@@ -2226,7 +2298,7 @@ function startReply(line) {
   replying = line;
   el.replyNick.textContent = line.nick;
   el.replyNick.style.color = identity(line.nick, line.mask).color;
-  el.replyText.textContent = stripFormatting(line.text);
+  el.replyText.textContent = shownText(stripFormatting(line.text));
   el.replying.hidden = false;
   el.input.focus();
   el.input.setSelectionRange(el.input.value.length, el.input.value.length);
@@ -5728,7 +5800,7 @@ async function notify(b, l) {
   const who = identity(l.nick, l.mask);
   const title = isPrivate(b) ? l.nick : t('{name} in {channel}', { name: who.name, channel: label(b) });
   const icon = await notifyIcon(who.photo);
-  showNotification(title, stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS), icon, { key: b.key, line: l.id }).catch((e) =>
+  showNotification(title, shownText(stripFormatting(l.text)).slice(0, NOTIFY_TEXT_CHARS), icon, { key: b.key, line: l.id }).catch((e) =>
     renderStatus(t('Notification: {error}', { error: e })),
   );
 }
@@ -6022,7 +6094,7 @@ async function loadHighlights(before) {
 function inboxParts() {
   const m = highlightMarks();
   const hidden = hiddenKeys();
-  const shown = [...inbox.lines.values()].filter((l) => !hidden.has(key(l.net, l.buffer)));
+  const shown = [...inbox.lines.values()].filter((l) => !hidden.has(key(l.net, l.buffer)) && !isMuffled(l));
   return inboxSplit(shown, m.upTo, m.done);
 }
 
@@ -6058,7 +6130,7 @@ function renderInbox() {
 function inboxText(l) {
   const box = h('div', 'inbox-text');
   for (const t of tokenize(l.text, myWords(l.net))) {
-    box.append(t.type === 'mention' ? h('span', 'mention', t.value) : t.type === 'url' ? shortUrl(t.value) : t.value);
+    box.append(t.type === 'mention' ? h('span', 'mention', t.value) : t.type === 'url' ? shortUrl(t.value) : shownText(t.value));
   }
   return box;
 }
@@ -6273,6 +6345,9 @@ async function loadShelf(more = false) {
 function shelfItems() {
   const items = [];
   for (const l of [...shelf.lines].reverse()) {
+    if (isMuffled(l)) {
+      continue;
+    }
     for (const t of tokenize(l.text, '')) {
       if (t.type === 'url') {
         items.push({ l, url: t.value, kind: mediaKind(t.value) });
@@ -6473,6 +6548,11 @@ el.notifyTest.addEventListener('click', async () => {
 // System Settings after a no.
 const GUIDE_SEEN_KEY = 'lobby.notifyGuide';
 
+/** Text written about Lobby, with the app's own name in a fork. */
+function appNamed(text) {
+  return text.replace(/\bLobby\b/g, BRAND.name);
+}
+
 async function notifyPermission() {
   return IS_MAC ? invoke('notify_permission').catch(() => null) : null;
 }
@@ -6494,7 +6574,7 @@ async function renderNotifyState() {
   if (!fix) {
     return;
   }
-  el.notifyState.textContent = fix.text;
+  el.notifyState.textContent = appNamed(fix.text);
   el.notifyFix.textContent = fix.action;
 }
 
@@ -6514,7 +6594,7 @@ async function offerNotifyGuide() {
   if (!fix) {
     return;
   }
-  el.notifyGuideText.textContent = fix.text;
+  el.notifyGuideText.textContent = appNamed(fix.text);
   el.notifyGuideGo.textContent = fix.action;
   el.notifyGuide.showModal();
 }
@@ -6928,7 +7008,7 @@ function dayStart(daysBack = 0) {
 async function talkers(b, since, until) {
   const bots = botNicks(state.settings[BOTS_SETTING]);
   const list = await invoke('talkers', { net: b.net, buffer: b.name, since, until }).catch(() => null);
-  return list?.filter((t) => !bots.has(t.nick.toLowerCase())) ?? null;
+  return list?.filter((t) => !bots.has(t.nick.toLowerCase()) && !isBlocked(t.nick)) ?? null;
 }
 
 async function addRecap(b) {
