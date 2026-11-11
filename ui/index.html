@@ -448,18 +448,18 @@
         <input id="welcome-nick" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="30">
         <span class="hint">What others see. Letters, digits and - _ work.</span>
       </div>
-      <div class="welcome-field">
+      <div class="welcome-field any-net">
         <span class="field-label" id="welcome-net-label">Network</span>
         <div id="welcome-nets" class="welcome-nets" role="radiogroup" aria-labelledby="welcome-net-label"></div>
         <input id="welcome-host" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="irc.example.org:6667" aria-label="Server address" hidden>
       </div>
-      <div class="welcome-field">
+      <div class="welcome-field any-net">
         <label class="field-label" for="welcome-chans">Channels to join</label>
         <input id="welcome-chans" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="#channel">
       </div>
       <p id="welcome-error" class="hint error" hidden></p>
       <button id="welcome-join" class="welcome-go" type="submit">Join</button>
-      <button id="welcome-back" class="link-btn welcome-back" type="button">Back</button>
+      <button id="welcome-back" class="link-btn welcome-back any-net" type="button">Back</button>
     </form>
   </dialog>
 
@@ -469,13 +469,13 @@
       <button id="connection-close" class="icon-btn" type="button" aria-label="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <form id="connection-form">
-      <div class="segments" role="radiogroup" aria-label="How Lobby connects">
+      <div class="segments any-net" role="radiogroup" aria-label="How Lobby connects">
         <button type="button" role="radio" data-mode="ssh">Through SSH</button>
         <button type="button" role="radio" data-mode="url">Server address</button>
         <button type="button" role="radio" data-mode="irc">Straight to IRC</button>
       </div>
       <p id="connection-state" class="conn-state"><span class="status-dot"></span><span id="connection-state-text"></span></p>
-      <p id="connection-about" class="hint"></p>
+      <p id="connection-about" class="hint any-net"></p>
 
       <div data-modes="ssh">
         <label for="conn-ssh" class="field-label">SSH login</label>
@@ -508,10 +508,10 @@
       <div data-modes="irc">
         <label for="conn-nick" class="field-label">Nick</label>
         <input id="conn-nick" class="field" autocomplete="off" spellcheck="false">
-        <span class="field-label">Networks</span>
-        <div id="conn-networks" class="net-rows"></div>
-        <button id="conn-add-net" class="link-btn" type="button">Add a network</button>
-        <p class="hint">For an IRC server or an irssiproxy port, one network each. Without lobby-server, history only covers the time Lobby is open.</p>
+        <span class="field-label any-net">Networks</span>
+        <div id="conn-networks" class="net-rows any-net"></div>
+        <button id="conn-add-net" class="link-btn any-net" type="button">Add a network</button>
+        <p class="hint any-net">For an IRC server or an irssiproxy port, one network each. Without lobby-server, history only covers the time Lobby is open.</p>
       </div>
 
       <p id="connection-error" class="hint error" hidden></p>
