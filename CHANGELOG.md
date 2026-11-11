@@ -6,6 +6,7 @@
 * Change the /me spark to sit by the name
 * Add a swipe from the right edge for people
 * Fix the channel list raising the iPhone keyboard
+* Fix the iPhone keyboard hiding the newest message
 
 ### 1.6.0: 2026-11-10
 

@@ -3283,7 +3283,7 @@ function fitKeyboard() {
   }
   // Taken before the slide starts moving the chat.
   if (!keyboardTimer) {
-    keyboardPinned = stuck;
+    keyboardPinned ||= stuck;
   }
   clearTimeout(keyboardTimer);
   keyboardTimer = setTimeout(() => {
@@ -3301,6 +3301,7 @@ function fitKeyboard() {
       stuck = true;
       toBottom();
     }
+    keyboardPinned = false;
     const field = document.activeElement;
     if (up && field?.closest('dialog')) {
       requestAnimationFrame(() => field.scrollIntoView({ block: 'nearest' }));
@@ -3308,6 +3309,8 @@ function fitKeyboard() {
   }, KEYBOARD_SETTLE_MS);
 }
 
+// The tap on the box comes before iOS starts moving anything.
+el.input.addEventListener('focus', () => (keyboardPinned = stuck || atBottom()));
 window.visualViewport?.addEventListener('resize', fitKeyboard);
 window.visualViewport?.addEventListener('scroll', fitKeyboard);
 
