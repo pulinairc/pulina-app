@@ -187,7 +187,15 @@ impl Session {
         members.sort_by_key(|m| m.to_lowercase());
         let modes = chan.modes.iter().filter_map(|(key, held)| Some((chan.members.get(key)?.clone(), held.clone()))).collect();
         let avatars = chan.members.iter().filter_map(|(key, nick)| Some((nick.clone(), self.avatars.get(key)?.clone()))).collect();
-        Out::Buffer(BufferInfo { net: self.net.clone(), name: chan.name.clone(), topic: chan.topic.clone(), members, joined, modes, avatars })
+        Out::Buffer(BufferInfo {
+            net: self.net.clone(),
+            name: chan.name.clone(),
+            topic: chan.topic.clone(),
+            members,
+            joined,
+            modes,
+            avatars,
+        })
     }
 
     /// ISUPPORT: the name prefixes, which modes take a parameter, and how many fit one line.
@@ -403,9 +411,7 @@ impl Session {
                 };
                 vec![]
             }
-            "315" if self.who_pending.remove(&msg.param(1).to_lowercase()) => {
-                self.chans.values().map(|c| self.info(c, true)).collect()
-            }
+            "315" if self.who_pending.remove(&msg.param(1).to_lowercase()) => self.chans.values().map(|c| self.info(c, true)).collect(),
             "ERROR" => vec![Out::Line(self.line("", "status", msg, msg.param(0), now))],
             // 301 also answers a message to someone away; only a WHOIS in progress takes it.
             cmd if WHOIS_NUMERICS.contains(&cmd) && (cmd != "301" || self.whois.contains_key(&msg.param(1).to_lowercase())) => {
@@ -626,7 +632,10 @@ mod tests {
 
     #[test]
     fn finds_only_whole_picture_links() {
-        assert_eq!(avatar_in("x https://chat.pulina.fi/a/0123456789abcdef y").as_deref(), Some("https://chat.pulina.fi/a/0123456789abcdef"));
+        assert_eq!(
+            avatar_in("x https://chat.pulina.fi/a/0123456789abcdef y").as_deref(),
+            Some("https://chat.pulina.fi/a/0123456789abcdef")
+        );
         assert_eq!(avatar_in("https://chat.pulina.fi/a/0123"), None);
         assert_eq!(avatar_in("Lobby"), None);
     }
