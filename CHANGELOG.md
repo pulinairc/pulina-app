@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.12.0: 2026-11-11
 
 * Add password strength meter and email to account applications
 * Add password reset for own accounts
