@@ -38,6 +38,7 @@ import {
   nickHue,
   parseReaction,
   parseAddress,
+  quotedText,
   commandMatches,
   personFor,
   glob,
@@ -158,6 +159,8 @@ test('reads reactions and replies sent as plain IRC text', () => {
   assert.deepEqual(parseAddress('frostbyte: no niin'), { nick: 'frostbyte', rest: 'no niin' });
   assert.equal(parseAddress('https://example.org'), null);
   assert.equal(parseAddress('no niin'), null);
+  assert.equal(quotedText('frostbyte: no niin'), 'no niin');
+  assert.equal(quotedText('no niin'), 'no niin');
 });
 
 test('slash menu matches typed commands', () => {

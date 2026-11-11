@@ -43,6 +43,7 @@ import {
   mentions,
   nickColor,
   parseAddress,
+  quotedText,
   personFor,
   parseReaction,
   sameDay,
@@ -2369,7 +2370,7 @@ function quoteNode(target) {
   q.classList.toggle('mine', target.line.own || target.line.nick === state.me[target.line.net]);
   const name = h('span', 'quote-nick', target.line.nick);
   name.style.color = identity(target.line.nick, target.line.mask).color;
-  q.append(name, h('span', 'quote-text', shownText(stripFormatting(target.line.text)).slice(0, QUOTE_CHARS)));
+  q.append(name, h('span', 'quote-text', shownText(stripFormatting(quotedText(target.line.text))).slice(0, QUOTE_CHARS)));
   q.addEventListener('click', () => {
     if (!target.row?.isConnected) {
       return;
@@ -2517,7 +2518,7 @@ function startReply(line) {
   replying = line;
   el.replyNick.textContent = line.nick;
   el.replyNick.style.color = identity(line.nick, line.mask).color;
-  el.replyText.textContent = shownText(stripFormatting(line.text));
+  el.replyText.textContent = shownText(stripFormatting(quotedText(line.text)));
   el.replying.hidden = false;
   el.input.focus();
   el.input.setSelectionRange(el.input.value.length, el.input.value.length);
