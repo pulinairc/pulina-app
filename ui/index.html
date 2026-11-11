@@ -492,14 +492,14 @@
       </div>
       <div class="account-cards">
         <div class="account-card">
-          <div class="account-card-top"><b>Join directly</b><span>Works right away</span></div>
+          <div class="account-card-top"><b>Join the channel directly</b><span>Works right away</span></div>
           <ul>
             <li class="yes">No sign-up</li>
             <li class="yes">History comes from the channel's public log</li>
             <li class="no">Connected only while the app is open</li>
             <li class="no">Others see your connection's address</li>
           </ul>
-          <button id="accounts-direct" class="account-btn" type="button">Join directly</button>
+          <button id="accounts-direct" class="account-btn" type="button">Join the channel directly</button>
         </div>
         <div class="account-card own">
           <div class="account-card-top"><b id="accounts-own-title"></b><span>For the channel's regulars</span></div>
@@ -522,13 +522,23 @@
       </div>
       <div class="welcome-field">
         <label class="field-label" for="apply-account">Account</label>
-        <input id="apply-account" class="field narrow" type="text" maxlength="15" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="e.g. aurora">
+        <input id="apply-account" class="field" type="text" maxlength="15" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="e.g. aurora">
         <span id="apply-mask" class="hint"></span>
       </div>
       <div class="welcome-field">
+        <label class="field-label" for="apply-email">Email</label>
+        <input id="apply-email" class="field" type="email" maxlength="254" autocomplete="email" autocapitalize="off" spellcheck="false">
+        <span class="hint">We tell you here when the account is approved. A forgotten password is reset through it too.</span>
+      </div>
+      <div class="welcome-field">
         <label class="field-label" for="apply-password">Password</label>
-        <input id="apply-password" class="field narrow" type="password" autocomplete="new-password">
-        <span class="hint">At least 10 characters.</span>
+        <div class="password-box">
+          <input id="apply-password" class="field" type="password" maxlength="256" autocomplete="new-password" autocapitalize="off" spellcheck="false">
+          <button id="apply-show" class="password-show" type="button">Show</button>
+        </div>
+        <div id="pw-meter" class="pw-meter" data-level="0" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <span id="pw-verdict" class="hint pw-verdict" aria-live="polite">At least 10 characters. A longer one is better.</span>
+        <span id="pw-tip" class="hint pw-tip" hidden>A password manager such as Bitwarden makes up a strong password and remembers it for you.</span>
       </div>
       <div class="welcome-field">
         <label class="field-label" for="apply-known">The nick people know you by on the channel</label>
@@ -545,12 +555,14 @@
       </div>
       <div class="welcome-field">
         <label class="field-label" for="signin-account">Account</label>
-        <input id="signin-account" class="field narrow" type="text" maxlength="15" autocomplete="username" autocapitalize="off" spellcheck="false">
+        <input id="signin-account" class="field" type="text" maxlength="15" autocomplete="username" autocapitalize="off" spellcheck="false">
       </div>
       <div class="welcome-field">
         <label class="field-label" for="signin-password">Password</label>
-        <input id="signin-password" class="field narrow" type="password" autocomplete="current-password">
+        <input id="signin-password" class="field" type="password" autocomplete="current-password">
+        <button id="signin-forgot" class="link-btn signin-forgot" type="button">Forgot your password?</button>
       </div>
+      <p id="signin-note" class="hint" hidden></p>
       <p id="signin-error" class="hint error" hidden></p>
       <span class="welcome-fill"></span>
       <button class="welcome-go" type="submit">Sign in</button>

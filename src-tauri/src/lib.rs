@@ -309,7 +309,7 @@ fn brand() -> Brand {
 }
 
 const PEEK_LINES: usize = 40;
-const ACCOUNT_ACTIONS: [&str; 3] = ["apply", "status", "cancel"];
+const ACCOUNT_ACTIONS: [&str; 4] = ["apply", "status", "cancel", "forgot"];
 
 /// One call to the fork's account service. The answer comes back as JSON, errors included.
 #[tauri::command]
