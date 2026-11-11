@@ -1,3 +1,10 @@
+### [Unreleased]
+
+* Add Sign out and Reset the app to Settings
+* Fix the lamp flashing before the welcome
+* Change the message box hint to name the channel or person
+* Fix upload errors hiding their cause
+
 ### 1.12.2: 2026-11-11
 
 * Change the sign-in links back to dim links side by side

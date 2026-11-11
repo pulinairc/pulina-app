@@ -1,5 +1,5 @@
 import { BRAND } from './brand.js';
-import { chooseLang, currentLang, LANGS, startLang, t } from './i18n.js';
+import { chooseLang, currentLang, LANGS, startLang, t, tv } from './i18n.js';
 import {
   CHAT_KINDS,
   colonOpensPicker,
@@ -332,6 +332,8 @@ const PLATFORM = { value: 'linux' };
 
 const key = (net, name) => `${net}\u0000${name.toLowerCase()}`;
 const label = (b) => b.name || b.net;
+/** The message box's hint: some languages say a channel, a person and a network differently. */
+const messageHint = (b) => tv('Message {name}', b.name === '' ? 'network' : isChannel(b.name) ? '' : 'person', { name: label(b) });
 const isPrivate = (b) => b.name !== '' && !isChannel(b.name);
 
 function h(tag, cls, text) {
@@ -1091,7 +1093,7 @@ function renderJoining() {
   const joining = isJoining(b);
   $('joining').hidden = !joining;
   el.input.disabled = joining;
-  el.input.placeholder = b ? t('Message {name}', { name: label(b) }) : '';
+  el.input.placeholder = b ? messageHint(b) : '';
   if (joining) {
     $('joining-text').textContent = t('Joining {name}…', { name: label(b) });
   }
@@ -1237,7 +1239,7 @@ function select(k) {
   } catch {
     /* storage may be unavailable */
   }
-  el.input.placeholder = t('Message {name}', { name: label(b) });
+  el.input.placeholder = messageHint(b);
   renderHeader();
   renderLog();
   if (shelf.open) {
@@ -4614,8 +4616,9 @@ let welcomeWay = 'irc';
 let welcomeNet = BRAND.start?.network ?? START_NETWORKS[0][0];
 
 function openWelcome() {
-  // The welcome is not a chat loading: no lamp in front of it.
+  // The welcome is not a chat loading: no lamp in front of it, and none on the next start either.
   splashDone = true;
+  storeFlag(CHAT_SHOWN_KEY, '');
   for (const node of [el.splash, el.splashLight, el.splashLamp]) {
     node.remove();
   }
@@ -8217,4 +8220,44 @@ el.settingsTabs.addEventListener('keydown', (e) => {
     next.focus();
     next.click();
   }
+});
+
+// Sign out and Reset ask twice: the first press only arms the button for a moment.
+const CONFIRM_MS = 4000;
+
+function armed(button, label, action) {
+  let timer = null;
+  button.addEventListener('click', () => {
+    if (!timer) {
+      button.textContent = t('Press again to confirm');
+      timer = setTimeout(() => {
+        timer = null;
+        button.textContent = t(label);
+      }, CONFIRM_MS);
+      return;
+    }
+    clearTimeout(timer);
+    timer = null;
+    action().catch((e) => renderStatus(String(e)));
+  });
+}
+
+armed($('sign-out'), 'Sign out', async () => {
+  const nick = (await invoke('get_connection').catch(() => null))?.nick ?? '';
+  const connection = { mode: '', ssh: '', ssh_port: null, port: null, url: '', token: '', nick, networks: [], key_line: '' };
+  await invoke('save_connection', { connection });
+  for (const key of [CHAT_SHOWN_KEY, ACCOUNT_WAITING_KEY]) {
+    storeFlag(key, '');
+  }
+  location.reload();
+});
+
+armed($('reset-app'), 'Reset the app', async () => {
+  try {
+    localStorage.clear();
+    sessionStorage.clear();
+  } catch {
+    /* storage may be unavailable */
+  }
+  await invoke('reset_app');
 });
