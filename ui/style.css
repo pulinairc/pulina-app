@@ -4458,3 +4458,20 @@ dialog.welcome::backdrop {
     transition: opacity 0.2s ease;
   }
 }
+
+/* A short window still shows the whole welcome, its button too. */
+@media (max-height: 780px) {
+  .welcome-step {
+    padding-top: calc(env(safe-area-inset-top) + 36px);
+    gap: 16px;
+  }
+  .welcome-top {
+    gap: 10px;
+  }
+  .welcome-top svg {
+    height: 72px;
+  }
+  .way {
+    padding: 14px 16px;
+  }
+}
