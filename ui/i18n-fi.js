@@ -256,6 +256,8 @@ export const FI = {
   'Welcome to IRC chat': 'Tervetuloa irkkaamaan',
   'I accept the rules': 'Hyväksyn säännöt',
   'Read all the rules': 'Lue kaikki säännöt',
+  'Scroll down': 'Rullaa alaspäin',
+  '← Back': '← Takaisin',
   'Know when someone talks to you': 'Tiedät, kun sinulle puhutaan',
   'You get a notification when someone mentions your nick or sends you a private message.':
     'Saat ilmoituksen, kun joku mainitsee nimimerkkisi tai lähettää sinulle yksityisviestin.',

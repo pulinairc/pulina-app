@@ -3,6 +3,8 @@
 * Change the update bar to Update, Restart and Dismiss
 * Fix the start light showing over the chat
 * Add the build date to the version in About
+* Fix channels not rejoined after a restart
+* Add back steps and a read-to-the-end rules list for forks
 
 ### 1.8.2: 2026-11-11
 

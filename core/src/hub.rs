@@ -97,6 +97,22 @@ pub struct Hub {
     masks: Mutex<HashMap<String, String>>,
 }
 
+/// The channels each network was in, kept so a restart or a reconnect joins them again.
+const REJOIN_PREFIX: &str = "rejoin.";
+
+fn remember(list: &mut Vec<String>, channel: &str, joined: bool) {
+    let known = list.iter().any(|c| c.eq_ignore_ascii_case(channel));
+    if joined && !known {
+        list.push(channel.to_string());
+    } else if !joined {
+        list.retain(|c| !c.eq_ignore_ascii_case(channel));
+    }
+}
+
+fn to_rejoin(remembered: &[String], joined: &[String]) -> Vec<String> {
+    remembered.iter().filter(|c| !joined.iter().any(|j| j.eq_ignore_ascii_case(c))).cloned().collect()
+}
+
 fn lock<T>(m: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     m.lock().unwrap_or_else(|e| e.into_inner())
 }
@@ -390,6 +406,22 @@ impl Hub {
         result
     }
 
+    fn remembered(&self, net: &str) -> Vec<String> {
+        let key = format!("{REJOIN_PREFIX}{net}");
+        self.store.settings().ok().and_then(|s| s.get(&key).and_then(|v| serde_json::from_str(v).ok())).unwrap_or_default()
+    }
+
+    fn remember_channel(&self, net: &str, channel: &str, joined: bool) {
+        let mut list = self.remembered(net);
+        let before = list.clone();
+        remember(&mut list, channel, joined);
+        if list != before
+            && let Ok(json) = serde_json::to_string(&list)
+        {
+            let _ = self.store.set_setting(&format!("{REJOIN_PREFIX}{net}"), &json);
+        }
+    }
+
     /// Keep the snapshot's member lists current between NAMES replies.
     fn track_members(&self, line: &Line) {
         let mut channels = lock(&self.channels);
@@ -421,6 +453,7 @@ impl Hub {
             }
             Out::Buffer(info) => {
                 let key = (info.net.clone(), info.name.to_lowercase());
+                self.remember_channel(net, &info.name, info.joined);
                 if info.joined {
                     lock(&self.channels).insert(key, info.clone());
                 } else {
@@ -429,6 +462,12 @@ impl Hub {
                 self.emit(Event::Buffer(info));
             }
             Out::Me(nick) => {
+                // Welcomed, or a new nick: either way, back into the channels left behind.
+                let joined: Vec<String> = lock(&self.channels).keys().filter(|(n, _)| n == net).map(|(_, c)| c.clone()).collect();
+                let missing = to_rejoin(&self.remembered(net), &joined);
+                if !missing.is_empty() {
+                    let _ = tx.send(format!("JOIN {}", missing.join(",")));
+                }
                 lock(&self.me).insert(net.into(), nick.clone());
                 let mask = lock(&self.masks).get(net).cloned().unwrap_or_default();
                 self.emit(Event::Me { net: net.into(), nick, mask });
@@ -449,5 +488,20 @@ impl Hub {
                 lock(&self.modes_per_line).insert(net.into(), n);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejoins_what_was_joined_and_not_parted() {
+        let remembered = vec!["#pulina".to_string(), "#kahvi".to_string()];
+        assert_eq!(to_rejoin(&remembered, &["#Pulina".to_string()]), vec!["#kahvi".to_string()]);
+        let mut list = remembered.clone();
+        remember(&mut list, "#retro", true);
+        remember(&mut list, "#PULINA", false);
+        assert_eq!(list, vec!["#kahvi".to_string(), "#retro".to_string()]);
     }
 }
