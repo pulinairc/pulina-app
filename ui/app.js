@@ -51,6 +51,7 @@ import {
   tokenize,
   youtube,
   mediaKind,
+  directLink,
   inboxSplit,
   maskWords,
   OFFENSIVE_WORDS,
@@ -6583,7 +6584,7 @@ function shelfTile(l, url, kind) {
   if (yt) {
     tile.append(image(`https://i.ytimg.com/vi/${yt.id}/mqdefault.jpg`));
   } else if (kind === 'image') {
-    tile.append(image(url));
+    tile.append(image(directLink(url)));
   } else {
     const v = h('video');
     v.muted = true;

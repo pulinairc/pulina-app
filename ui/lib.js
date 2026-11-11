@@ -910,6 +910,22 @@ export function botNicks(value = '') {
 }
 
 const IMAGE_EXT = /\.(?:jpe?g|png|gif|webp|avif|heic)$/i;
+
+/** A Dropbox share link opens a web page; with raw=1 it serves the file itself. */
+export function directLink(url) {
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    return url;
+  }
+  if (!/^(www\.)?dropbox\.com$/.test(u.hostname) || !/^\/(scl\/fi|s)\//.test(u.pathname)) {
+    return url;
+  }
+  u.searchParams.delete('dl');
+  u.searchParams.set('raw', '1');
+  return u.toString();
+}
 const VIDEO_EXT = /\.(?:mp4|webm|mov|m4v)$/i;
 
 /** What a link shows as on the shelf: a YouTube still, a picture, a video or a plain link row. */
