@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Fix a person's lines staying split after the New line
+
 ### 1.13.6: 2026-11-11
 
 * Fix the welcome running off the iPhone screen
