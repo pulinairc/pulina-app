@@ -146,6 +146,7 @@ const el = {
   emoticonToggle: $('emoticon-toggle'),
   botsField: $('bots-field'),
   highlightField: $('highlight-field'),
+  channelAlerts: $('channel-alerts'),
   shortcodeToggle: $('shortcode-toggle'),
   iconChoices: $('icon-choices'),
   textSize: $('text-size'),
@@ -589,7 +590,8 @@ function onLine(l) {
   if (mentioned) {
     b.mention = true;
   }
-  if (mentioned && !isHidden(b) && !(visible && document.hasFocus())) {
+  const wanted = mentioned || keySet(NOTIFY_ALL_SETTING).has(b.key);
+  if (wanted && !isHidden(b) && !(visible && document.hasFocus())) {
     notify(b, l);
   }
   headerSoon();
@@ -635,6 +637,27 @@ function sortedBuffers() {
 const CHANNELS_SETTING = 'channels';
 const MUTED_SETTING = 'muted';
 const HIDDEN_SETTING = 'hidden';
+// Channels where every message, not only highlights, counts on the app icon or notifies.
+const BADGE_ALL_SETTING = 'badgeAll';
+const NOTIFY_ALL_SETTING = 'notifyAll';
+
+function keySet(setting) {
+  try {
+    return new Set(JSON.parse(state.settings[setting] || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function setKey(setting, k, on) {
+  const keys = keySet(setting);
+  if (on) {
+    keys.add(k);
+  } else {
+    keys.delete(k);
+  }
+  saveSetting(setting, JSON.stringify([...keys]));
+}
 
 /** Hidden channels are left out of everything but the Hidden group at the end of the channel list. */
 function hiddenKeys() {
@@ -782,13 +805,15 @@ function photoInto(node, src) {
   return node;
 }
 
-// The app icon counts what the @ pill counts, highlights not yet checked off, plus unread private messages.
+// The app icon counts what the @ pill counts, highlights not yet checked off, plus unread private messages
+// and every unread message in channels set to count them all.
 let shownBadge = -1;
 
 function badgeCount() {
-  let n = inboxParts().fresh.length;
+  const every = keySet(BADGE_ALL_SETTING);
+  let n = inboxParts().fresh.filter((l) => !every.has(key(l.net, l.buffer))).length;
   for (const b of state.buffers.values()) {
-    if (isPrivate(b) && !isHidden(b)) {
+    if ((isPrivate(b) || every.has(b.key)) && !isHidden(b)) {
       n += b.unread;
     }
   }
@@ -1105,6 +1130,36 @@ el.switcher.addEventListener('click', (e) => {
 
 // Settings
 
+function alertSwitch(b, setting, what) {
+  const box = h('input', 'switch');
+  box.type = 'checkbox';
+  box.setAttribute('role', 'switch');
+  box.setAttribute('aria-label', `${what}: every message in ${label(b)}`);
+  box.checked = keySet(setting).has(b.key);
+  box.addEventListener('change', () => {
+    setKey(setting, b.key, box.checked);
+    renderHeader();
+  });
+  return box;
+}
+
+function renderChannelAlerts() {
+  const rows = ordered()
+    .filter((b) => isChannel(b.name))
+    .map((b) => {
+      const row = h('div', 'alert-row');
+      row.append(
+        h('span', 'alert-name', label(b)),
+        alertSwitch(b, BADGE_ALL_SETTING, 'App icon'),
+        alertSwitch(b, NOTIFY_ALL_SETTING, 'Notify'),
+      );
+      return row;
+    });
+  const head = h('div', 'alert-row alert-head');
+  head.append(h('span', ''), h('span', '', 'App icon'), h('span', '', 'Notify'));
+  el.channelAlerts.replaceChildren(...(rows.length ? [head, ...rows] : [h('p', 'hint', 'No channels yet.')]));
+}
+
 function renderSettings() {
   el.notifyToggle.checked = notifyOn();
   renderNotifyState();
@@ -1116,6 +1171,7 @@ function renderSettings() {
   renderIconChoices();
   renderShortcuts();
   renderUploadSettings();
+  renderChannelAlerts();
   el.lastfmUser.value = state.settings[LASTFM_USER_SETTING] || '';
   el.lastfmKey.value = state.settings[LASTFM_KEY_SETTING] || '';
   el.npFormat.value = state.settings[NP_FORMAT_SETTING] || '';
@@ -4137,6 +4193,12 @@ async function start() {
     }
     if (e.payload.key === HIDDEN_SETTING) {
       renderInbox();
+    }
+    if ([BADGE_ALL_SETTING, NOTIFY_ALL_SETTING].includes(e.payload.key)) {
+      renderHeader();
+      if (el.settings.open) {
+        renderChannelAlerts();
+      }
     }
     if ([LASTFM_USER_SETTING, LASTFM_KEY_SETTING].includes(e.payload.key)) {
       pollNowPlaying();

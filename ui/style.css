@@ -1179,6 +1179,30 @@ dialog:focus {
 #settings p {
   margin: 0;
 }
+/* Per channel: name, then the app icon and notify switches in two columns. */
+.alert-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 64px 64px;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-size: 15px;
+  color: var(--text);
+}
+.alert-row .switch {
+  justify-self: center;
+}
+.alert-head {
+  min-height: 0;
+  font-size: 13px;
+  color: var(--dim);
+  text-align: center;
+}
+.alert-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 #settings .hint {
   margin-top: 8px;
   font-size: 13px;
