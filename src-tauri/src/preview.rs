@@ -49,8 +49,22 @@ async fn host_is_public(url: &Url) -> bool {
     }
 }
 
+/// A Dropbox share link opens a web page; with raw=1 it serves the file itself.
+fn direct(url: &Url) -> Url {
+    let host = url.host_str().unwrap_or("").trim_start_matches("www.");
+    let shared = url.path().starts_with("/scl/fi/") || url.path().starts_with("/s/");
+    if host != "dropbox.com" || !shared {
+        return url.clone();
+    }
+    let mut file = url.clone();
+    let query: Vec<(String, String)> =
+        url.query_pairs().filter(|(k, _)| k != "dl").map(|(k, v)| (k.into_owned(), v.into_owned())).collect();
+    file.query_pairs_mut().clear().extend_pairs(query).append_pair("raw", "1");
+    file
+}
+
 pub async fn fetch(raw: &str) -> Option<Preview> {
-    let url = Url::parse(raw).ok()?;
+    let url = direct(&Url::parse(raw).ok()?);
     if !matches!(url.scheme(), "http" | "https") || !host_is_public(&url).await {
         return None;
     }
@@ -68,7 +82,7 @@ pub async fn fetch(raw: &str) -> Option<Preview> {
     let site = url.host_str().unwrap_or("").trim_start_matches("www.").to_string();
 
     if content_type.starts_with("image/") {
-        return Some(Preview { kind: "image".into(), url: raw.into(), image: raw.into(), site, ..Default::default() });
+        return Some(Preview { kind: "image".into(), url: raw.into(), image: url.to_string(), site, ..Default::default() });
     }
     for kind in ["video", "audio"] {
         if content_type.starts_with(&format!("{kind}/")) {
@@ -230,6 +244,14 @@ pub fn parse(html: &str, base: &Url) -> Preview {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn dropbox_share_links_fetch_the_file() {
+        let share = Url::parse("https://www.dropbox.com/scl/fi/abc/kuva.jpg?rlkey=x&st=y&e=1&dl=0").unwrap();
+        assert_eq!(direct(&share).as_str(), "https://www.dropbox.com/scl/fi/abc/kuva.jpg?rlkey=x&st=y&e=1&raw=1");
+        let other = Url::parse("https://example.org/kuva.jpg?dl=0").unwrap();
+        assert_eq!(direct(&other), other);
+    }
 
     #[test]
     fn reads_open_graph_tags() {

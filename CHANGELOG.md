@@ -13,6 +13,7 @@
 * Add a public log backlog for forks
 * Add the channel's latest talk behind a one-channel welcome
 * Fix long messages splitting too early and mid-word
+* Add pictures from Dropbox share links
 
 ### 1.8.1: 2026-11-11
 

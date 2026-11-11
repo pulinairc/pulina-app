@@ -285,8 +285,12 @@ async fn preview(state: State<'_, AppState>, url: String) -> Result<Option<previ
         return Ok(serde_json::from_str(&json).ok());
     }
     let result = preview::fetch(&url).await;
-    let json = serde_json::to_string(&result).unwrap_or_else(|_| "null".into());
-    state.store.preview_put(&url, &json, now_ms());
+    // A miss is tried again next start: the site may be down, or a later version may read it.
+    if let Some(found) = &result
+        && let Ok(json) = serde_json::to_string(found)
+    {
+        state.store.preview_put(&url, &json, now_ms());
+    }
     Ok(result)
 }
 

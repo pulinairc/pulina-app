@@ -7,6 +7,7 @@ import {
   OFFENSIVE_WORDS,
   reportMail,
   mediaKind,
+  directLink,
   inboxSplit,
   defaultShortcuts,
   nickMatches,
@@ -526,4 +527,12 @@ test('a report opens mail with the message and the note', () => {
     ['Network: IRCnet', 'Channel: #pulina', 'Nick: kummitus', 'Sent: 9.11.2026 08:05', 'Message: hei & moi', 'Note: spam'].join('\n'),
   );
   assert.ok(!new URLSearchParams(reportMail('a@b.c', line).split('?')[1]).get('body').includes('Note'));
+});
+
+test('Dropbox share links point at the file itself', () => {
+  const share = 'https://www.dropbox.com/scl/fi/abc/kuva.jpg?rlkey=x&st=y&e=1&dl=0';
+  assert.equal(directLink(share), 'https://www.dropbox.com/scl/fi/abc/kuva.jpg?rlkey=x&st=y&e=1&raw=1');
+  assert.equal(directLink('https://www.dropbox.com/s/abc/kuva.png'), 'https://www.dropbox.com/s/abc/kuva.png?raw=1');
+  assert.equal(directLink('https://example.org/kuva.jpg?dl=0'), 'https://example.org/kuva.jpg?dl=0');
+  assert.equal(mediaKind(share), 'image');
 });
