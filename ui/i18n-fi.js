@@ -672,4 +672,16 @@ export const FI = {
   'Guessing it would take only {time}.': 'Arvaaminen veisi vain {time}.',
   'Too many wrong tries. Try again in 15 minutes.': 'Liian monta väärää yritystä. Yritä uudelleen vartin päästä.',
   'Too many applications are waiting right now. Try again later.': 'Jonossa on nyt liikaa hakemuksia. Yritä myöhemmin uudelleen.',
+  'I have a shell account': 'Minulla on pulina.fi-shell',
+  'Sign in with your {host} shell': 'Kirjaudu {host}-shellillä',
+  'The app connects through your own irssi, so you see the same chat with your own nick. Your irssi stays as it is.':
+    'Sovellus yhdistää oman irssisi kautta, joten näet saman keskustelun omalla nimimerkilläsi. Irssisi pysyy ennallaan.',
+  'Shell account': 'Shell-tunnus',
+  'A password for the app': 'Salasana sovellukseen',
+  'Only for the app. Your shell password stays as it is.': 'Vain sovellusta varten. Shellin salasanasi pysyy ennallaan.',
+  'Log in to your shell and run this within 10 minutes:': 'Kirjaudu shelliin ja aja tämä 10 minuutin sisällä:',
+  'Waiting for your shell…': 'Odotetaan shelliltäsi…',
+  'No shell account with that name is set up for the app. Ask the admins.':
+    'Tällä nimellä ei ole sovellukseen valmisteltua shell-tunnusta. Kysy ylläpidolta.',
+  'The code ran out. Press Continue for a new one.': 'Koodi vanheni. Paina Jatka, niin saat uuden.',
 };
