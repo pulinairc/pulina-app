@@ -4203,3 +4203,196 @@ body.docked #status {
     font-size: 15.5px;
   }
 }
+
+/* First start: the welcome fills the window, one step at a time. */
+dialog.welcome {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--bg);
+  box-shadow: none;
+}
+dialog.welcome::backdrop {
+  background: var(--bg);
+}
+.welcome-step {
+  box-sizing: border-box;
+  min-height: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 48px) 20px calc(env(safe-area-inset-bottom) + 24px);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.welcome-step[hidden] {
+  display: none;
+}
+.welcome-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.welcome-top-left {
+  align-items: flex-start;
+  text-align: left;
+}
+.welcome h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--strong);
+}
+.welcome-lead {
+  margin: 0;
+  max-width: 300px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--dim);
+}
+.welcome-ways {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.way {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.way strong {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--strong);
+}
+.way span {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--dim);
+}
+.way[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--raised);
+  box-shadow: inset 0 0 0 0.5px var(--accent);
+}
+.welcome-go {
+  margin-top: auto;
+  min-height: 54px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.welcome-back {
+  align-self: center;
+}
+.welcome-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.welcome-field .field-label {
+  margin: 0;
+}
+.welcome-nets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.welcome-nets button {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.welcome-nets button[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* After the welcome: what is left to set up, above the chat until done or hidden. */
+.checklist {
+  flex: none;
+  margin: 12px max(12px, calc((100% - 520px) / 2)) 0;
+  padding: 16px 18px 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.checklist[hidden] {
+  display: none;
+}
+.checklist-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--strong);
+}
+#checklist-count {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--dim);
+}
+.checklist-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+}
+#checklist-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+.check-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--strong);
+  font: inherit;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.check-item:disabled {
+  color: var(--faint);
+  text-decoration: line-through;
+  cursor: default;
+}
+#checklist-hide {
+  align-self: flex-start;
+}

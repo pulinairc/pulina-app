@@ -122,6 +122,21 @@ const el = {
   status: $('status'),
   statusText: $('status-text'),
   statusAction: $('status-action'),
+  welcome: $('welcome'),
+  welcomeWays: $('welcome-ways'),
+  welcomeQuick: $('welcome-quick'),
+  welcomeNext: $('welcome-next'),
+  welcomeBack: $('welcome-back'),
+  welcomeNick: $('welcome-nick'),
+  welcomeNets: $('welcome-nets'),
+  welcomeHost: $('welcome-host'),
+  welcomeChans: $('welcome-chans'),
+  welcomeError: $('welcome-error'),
+  checklist: $('checklist'),
+  checklistCount: $('checklist-count'),
+  checklistFill: $('checklist-fill'),
+  checklistItems: $('checklist-items'),
+  checklistHide: $('checklist-hide'),
   updateBar: $('update-bar'),
   updateText: $('update-text'),
   updateGo: $('update-go'),
@@ -858,6 +873,7 @@ function updateBadge() {
 
 function renderHeader() {
   updateBadge();
+  renderChecklist();
   const b = state.buffers.get(state.current);
   if (b) {
     icon(b, el.chanIcon);
@@ -4032,9 +4048,9 @@ function applyStatus(st) {
     showToast(st.error);
   }
   renderStatus();
-  // Nothing set up yet, like on a phone's first start: go straight to the setup.
-  if (st.error && !st.networks.length && !el.connection.open) {
-    openConnection();
+  // Nothing set up yet, like on a phone's first start: the welcome.
+  if (st.error && !st.networks.length && !el.connection.open && !el.welcome.open) {
+    openWelcome();
   }
 }
 
@@ -4048,6 +4064,190 @@ if (BRAND.name !== 'Lobby') {
     node.setAttribute('aria-label', node.getAttribute('aria-label').replace(/\bLobby\b/g, BRAND.name));
   }
 }
+
+// Onboarding: the welcome on a first start, then a checklist over the chat until it is done or hidden.
+const START_NETWORKS = [
+  ['QuakeNet', 'irc.quakenet.org'],
+  ['IRCnet', 'open.ircnet.net'],
+  ['Libera.Chat', 'irc.libera.chat'],
+];
+const OTHER_SERVER = 'Other server';
+const IRC_PORT = 6667;
+const NICK_RE = /^[A-Za-z[\]\\`_^{|}][\w[\]\\`^{|}-]*$/;
+const JOIN_AFTER_KEY = 'lobby.joinAfterSetup';
+const CHECKLIST_KEY = 'lobby.checklist';
+const CHECK_OPEN =
+  '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-opacity="0.45" stroke-width="1.6"/></svg>';
+const CHECK_DONE =
+  '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--mention)"/><path d="M7.5 12.5l3 3 6-6.5" stroke="var(--bg)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+let welcomeWay = 'irc';
+let welcomeNet = BRAND.start?.network ?? START_NETWORKS[0][0];
+
+function openWelcome() {
+  showWelcomeStep('ways');
+  el.welcome.showModal();
+}
+
+function showWelcomeStep(step) {
+  el.welcomeWays.hidden = step !== 'ways';
+  el.welcomeQuick.hidden = step !== 'quick';
+}
+
+for (const b of el.welcome.querySelectorAll('.way')) {
+  b.addEventListener('click', () => {
+    welcomeWay = b.dataset.way;
+    for (const other of el.welcome.querySelectorAll('.way')) {
+      other.setAttribute('aria-checked', String(other === b));
+    }
+  });
+}
+
+el.welcomeNext.addEventListener('click', async () => {
+  storeFlag(CHECKLIST_KEY, 'show');
+  if (welcomeWay === 'irc') {
+    renderWelcomeNets();
+    el.welcomeChans.value ||= BRAND.start?.channels ?? '';
+    showWelcomeStep('quick');
+    el.welcomeNick.focus();
+    return;
+  }
+  el.welcome.close();
+  await openConnection();
+  setConnectionMode(welcomeWay);
+});
+el.welcomeBack.addEventListener('click', () => showWelcomeStep('ways'));
+
+function renderWelcomeNets() {
+  const names = [...START_NETWORKS.map(([name]) => name), OTHER_SERVER];
+  el.welcomeNets.replaceChildren(
+    ...names.map((name) => {
+      const b = h('button', null, name);
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(name === welcomeNet));
+      b.addEventListener('click', () => {
+        welcomeNet = name;
+        renderWelcomeNets();
+      });
+      return b;
+    }),
+  );
+  el.welcomeHost.hidden = welcomeNet !== OTHER_SERVER;
+}
+
+el.welcomeQuick.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nick = el.welcomeNick.value.trim();
+  const preset = START_NETWORKS.find(([name]) => name === welcomeNet);
+  // Another server may name its port: irc.example.org:6697.
+  const [host, port] = preset ? [preset[1]] : el.welcomeHost.value.trim().split(':');
+  const problem = !NICK_RE.test(nick)
+    ? 'Pick a nick that starts with a letter: letters, digits and - _ after it.'
+    : host
+      ? null
+      : 'Write the server address.';
+  el.welcomeError.hidden = !problem;
+  el.welcomeError.textContent = problem || '';
+  if (problem) {
+    return;
+  }
+  const name = preset ? preset[0] : host;
+  const connection = {
+    mode: 'irc',
+    ssh: '',
+    ssh_port: null,
+    port: null,
+    url: '',
+    token: '',
+    nick,
+    networks: [{ name, host, port: Number(port) || IRC_PORT, password: null, password_file: null }],
+    key_line: '',
+  };
+  const channels = el.welcomeChans.value
+    .split(/[\s,]+/)
+    .filter(Boolean)
+    .map((c) => (isChannel(c) ? c : `#${c}`));
+  try {
+    await invoke('save_connection', { connection });
+    storeFlag(JOIN_AFTER_KEY, JSON.stringify({ net: name, channels }));
+    location.reload();
+  } catch (err) {
+    el.welcomeError.hidden = false;
+    el.welcomeError.textContent = String(err);
+  }
+});
+
+/** The channels picked in the welcome, joined once the network first answers. */
+function joinAfterSetup(net) {
+  let plan = null;
+  try {
+    plan = JSON.parse(storedFlag(JOIN_AFTER_KEY));
+  } catch {
+    /* nothing planned */
+  }
+  if (plan?.net !== net) {
+    return;
+  }
+  try {
+    localStorage.removeItem(JOIN_AFTER_KEY);
+  } catch {
+    /* joined once anyway */
+  }
+  if (plan.channels.length) {
+    invoke('send', { net, buffer: '', text: `/join ${plan.channels.join(',')}` }).catch((err) => renderStatus(String(err)));
+  }
+}
+
+function openSettingsTab(tab) {
+  el.switcher.close();
+  renderSettings();
+  showSettingsTab(tab);
+  el.settings.showModal();
+}
+
+function checklistItems() {
+  const net = state.networks[0];
+  const me = state.me[net];
+  return [
+    { label: net ? `Connect to ${net}` : 'Connect', done: Object.values(state.conn).includes('connected') },
+    { label: 'Join a channel', done: [...state.buffers.values()].some((b) => isChannel(b.name)), go: openSwitcher },
+    { label: 'Add your photo', done: Boolean(me && identity(me).photo), go: () => me && openPerson(me) },
+    { label: 'Turn on notifications', done: notifyOn() && notifyAllowed === true, go: () => openSettingsTab('notifications') },
+    { label: 'Pick your highlight words', done: highlightWords().length > 0, go: () => openSettingsTab('notifications') },
+  ];
+}
+
+let checklistShown = '';
+
+function renderChecklist() {
+  const items = storedFlag(CHECKLIST_KEY) === 'show' ? checklistItems() : [];
+  const done = items.filter((item) => item.done).length;
+  const shown = items.map((item) => item.label + item.done).join();
+  el.checklist.hidden = !items.length || done === items.length;
+  if (el.checklist.hidden || shown === checklistShown) {
+    return;
+  }
+  checklistShown = shown;
+  el.checklistCount.textContent = `${done} of ${items.length}`;
+  el.checklistFill.style.width = `${(done / items.length) * 100}%`;
+  el.checklistItems.replaceChildren(
+    ...items.map((item) => {
+      const b = h('button', 'check-item');
+      b.type = 'button';
+      b.disabled = item.done || !item.go;
+      b.append(svg(item.done ? CHECK_DONE : CHECK_OPEN), h('span', null, item.label));
+      if (item.go) {
+        b.addEventListener('click', item.go);
+      }
+      return b;
+    }),
+  );
+}
+
+el.checklistHide.addEventListener('click', () => {
+  storeFlag(CHECKLIST_KEY, 'hidden');
+  renderChecklist();
+});
 
 // Connection setup: the same choices on every device, saved to the config file.
 
@@ -4318,7 +4518,11 @@ async function start() {
   });
   await listen('conn', (e) => {
     state.conn[e.payload.net] = e.payload.state;
+    if (e.payload.state === 'connected') {
+      joinAfterSetup(e.payload.net);
+    }
     renderStatus();
+    renderChecklist();
   });
   await listen('people', (e) => {
     state.people = e.payload;
