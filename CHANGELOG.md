@@ -1,3 +1,8 @@
+### 1.13.4: 2026-11-11
+
+* Fix catbox.moe dropping uploads without a User-Agent
+* Change the join buttons to "Join channel"
+
 ### 1.13.3: 2026-11-11
 
 * Fix own join showing again after reconnecting
