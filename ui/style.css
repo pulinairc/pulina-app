@@ -4345,8 +4345,14 @@ dialog.welcome::backdrop {
   color: color-mix(in srgb, var(--dim) 8%, transparent);
 }
 @keyframes sign-drift {
+  25% {
+    transform: translate(26px, -34px) rotate(6deg);
+  }
   50% {
-    transform: translate(18px, -26px) rotate(8deg);
+    transform: translate(-12px, -60px) rotate(-5deg);
+  }
+  75% {
+    transform: translate(-30px, -22px) rotate(4deg);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -4707,13 +4713,14 @@ dialog.welcome::backdrop {
   display: none;
 }
 .talking-dot {
-  flex-shrink: 0;
   width: 8px;
   height: 8px;
   border-radius: 50%;
+  display: inline-block;
+  margin-right: 8px;
   background: var(--accent);
-  /* Centred on the letters, not on the line box above them. */
-  transform: translateY(1px);
+  /* Inside the text, centred on its lowercase letters whatever the font. */
+  vertical-align: middle;
 }
 .welcome-talking .pill-faces {
   margin-left: 2px;

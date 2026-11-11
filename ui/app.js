@@ -4673,7 +4673,9 @@ function showTalking(lines) {
   const faces = h('span', 'pill-faces');
   faces.append(...shown.slice(0, PILL_FACES).map((n) => avatar(n, '')));
   const text = recent.length ? t('{count} chatting now', { count: recent.length }) : t('Talked last');
-  box.replaceChildren(h('span', 'talking-dot'), h('span', null, text), faces);
+  const label = h('span');
+  label.append(h('span', 'talking-dot'), text);
+  box.replaceChildren(label, faces);
 }
 
 function showNickFace() {
