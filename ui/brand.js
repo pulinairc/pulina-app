@@ -8,6 +8,7 @@ export const BRAND = {
   lang: 'fi',
   // The welcome's quick start: #pulina on QuakeNet.
   start: { network: 'QuakeNet', channels: '#pulina' },
+  startNote: 'The #pulina history is kept in the background.',
   icons: [
     ['pulina-neon', 'Pulina neon'],
     ['terminal', 'Terminal'],
