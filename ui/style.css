@@ -4497,7 +4497,26 @@ dialog.welcome::backdrop {
   z-index: 1001;
   pointer-events: none;
   background: linear-gradient(rgb(176 104 143 / 55%), rgb(176 104 143 / 0%) 75%);
-  clip-path: polygon(50% 0, 50% 0, 50% 0, 50% 0);
+  /* From the bulb (the lamp sits at 50% across, its bulb at 34% down) to the floor. */
+  clip-path: polygon(
+    calc(50% - 24px) 34%,
+    calc(50% + 24px) 34%,
+    calc(50% + 135px) min(85%, calc(34% + 330px)),
+    calc(50% - 135px) min(85%, calc(34% + 330px))
+  );
+  transform-origin: 50% 34%;
+  opacity: 0;
+  animation: splash-beam 0.4s ease-out 0.35s forwards;
+}
+@keyframes splash-beam {
+  from {
+    opacity: 0;
+    transform: scale(0.3, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 /* Its own layer above the cover and the light, so their moving edges never cut through it. */
 .splash-lamp {
@@ -4508,19 +4527,10 @@ dialog.welcome::backdrop {
   top: calc(34% - 132px);
   margin-left: -60px;
   overflow: visible;
-  transition:
-    opacity 0.22s ease-in,
-    transform 0.22s ease-in;
-}
-.splash-lamp.opening {
-  opacity: 0;
-  transform: translateY(-8px);
 }
 .splash-bulb {
   opacity: 0.15;
-}
-.splash-lamp.lit .splash-bulb {
-  animation: splash-flicker 0.3s linear forwards;
+  animation: splash-flicker 0.3s linear 0.05s forwards;
 }
 @keyframes splash-flicker {
   0% {
@@ -4541,6 +4551,11 @@ dialog.welcome::backdrop {
   .splash,
   .splash-lamp {
     transition: opacity 0.2s ease;
+  }
+  .splash-light,
+  .splash-bulb {
+    animation: none;
+    opacity: 1;
   }
 }
 

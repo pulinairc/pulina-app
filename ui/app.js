@@ -1747,17 +1747,15 @@ function renderLog() {
   }
 }
 
-// Cold start: the lamp switches on, then the chat opens through its light, once there is a chat to show.
-const SPLASH_MIN_MS = 700;
+// Cold start: the lamp is lit and its beam drawn by CSS from the first frame, so a slow start
+// never shows it dark. Once there is a chat, it shows through the beam, then lamp and beam go together.
+const SPLASH_MIN_MS = 900;
 const SPLASH_MAX_MS = 3000;
-const SPLASH_CONE_MS = 300;
-const SPLASH_OUT_MS = 220;
-const SPLASH_OPEN_MS = 320;
-const CONE_TOP_HALF_PX = 24;
-const CONE_SPREAD = 0.41;
+const SPLASH_OPEN_MS = 450;
+const SPLASH_HOLD_MS = 650;
+const SPLASH_OUT_MS = 400;
 const splashStart = performance.now();
 let splashDone = false;
-requestAnimationFrame(() => el.splashLamp.classList.add('lit'));
 setTimeout(splashReady, SPLASH_MAX_MS);
 
 function splashReady() {
@@ -1768,9 +1766,7 @@ function splashReady() {
   setTimeout(openSplash, Math.max(0, SPLASH_MIN_MS - (performance.now() - splashStart)));
 }
 
-const px = (points) => points.map(([x, y]) => `${x}px ${y}px`).join(', ');
-
-// Only opacity and transform move, so the animation runs smoothly while the app is busy starting.
+// Only opacity moves, so the animation runs smoothly while the app is busy starting.
 function openSplash() {
   const cover = el.splash;
   const light = el.splashLight;
@@ -1781,49 +1777,26 @@ function openSplash() {
     lamp.remove();
   };
   // Whatever a slow frame does, nothing of the splash outlives this.
-  setTimeout(done, SPLASH_CONE_MS + SPLASH_OUT_MS + SPLASH_OPEN_MS + 400);
+  setTimeout(done, SPLASH_OPEN_MS + SPLASH_HOLD_MS + SPLASH_OUT_MS + 400);
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    cover.style.opacity = lamp.style.opacity = '0';
+    cover.style.opacity = lamp.style.opacity = light.style.opacity = '0';
     setTimeout(done, 250);
     return;
   }
-  // The iPhone zooms the page for text size: `k` turns measured pixels back into style pixels.
-  const box = light.getBoundingClientRect();
-  const k = box.width / light.offsetWidth || 1;
-  const at = lamp.getBoundingClientRect();
-  Object.assign(lamp.style, { top: `${at.top / k}px`, left: `${at.left / k}px`, marginLeft: '0' });
-  const bulb = lamp.querySelector('.splash-bulb').getBoundingClientRect();
-  const x = (bulb.left + bulb.width / 2 - box.left) / k;
-  const y = (bulb.top + bulb.height / 2 - box.top) / k;
-  const foot = Math.min((box.height / k) * 0.85, y + 330);
-  const half = (foot - y) * CONE_SPREAD;
-  light.style.clipPath = `polygon(${px([
-    [x - CONE_TOP_HALF_PX, y],
-    [x + CONE_TOP_HALF_PX, y],
-    [x + half, foot],
-    [x - half, foot],
-  ])})`;
-  light.style.transformOrigin = `${x}px ${y}px`;
-  light.style.transform = 'scale(0.3, 0)';
-  light.style.opacity = '0';
-  light.getBoundingClientRect();
-  light.style.transition = `transform ${SPLASH_CONE_MS}ms ease-out, opacity ${SPLASH_CONE_MS}ms ease-out`;
-  light.style.transform = 'none';
-  light.style.opacity = '1';
+  cover.classList.add('opening');
+  cover.style.transition = `opacity ${SPLASH_OPEN_MS}ms ease-out`;
+  cover.style.opacity = '0';
   setTimeout(() => {
-    // The lamp and its light go first, so they never hang over the chat.
-    light.style.transition = `opacity ${SPLASH_OUT_MS}ms ease-in`;
-    light.style.opacity = '0';
-    lamp.classList.add('opening');
-    setTimeout(() => {
-      lamp.remove();
-      light.remove();
-      cover.classList.add('opening');
-      cover.style.transition = `opacity ${SPLASH_OPEN_MS}ms ease-out`;
-      cover.style.opacity = '0';
-      setTimeout(done, SPLASH_OPEN_MS + 50);
-    }, SPLASH_OUT_MS);
-  }, SPLASH_CONE_MS + 80);
+    // The beam's own animation holds its opacity, so it hands over to a plain transition first.
+    light.style.animation = 'none';
+    light.style.opacity = '1';
+    light.getBoundingClientRect();
+    for (const node of [lamp, light]) {
+      node.style.transition = `opacity ${SPLASH_OUT_MS}ms ease-in`;
+      node.style.opacity = '0';
+    }
+    setTimeout(done, SPLASH_OUT_MS + 50);
+  }, SPLASH_OPEN_MS + SPLASH_HOLD_MS);
 }
 
 /** The line at the top of the chat when it is scrolled up, so coming back opens there. */

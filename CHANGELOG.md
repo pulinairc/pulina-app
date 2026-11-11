@@ -13,6 +13,7 @@
 * Change the start lamp cord to reach the top
 * Fix reactions landing on the nick's latest message
 * Add Dropbox video and audio playback
+* Fix the start lamp staying dark and the beam flashing
 
 ### 1.8.2: 2026-11-11
 
