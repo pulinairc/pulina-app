@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.13.6: 2026-11-11
 
 * Change uploads to up.pulina.fi, no catbox.moe
 * Fix the welcome running off the iPhone screen
