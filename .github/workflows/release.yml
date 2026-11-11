@@ -6,11 +6,11 @@ name: Release
     branches: [main]
     paths:
       - 'CHANGELOG.md'
+  # Forks such as the Pulina app release by hand or after merging a new Lobby version.
+  workflow_dispatch:
 
 jobs:
   release:
-    # Forks such as the Pulina app release on their own terms.
-    if: github.repository == 'rollecode/lobby'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -24,8 +24,10 @@ jobs:
 
       - name: Get version from CHANGELOG
         id: version
+        # A push releases only a version on top; by hand, the newest version below any Unreleased.
         run: |
-          VERSION=$(grep -m1 '^### ' CHANGELOG.md | sed 's/### \([0-9.]*\).*/\1/')
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then heading='^### [0-9]'; else heading='^### '; fi
+          VERSION=$(grep -m1 "$heading" CHANGELOG.md | sed 's/### \([0-9.]*\).*/\1/')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Found version: $VERSION"
 
@@ -178,7 +180,7 @@ jobs:
           unsigned=$(find src-tauri/gen/android/app/build/outputs/apk -name '*release-unsigned.apk' | head -n1)
           echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/lobby.jks"
           "$tools/zipalign" -f 4 "$unsigned" "$RUNNER_TEMP/aligned.apk"
-          apk="Lobby_${TAG#v}_android.apk"
+          apk="$(jq -r .productName src-tauri/tauri.conf.json)_${TAG#v}_android.apk"
           "$tools/apksigner" sign --ks "$RUNNER_TEMP/lobby.jks" --ks-pass env:KEYSTORE_PASSWORD --out "$apk" "$RUNNER_TEMP/aligned.apk"
           "$tools/apksigner" verify "$apk"
           gh release upload "$TAG" "$apk" --clobber

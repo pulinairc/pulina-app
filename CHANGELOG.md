@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.7.1: 2026-11-11
 
 * Add updates from inside the app
 * Add a welcome and a setup checklist
