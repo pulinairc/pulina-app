@@ -1,6 +1,21 @@
 //! IRC wire format: parsing incoming lines and building outgoing ones.
 
-const MAX_TEXT_BYTES: usize = 400;
+/// An IRC line is 512 bytes with its CRLF, and the server puts our address in front of what others get.
+const LINE_BYTES: usize = 510;
+/// Before the server has shown our address: the longest ident and host it may have.
+const UNKNOWN_MASK_BYTES: usize = "!".len() + 10 + "@".len() + 63;
+/// The address can still change after joining, as when Q hides it, so some bytes stay spare.
+pub const SPARE_BYTES: usize = 16;
+const MIN_TEXT_BYTES: usize = 100;
+const ACTION_WRAP_BYTES: usize = "\u{1}ACTION \u{1}".len();
+
+/// How much text one PRIVMSG to `target` can carry. `prefix` is "nick!user@host",
+/// or the bare nick before the server has shown the rest.
+pub fn text_room(prefix: &str, target: &str) -> usize {
+    let mask = if prefix.contains('@') { 0 } else { UNKNOWN_MASK_BYTES };
+    let around = ":".len() + prefix.len() + mask + " PRIVMSG ".len() + target.len() + " :".len();
+    LINE_BYTES.saturating_sub(around + SPARE_BYTES).max(MIN_TEXT_BYTES)
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Msg {
@@ -76,19 +91,26 @@ pub fn is_ctcp(text: &str) -> bool {
     text.starts_with('\u{1}')
 }
 
-/// Split text into IRC-sized pieces on character boundaries.
-pub fn split_text(text: &str) -> Vec<String> {
+/// Split text into pieces of at most `max` bytes, between words where it can.
+pub fn split_text(text: &str, max: usize) -> Vec<String> {
     let mut out = Vec::new();
     for line in text.lines().filter(|l| !l.is_empty()) {
-        let mut chunk = String::new();
-        for ch in line.chars() {
-            if chunk.len() + ch.len_utf8() > MAX_TEXT_BYTES {
-                out.push(std::mem::take(&mut chunk));
+        let mut rest = line;
+        while rest.len() > max {
+            let mut cut = max;
+            while !rest.is_char_boundary(cut) {
+                cut -= 1;
             }
-            chunk.push(ch);
+            // A space in the later half is a word break; a long word is cut where it must.
+            let (head, tail) = match rest[..cut].rfind(' ') {
+                Some(space) if space > max / 2 => (&rest[..space], &rest[space + 1..]),
+                _ => (&rest[..cut], &rest[cut..]),
+            };
+            out.push(head.to_string());
+            rest = tail;
         }
-        if !chunk.is_empty() {
-            out.push(chunk);
+        if !rest.is_empty() {
+            out.push(rest.to_string());
         }
     }
     out
@@ -102,10 +124,11 @@ pub struct Echo {
 }
 
 /// Turn what was typed into raw IRC lines, plus what to show locally.
-/// `modes_per_line` is how many mode changes the server takes in one MODE line.
-pub fn outgoing(buffer: &str, input: &str, modes_per_line: usize) -> Result<Vec<(String, Option<Echo>)>, String> {
+/// `modes_per_line` is how many mode changes the server takes in one MODE line; `prefix` is
+/// our own "nick!user@host", which sets how long a message may be.
+pub fn outgoing(buffer: &str, input: &str, modes_per_line: usize, prefix: &str) -> Result<Vec<(String, Option<Echo>)>, String> {
     let say = |target: &str, text: &str| {
-        split_text(text)
+        split_text(text, text_room(prefix, target))
             .into_iter()
             .map(|t| (format!("PRIVMSG {target} :{t}"), Some(Echo { buffer: target.into(), kind: "msg", text: t })))
             .collect::<Vec<_>>()
@@ -122,8 +145,11 @@ pub fn outgoing(buffer: &str, input: &str, modes_per_line: usize) -> Result<Vec<
     let rest = rest.trim();
     let raw = match name.to_lowercase().as_str() {
         "me" => {
-            let echo = Echo { buffer: buffer.into(), kind: "action", text: rest.into() };
-            return Ok(vec![(format!("PRIVMSG {buffer} :\u{1}ACTION {rest}\u{1}"), Some(echo))]);
+            let room = text_room(prefix, buffer).saturating_sub(ACTION_WRAP_BYTES);
+            return Ok(split_text(rest, room)
+                .into_iter()
+                .map(|t| (format!("PRIVMSG {buffer} :\u{1}ACTION {t}\u{1}"), Some(Echo { buffer: buffer.into(), kind: "action", text: t })))
+                .collect());
         }
         "msg" | "query" => {
             let (target, text) = rest.split_once(' ').unwrap_or((rest, ""));
@@ -207,14 +233,26 @@ mod tests {
         assert_eq!(action("hello"), None);
 
         let long = "ä".repeat(300);
-        let parts = split_text(&long);
-        assert!(parts.iter().all(|p| p.len() <= MAX_TEXT_BYTES));
+        let parts = split_text(&long, 400);
+        assert!(parts.iter().all(|p| p.len() <= 400));
         assert_eq!(parts.concat(), long);
-        assert_eq!(split_text("one\ntwo"), vec!["one", "two"]);
+        assert_eq!(split_text("one\ntwo", 400), vec!["one", "two"]);
+    }
+
+    #[test]
+    fn fills_the_line_and_splits_between_words() {
+        let room = text_room("rolle!~rolle@a.example.net", "#pulina");
+        assert_eq!(room, 510 - ":rolle!~rolle@a.example.net PRIVMSG #pulina :".len() - SPARE_BYTES);
+        let unknown = text_room("rolle", "#pulina");
+        assert!(unknown < room);
+        let words = "sana ".repeat(120);
+        let parts = split_text(words.trim(), 100);
+        assert!(parts.iter().all(|p| p.len() <= 100 && !p.starts_with(' ') && p.ends_with("sana")));
+        assert_eq!(parts.join(" "), words.trim());
     }
 
     fn typed(buffer: &str, input: &str) -> Result<Vec<(String, Option<Echo>)>, String> {
-        outgoing(buffer, input, crate::net::DEFAULT_MODES_PER_LINE)
+        outgoing(buffer, input, crate::net::DEFAULT_MODES_PER_LINE, "rolle")
     }
 
     #[test]
@@ -234,7 +272,7 @@ mod tests {
         assert!(typed("#a", "/quit").is_err());
         assert_eq!(typed("#a", "/wc").unwrap()[0].0, "PART #a :");
         assert_eq!(typed("#a", "/op kaisla jaska").unwrap()[0].0, "MODE #a +oo kaisla jaska");
-        let lines: Vec<String> = outgoing("#a", "/voice a b c d e", 2).unwrap().into_iter().map(|(raw, _)| raw).collect();
+        let lines: Vec<String> = outgoing("#a", "/voice a b c d e", 2, "rolle").unwrap().into_iter().map(|(raw, _)| raw).collect();
         assert_eq!(lines, ["MODE #a +vv a b", "MODE #a +vv c d", "MODE #a +v e"]);
         assert_eq!(typed("#a", "/kick jaska bye now").unwrap()[0].0, "KICK #a jaska :bye now");
         assert_eq!(typed("#a", "/away").unwrap()[0].0, "AWAY");

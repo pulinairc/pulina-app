@@ -488,18 +488,18 @@ test('fills in the now playing line', () => {
 
 test('counts the room left in a message, in bytes, per line', () => {
   // 510 less ":rolle!" + a 10-byte ident + "@" + a 63-byte host + " PRIVMSG #pulina :" is 411, capped at 400.
-  assert.equal(messageRoom('', 'rolle', '#pulina'), 400);
-  assert.equal(messageRoom('moi', 'rolle', '#pulina'), 397);
-  assert.equal(messageRoom('ääkköset', 'rolle', '#pulina'), 400 - 11);
-  assert.equal(messageRoom('a\nbbbb', 'rolle', '#pulina'), 396);
-  assert.equal(messageRoom('/me waves', 'rolle', '#pulina'), 400 - 5 - 9);
+  // Before a join shows our address the longest one is assumed, with 16 bytes spare as in core.
+  const unknown = 510 - (1 + 5 + 1 + 10 + 1 + 63 + 9 + 7 + 2) - 16;
+  assert.equal(messageRoom('', 'rolle', '#pulina'), unknown);
+  assert.equal(messageRoom('moi', 'rolle', '#pulina'), unknown - 3);
+  assert.equal(messageRoom('ääkköset', 'rolle', '#pulina'), unknown - 11);
+  assert.equal(messageRoom('a\nbbbb', 'rolle', '#pulina'), unknown - 4);
+  assert.equal(messageRoom('/me waves', 'rolle', '#pulina'), unknown - 5 - 9);
   assert.equal(messageRoom('/join #x', 'rolle', '#pulina'), null);
-  const long = 'x'.repeat(420);
-  assert.equal(messageRoom(long, 'rolle', '#pulina'), -20);
-  assert.equal(
-    messageRoom('hi', 'a_very_long_nickname', '#a-channel-with-a-long-name-indeed'),
-    510 - (1 + 20 + 1 + 10 + 1 + 63 + 9 + 34 + 2) - 2,
-  );
+  // The 413-byte line that was split at 400 fits once the real address is known.
+  const known = 510 - ':rolle!~rolle@a.example.net PRIVMSG #pulina :'.length - 16;
+  assert.equal(messageRoom('', 'rolle', '#pulina', '~rolle@a.example.net'), known);
+  assert.ok(messageRoom('x'.repeat(413), 'rolle', '#pulina', '~rolle@a.example.net') >= 0);
 });
 
 test('offensive words show as dots, whole words only', () => {

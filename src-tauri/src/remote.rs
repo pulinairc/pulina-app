@@ -230,7 +230,7 @@ impl Remote {
                     n.state = state.clone();
                 }
             }
-            Event::Me { net, nick } => {
+            Event::Me { net, nick, .. } => {
                 if let Some(n) = snap.networks.iter_mut().find(|n| &n.name == net) {
                     n.nick = nick.clone();
                 }
