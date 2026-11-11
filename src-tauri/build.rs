@@ -16,5 +16,9 @@ fn main() {
             println!("cargo:rerun-if-changed={path}");
         }
     }
+    // The bundle's own icon; a fork such as the Pulina app names its own in this file.
+    let default_icon = std::fs::read_to_string("icons/default.txt").expect("icons/default.txt");
+    println!("cargo:rustc-env=APP_DEFAULT_ICON={}", default_icon.trim());
+    println!("cargo:rerun-if-changed=icons/default.txt");
     tauri_build::build()
 }

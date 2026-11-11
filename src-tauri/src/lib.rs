@@ -363,9 +363,9 @@ fn icon_name_ok(name: &str) -> bool {
     !name.is_empty() && name.chars().all(|c| c.is_ascii_lowercase() || c == '-')
 }
 
-/// Pendant lamp is the bundle's own icon on iPhone; the others are alternates in its asset catalog.
+/// The bundle's own icon on iPhone, from icons/default.txt; the others are alternates in its asset catalog.
 #[cfg(any(target_os = "ios", test))]
-const DEFAULT_ICON: &str = "pendant-lamp";
+const DEFAULT_ICON: &str = env!("APP_DEFAULT_ICON");
 
 /// The alternate icon set iPhone switches to, as `tools/ios-icons.sh` names it; None is the bundle's own.
 #[cfg(any(target_os = "ios", test))]
@@ -724,6 +724,6 @@ mod tests {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("icons/ios/{DEFAULT_ICON}.png"));
         assert!(path.is_file(), "missing {}", path.display());
         let script = std::fs::read_to_string(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../tools/ios-icons.sh")).unwrap();
-        assert!(script.contains(&format!("[ \"$name\" = {DEFAULT_ICON} ]")), "tools/ios-icons.sh must make {DEFAULT_ICON} the app icon");
+        assert!(script.contains("icons/default.txt"), "tools/ios-icons.sh must make {DEFAULT_ICON} the app icon");
     }
 }
