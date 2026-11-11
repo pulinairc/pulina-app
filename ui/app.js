@@ -47,6 +47,7 @@ import {
   personFor,
   parseReaction,
   sameDay,
+  GROUP_GAP_MS,
   shortUrl,
   stripFormatting,
   summarize,
@@ -2022,6 +2023,7 @@ function appendLine(l) {
       }
       view.group.body.append(r);
       view.group.last = l;
+      view.group.body.parentNode.dataset.last = l.ts;
       fresh = r;
     }
   } else {
@@ -2169,6 +2171,10 @@ function newGroup(l) {
   head.append(name);
   body.append(head);
   group.append(av, body);
+  // What dropSeparator needs to join this group with the one before it.
+  group.dataset.nick = l.nick.toLowerCase();
+  group.dataset.first = l.ts;
+  group.dataset.last = l.ts;
   el.col.append(group);
   return { body, last: l };
 }
@@ -4351,6 +4357,29 @@ function markCurrentRead() {
   updateJumps();
 }
 
+/** One person's talk split only by the New line becomes one group again once that line goes. */
+function joinGroups(before, after) {
+  const group = (n) => n?.classList.contains('group') && !n.classList.contains('narration') && n.dataset.nick;
+  if (!group(before) || !group(after) || before.dataset.nick !== after.dataset.nick) {
+    return;
+  }
+  const last = Number(before.dataset.last);
+  const first = Number(after.dataset.first);
+  if (first - last >= GROUP_GAP_MS || !sameDay(last, first)) {
+    return;
+  }
+  const into = before.querySelector(':scope > .gb');
+  const from = after.querySelector(':scope > .gb');
+  for (const r of [...from.children].filter((c) => !c.classList.contains('hd'))) {
+    into.append(r);
+  }
+  before.dataset.last = after.dataset.last;
+  after.remove();
+  if (view.group?.body === from) {
+    view.group.body = into;
+  }
+}
+
 // Removing the New line keeps what is on screen where it was.
 function dropSeparator() {
   const sep = view.separator;
@@ -4364,7 +4393,10 @@ function dropSeparator() {
   sep.addEventListener(
     'transitionend',
     () => {
+      const before = sep.previousElementSibling;
+      const after = sep.nextElementSibling;
       sep.remove();
+      joinGroups(before, after);
       if (pinned) {
         toBottom();
       }
