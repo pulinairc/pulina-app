@@ -1,3 +1,7 @@
+### 1.12.2: 2026-11-11
+
+* Change the sign-in links back to dim links side by side
+
 ### 1.12.1: 2026-11-11
 
 * Change sign-in choices to two buttons side by side
