@@ -1,9 +1,10 @@
-### [Unreleased]
+### 1.13.0: 2026-11-11
 
 * Add Sign out and Reset the app to Settings
 * Fix the lamp flashing before the welcome
 * Change the message box hint to name the channel or person
 * Fix upload errors hiding their cause
+* Change the Lobby welcome to one nick field on QuakeNet, other ways behind a link
 
 ### 1.12.2: 2026-11-11
 

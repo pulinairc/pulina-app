@@ -692,4 +692,5 @@ export const FI = {
   'Removes everything the app keeps on this device: connections, history, settings and people. It starts as if new.':
     'Poistaa kaiken, mitä sovellus on tallentanut tälle laitteelle: yhteydet, viestihistorian, asetukset ja ihmiset. Sovellus käynnistyy kuin uutena.',
   'Press again to confirm': 'Vahvista painamalla uudelleen',
+  'Other ways to connect →': 'Muut tavat yhdistää →',
 };

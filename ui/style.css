@@ -5242,3 +5242,8 @@ dialog.welcome::backdrop {
 .start-over-row .hint {
   margin: 0;
 }
+
+/* "Back" from the ways to the one-field welcome exists only where that welcome does. */
+:root:not([data-sheet]) .sheet-only {
+  display: none;
+}
