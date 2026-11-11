@@ -1,3 +1,7 @@
+### 1.13.2: 2026-11-11
+
+* Fix catbox.moe uploads failing over HTTP/2
+
 ### 1.13.1: 2026-11-11
 
 * Fix a first join showing the channel log as unread
