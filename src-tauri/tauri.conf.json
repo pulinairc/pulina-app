@@ -1,7 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Lobby",
-  "identifier": "io.github.rollecode.lobby",
+  "productName": "Pulina",
+  "identifier": "fi.pulina.app",
+  "mainBinaryName": "pulina",
   "build": {
     "frontendDist": "../ui"
   },
@@ -10,7 +11,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Lobby",
+        "title": "Pulina",
         "width": 440,
         "height": 720,
         "minWidth": 300,
