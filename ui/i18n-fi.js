@@ -680,7 +680,7 @@ export const FI = {
   'No shell account with that name is set up for the app. Ask the admins.':
     'Tällä nimellä ei ole sovellukseen valmisteltua shell-tunnusta. Kysy ylläpidolta.',
   'The code ran out. Press Continue for a new one.': 'Koodi vanheni. Paina Jatka, niin saat uuden.',
-  'Already have one?': 'Onko sinulla jo tunnus?',
-  'Sign in with an account': 'Kirjaudu tunnuksella',
-  'Sign in with a shell': 'Kirjaudu shellillä',
+  'Already have one? Sign in:': 'Onko sinulla jo tunnus? Kirjaudu:',
+  'With an account': 'Tunnuksella',
+  'With a shell': 'Shellillä',
 };
