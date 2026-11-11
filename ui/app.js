@@ -1037,7 +1037,39 @@ function updateBadge() {
   invoke('set_badge', { count: n }).catch(() => {});
 }
 
+// A channel being joined (rejoined after a start, or picked in the welcome): its history may already
+// show, but nothing can be sent there until the server has let you in.
+const REJOIN_SETTING_PREFIX = 'rejoin.';
+// The channel the welcome joins, opened as soon as the server lets you in.
+let openWhenJoined = null;
+
+function rememberedChannels(net) {
+  try {
+    return JSON.parse(state.settings[REJOIN_SETTING_PREFIX + net] || '[]').map((c) => c.toLowerCase());
+  } catch {
+    return [];
+  }
+}
+
+function isJoining(b) {
+  return (
+    Boolean(b) && isChannel(b.name) && !b.joined && (openWhenJoined === b.key || rememberedChannels(b.net).includes(b.name.toLowerCase()))
+  );
+}
+
+function renderJoining() {
+  const b = state.buffers.get(state.current);
+  const joining = isJoining(b);
+  $('joining').hidden = !joining;
+  el.input.disabled = joining;
+  el.input.placeholder = b ? t('Message {name}', { name: label(b) }) : '';
+  if (joining) {
+    $('joining-text').textContent = t('Joining {name}…', { name: label(b) });
+  }
+}
+
 function renderHeader() {
+  renderJoining();
   updateBadge();
   renderChecklist();
   const b = state.buffers.get(state.current);
@@ -1776,7 +1808,10 @@ function settle(node) {
   node.getBoundingClientRect();
 }
 
+const CHAT_SHOWN_KEY = 'lobby.chatShown';
+
 function openSplash() {
+  storeFlag(CHAT_SHOWN_KEY, '1');
   const cover = el.splash;
   const light = el.splashLight;
   const lamp = el.splashLamp;
@@ -3625,7 +3660,7 @@ async function send() {
   const typed = el.input.value.replace(/^ (?=https?:\/\/)/, '');
   const text = settingOn(EMOTICON_SETTING) ? convertEmoticons(typed) : typed;
   const b = state.buffers.get(state.current);
-  if (!text.trim() || !b) {
+  if (!text.trim() || !b || isJoining(b)) {
     return;
   }
   // Too long for one IRC line: nothing goes until it is shortened.
@@ -4536,7 +4571,11 @@ let welcomeWay = 'irc';
 let welcomeNet = BRAND.start?.network ?? START_NETWORKS[0][0];
 
 function openWelcome() {
-  splashReady();
+  // The welcome is not a chat loading: no lamp in front of it.
+  splashDone = true;
+  for (const node of [el.splash, el.splashLight, el.splashLamp]) {
+    node.remove();
+  }
   // Finnish puts the name in its own case: Tervetuloa Lobbyyn.
   const app = currentLang() === 'fi' ? (BRAND.fiInto ?? BRAND.name) : BRAND.name;
   $('welcome-title').textContent = BRAND.welcome ? t(BRAND.welcome) : t('Welcome to {app}', { app });
@@ -4711,6 +4750,7 @@ async function finishWelcome() {
   try {
     await invoke('save_connection', { connection: onboarding.connection });
     storeFlag(JOIN_AFTER_KEY, JSON.stringify(onboarding.plan));
+    storeFlag(CHAT_SHOWN_KEY, '1');
     location.reload();
   } catch (err) {
     showWelcomeStep('quick');
@@ -4826,8 +4866,6 @@ $('photo-skip').addEventListener('click', () => {
   delete onboarding.plan.photo;
   finishWelcome();
 });
-
-let openWhenJoined = null;
 
 /** The channels picked in the welcome, joined once the network first answers. */
 function joinAfterSetup(net) {

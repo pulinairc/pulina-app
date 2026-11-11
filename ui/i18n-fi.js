@@ -316,6 +316,7 @@ export const FI = {
   'Networks on lobby-server': 'lobby-serverin verkot',
   'Add a network': 'Lisää verkko',
   Nick: 'Nimimerkki',
+  'Joining {name}…': 'Liitytään kanavalle {name}…',
   '{count} chatting now': '{count} juttelee nyt',
   'Talked last': 'Viimeksi juttelivat',
   Networks: 'Verkot',

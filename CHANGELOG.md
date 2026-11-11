@@ -3,6 +3,9 @@
 * Fix the update check saying up to date without update files
 * Change the start light to widen over the chat, beam to the bottom
 * Change the fork join screen to one nick field with who is talking
+* Fix messages sent before joining being lost; show joining and own join
+* Fix the start lamp flashing before the welcome
+* Fix Cmd+Q on Mac quitting without the quit message
 
 ### 1.9.1: 2026-11-11
 

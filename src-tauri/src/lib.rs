@@ -611,6 +611,22 @@ fn set_quit_message(state: State<'_, AppState>, text: String) {
 /// How long the QUIT gets to reach the server before the app is gone.
 const QUIT_FLUSH: std::time::Duration = std::time::Duration::from_millis(400);
 
+static SAID_GOODBYE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// A direct connection says goodbye with the quit message; lobby-server stays on IRC without the app.
+fn say_goodbye(app: &AppHandle) {
+    if SAID_GOODBYE.swap(true, std::sync::atomic::Ordering::SeqCst) {
+        return;
+    }
+    let Some(state) = app.try_state::<AppState>() else { return };
+    let Source::Local(hub) = state.source() else { return };
+    let reason = state.quit.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    if !reason.is_empty() {
+        hub.quit_all(&reason);
+        std::thread::sleep(QUIT_FLUSH);
+    }
+}
+
 /// The version, the commit it was built from and that commit's date, for the About section in Settings.
 #[derive(Serialize)]
 struct AppInfo {
@@ -628,6 +644,8 @@ fn app_info() -> AppInfo {
 const ABOUT_MENU_ID: &str = "about";
 #[cfg(desktop)]
 const SETTINGS_MENU_ID: &str = "settings";
+#[cfg(target_os = "macos")]
+const QUIT_MENU_ID: &str = "quit";
 
 /// macOS: the standard menu bar, with Help > About Lobby opening the About section in Settings.
 #[cfg(target_os = "macos")]
@@ -642,6 +660,16 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     if let Some(own) = menu.items()?.first().and_then(|m| m.as_submenu().cloned()) {
         own.insert(&MenuItem::with_id(app, SETTINGS_MENU_ID, "Settings…", true, Some("CmdOrCtrl+,"))?, 2)?;
         own.insert(&PredefinedMenuItem::separator(app)?, 3)?;
+        // The standard Quit ends the app before it can say goodbye on IRC; this one sends the quit message first.
+        let quit = own
+            .items()?
+            .into_iter()
+            .rev()
+            .find(|i| i.as_predefined_menuitem().and_then(|p| p.text().ok()).is_some_and(|t| t.starts_with("Quit")));
+        if let Some(quit) = quit {
+            own.remove(&quit)?;
+        }
+        own.append(&MenuItem::with_id(app, QUIT_MENU_ID, format!("Quit {name}"), true, Some("CmdOrCtrl+Q"))?)?;
     }
     Ok(menu)
 }
@@ -660,6 +688,11 @@ pub fn run() {
             }
             if event.id().0 == SETTINGS_MENU_ID {
                 let _ = app.emit("show-settings", ());
+            }
+            #[cfg(target_os = "macos")]
+            if event.id().0 == QUIT_MENU_ID {
+                say_goodbye(app);
+                app.exit(0);
             }
         })
         .plugin({
@@ -742,16 +775,8 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("failed to start Lobby")
         .run(|app, event| {
-            // A direct connection says goodbye; lobby-server stays on IRC without the app.
-            if let tauri::RunEvent::ExitRequested { .. } = event
-                && let Some(state) = app.try_state::<AppState>()
-                && let Source::Local(hub) = state.source()
-            {
-                let reason = state.quit.lock().unwrap_or_else(|e| e.into_inner()).clone();
-                if !reason.is_empty() {
-                    hub.quit_all(&reason);
-                    std::thread::sleep(QUIT_FLUSH);
-                }
+            if let tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit = event {
+                say_goodbye(app);
             }
             if let tauri::RunEvent::Resumed = event {
                 #[cfg(target_os = "ios")]
