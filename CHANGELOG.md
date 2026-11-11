@@ -1,6 +1,6 @@
 ### [Unreleased]
 
-* Fix the hidden Restart button after an update
+* Change the update bar to Update, Restart and Dismiss
 * Fix the start light showing over the chat
 * Add the build date to the version in About
 

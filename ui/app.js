@@ -148,6 +148,7 @@ const el = {
   updateBar: $('update-bar'),
   updateText: $('update-text'),
   updateGo: $('update-go'),
+  updateRestart: $('update-restart'),
   updateClose: $('update-close'),
   updateSection: $('update-section'),
   updateAutoRow: $('update-auto-row'),
@@ -1474,16 +1475,16 @@ function renderUpdate() {
     return;
   }
   const name = `${BRAND.name} ${found.version}`;
-  el.updateGo.hidden = update.busy;
-  el.updateBar.classList.toggle('ready', Boolean(update.ready));
+  // One step at a time: update, then restart; dismissing hides this version until the next.
+  el.updateGo.hidden = update.busy || update.ready;
+  el.updateRestart.hidden = !update.ready;
+  el.updateGo.textContent = found.installable ? t('Update') : t('Download');
   if (update.ready) {
     el.updateText.textContent = t('{name} is ready. Restart to start using it.', { name });
-    el.updateGo.textContent = t('Restart now');
   } else if (update.busy) {
     el.updateText.textContent = t('Installing {name}…', { name });
   } else {
     el.updateText.textContent = t('{name} is out.', { name });
-    el.updateGo.textContent = found.installable ? t('Update') : t('Download');
   }
 }
 
@@ -1518,14 +1519,12 @@ setTimeout(checkUpdateQuietly, UPDATE_FIRST_MS);
 setInterval(checkUpdateQuietly, UPDATE_EVERY_MS);
 
 el.updateGo.addEventListener('click', () => {
-  if (update.ready) {
-    return invoke('restart');
-  }
   if (update.found?.installable) {
     return installUpdate();
   }
   openUrl(`${BRAND.site}/releases/tag/v${update.found.version}`);
 });
+el.updateRestart.addEventListener('click', () => invoke('restart'));
 el.updateClose.addEventListener('click', () => {
   storeFlag(UPDATE_CLOSED_KEY, update.found.version);
   renderUpdate();
