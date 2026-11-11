@@ -68,7 +68,7 @@ jobs:
           - os: ubuntu-22.04
             bundles: deb,appimage
           - os: macos-latest
-            bundles: dmg
+            bundles: app,dmg
           - os: windows-latest
             bundles: nsis
     runs-on: ${{ matrix.os }}
@@ -86,15 +86,57 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
 
+      # Signed update files for the app's own updater; without the key, none are made.
       - name: Build the app
-        run: npx --yes @tauri-apps/cli@2 build --bundles ${{ matrix.bundles }}
+        shell: bash
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        run: |
+          extra=()
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::warning::No TAURI_SIGNING_PRIVATE_KEY secret, so no update files"
+            extra=(--config '{"bundle":{"createUpdaterArtifacts":false}}')
+          fi
+          npx --yes @tauri-apps/cli@2 build --bundles ${{ matrix.bundles }} "${extra[@]}"
 
       - name: Attach to the release
         shell: bash
-        run: find target/release/bundle \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*-setup.exe' \) -exec gh release upload "$TAG" {} --clobber \;
+        run: find target/release/bundle \( -name '*.deb' -o -name '*.AppImage' -o -name '*.dmg' -o -name '*-setup.exe' -o -name '*.app.tar.gz' -o -name '*.sig' \) -exec gh release upload "$TAG" {} --clobber \;
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.release.outputs.tag }}
+
+  # latest.json tells the installed apps what is new and where its signed files are.
+  updater:
+    needs: [release, build]
+    if: needs.release.outputs.created == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Write latest.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          mkdir sigs && cd sigs
+          if ! gh release download "$TAG" -R "$REPO" -p '*.sig'; then
+            echo "::warning::No signatures, so no latest.json"
+            exit 0
+          fi
+          base="https://github.com/$REPO/releases/download/$TAG"
+          entry() {
+            f=$(ls $2 2>/dev/null | head -n1)
+            if [ -z "$f" ]; then echo '{}'; return; fi
+            jq -n --arg p "$1" --arg s "$(cat "$f")" --arg u "$base/${f%.sig}" '{($p): {signature: $s, url: $u}}'
+          }
+          { entry darwin-aarch64 '*.app.tar.gz.sig'; entry linux-x86_64 '*.AppImage.sig'; entry windows-x86_64 '*-setup.exe.sig'; } | jq -s add > platforms.json
+          gh release view "$TAG" -R "$REPO" --json body -q .body > notes.txt
+          jq -n --arg v "${TAG#v}" --rawfile n notes.txt --arg d "$(date -u +%FT%TZ)" --slurpfile p platforms.json \
+            '{version: $v, notes: $n, pub_date: $d, platforms: $p[0]}' > latest.json
+          gh release upload "$TAG" latest.json --clobber -R "$REPO"
 
   android:
     needs: release

@@ -25,6 +25,18 @@
   },
   "bundle": {
     "active": true,
-    "icon": ["icons/icon.png", "icons/icon.ico"]
+    "icon": [
+      "icons/icon.png",
+      "icons/icon.ico"
+    ],
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDYyOEMxMzdGMTdEOTRGNDMKUldSRFQ5a1hmeE9NWWlYREZpMEF3YWpKUDBSTjdqdTJUMDZxem1DQ0JuMDJ6SUJDY0srUDFqYkUK",
+      "endpoints": [
+        "https://github.com/rollecode/lobby/releases/latest/download/latest.json"
+      ]
+    }
   }
 }

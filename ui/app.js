@@ -122,6 +122,15 @@ const el = {
   status: $('status'),
   statusText: $('status-text'),
   statusAction: $('status-action'),
+  updateBar: $('update-bar'),
+  updateText: $('update-text'),
+  updateGo: $('update-go'),
+  updateClose: $('update-close'),
+  updateSection: $('update-section'),
+  updateAutoRow: $('update-auto-row'),
+  updateAuto: $('update-auto'),
+  updateCheck: $('update-check'),
+  updateResult: $('update-result'),
   toast: $('toast'),
   log: $('log'),
   col: $('col'),
@@ -1192,6 +1201,7 @@ function renderSettings() {
   renderShortcuts();
   renderUploadSettings();
   renderChannelAlerts();
+  renderUpdateSettings();
   el.lastfmUser.value = state.settings[LASTFM_USER_SETTING] || '';
   el.lastfmKey.value = state.settings[LASTFM_KEY_SETTING] || '';
   el.npFormat.value = state.settings[NP_FORMAT_SETTING] || '';
@@ -1233,6 +1243,119 @@ el.settingsTabs.addEventListener('click', (e) => {
     el.settings.querySelector('.settings-body').scrollTop = 0;
   }
 });
+// Updates: installed in place where the app can replace itself, announced with a download link elsewhere.
+const UPDATE_AUTO_KEY = 'lobby.updateAuto';
+const UPDATE_CLOSED_KEY = 'lobby.updateClosed';
+const UPDATE_FIRST_MS = 20 * 1000;
+const UPDATE_EVERY_MS = 6 * 60 * 60 * 1000;
+const update = { found: null, ready: false, busy: false };
+
+function storedFlag(k) {
+  try {
+    return localStorage.getItem(k);
+  } catch {
+    return null;
+  }
+}
+
+function storeFlag(k, value) {
+  try {
+    localStorage.setItem(k, value);
+  } catch {
+    /* the default stays */
+  }
+}
+
+function updatesAuto() {
+  return storedFlag(UPDATE_AUTO_KEY) !== 'off';
+}
+
+function renderUpdate() {
+  const found = update.found;
+  el.updateBar.hidden = !found || storedFlag(UPDATE_CLOSED_KEY) === found.version;
+  if (el.updateBar.hidden) {
+    return;
+  }
+  const name = `${BRAND.name} ${found.version}`;
+  el.updateGo.hidden = update.busy;
+  if (update.ready) {
+    el.updateText.textContent = `${name} is installed.`;
+    el.updateGo.textContent = 'Restart';
+  } else if (update.busy) {
+    el.updateText.textContent = `Installing ${name}…`;
+  } else {
+    el.updateText.textContent = `${name} is out.`;
+    el.updateGo.textContent = found.installable ? 'Update' : 'Download';
+  }
+}
+
+async function installUpdate() {
+  update.busy = true;
+  renderUpdate();
+  try {
+    await invoke('install_update');
+    update.ready = true;
+  } catch (e) {
+    renderStatus(`Update: ${e}`);
+  }
+  update.busy = false;
+  renderUpdate();
+}
+
+async function checkUpdate() {
+  const found = await invoke('check_update');
+  update.found = found;
+  if (found?.installable && updatesAuto() && !update.ready && !update.busy) {
+    await installUpdate();
+  }
+  renderUpdate();
+  return found;
+}
+
+function checkUpdateQuietly() {
+  checkUpdate().catch(() => {});
+}
+
+setTimeout(checkUpdateQuietly, UPDATE_FIRST_MS);
+setInterval(checkUpdateQuietly, UPDATE_EVERY_MS);
+
+el.updateGo.addEventListener('click', () => {
+  if (update.ready) {
+    return invoke('restart');
+  }
+  if (update.found?.installable) {
+    return installUpdate();
+  }
+  openUrl(`${BRAND.site}/releases/tag/v${update.found.version}`);
+});
+el.updateClose.addEventListener('click', () => {
+  storeFlag(UPDATE_CLOSED_KEY, update.found.version);
+  renderUpdate();
+});
+
+function renderUpdateSettings() {
+  // iPhone updates come from the App Store.
+  el.updateSection.hidden = PLATFORM.value === 'ios';
+  el.updateAuto.checked = updatesAuto();
+  invoke('can_install_updates')
+    .then((can) => {
+      el.updateAutoRow.hidden = !can;
+    })
+    .catch(() => {});
+}
+
+el.updateAuto.addEventListener('change', () => storeFlag(UPDATE_AUTO_KEY, el.updateAuto.checked ? 'on' : 'off'));
+el.updateCheck.addEventListener('click', async () => {
+  el.updateResult.hidden = false;
+  el.updateResult.textContent = 'Checking…';
+  try {
+    const found = await checkUpdate();
+    el.updateResult.textContent = found ? `${BRAND.name} ${found.version} is out.` : `${BRAND.name} is up to date.`;
+  } catch (e) {
+    el.updateResult.textContent = `Could not check: ${e}`;
+  }
+});
+
 // About: the version and the commit it was built from, linked to that commit.
 const REPO_URL = BRAND.site;
 

@@ -9,6 +9,7 @@ mod preview;
 mod remote;
 mod sftp;
 mod tunnel;
+mod update;
 
 use lobby_core::hub::{Event, Hub, Snapshot};
 use lobby_core::now_ms;
@@ -616,7 +617,8 @@ pub fn run() {
             tauri_plugin_window_state::Builder::default()
                 .with_state_flags(StateFlags::SIZE | StateFlags::POSITION | StateFlags::MAXIMIZED)
                 .build()
-        });
+        })
+        .plugin(tauri_plugin_updater::Builder::new().build());
     builder
         .setup(|app| {
             #[cfg(target_os = "macos")]
@@ -670,6 +672,10 @@ pub fn run() {
             notify_icon,
             set_app_icon,
             set_badge,
+            update::can_install_updates,
+            update::check_update,
+            update::install_update,
+            update::restart,
             notify_mac,
             allow_notifications,
             notify_permission,
