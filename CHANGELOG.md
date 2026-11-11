@@ -1,3 +1,7 @@
+### 1.13.5: 2026-11-11
+
+* Change the nick field button back to "Join"
+
 ### 1.13.4: 2026-11-11
 
 * Fix catbox.moe dropping uploads without a User-Agent
