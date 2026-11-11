@@ -290,9 +290,22 @@ async fn preview(state: State<'_, AppState>, url: String) -> Result<Option<previ
     Ok(result)
 }
 
+/// What a fork such as Pulina adds on the native side, from its own brand.json.
+#[derive(serde::Deserialize, Default)]
+struct Brand {
+    backlog: Option<lobby_core::backlog::Backlog>,
+}
+
+fn brand() -> Brand {
+    serde_json::from_str(include_str!("../brand.json")).unwrap_or_default()
+}
+
 /// Pass hub events to the window. A lagging window reloads instead of missing lines.
 fn forward(app: AppHandle, hub: Arc<Hub>) {
     let mut rx = hub.subscribe();
+    if let Some(backlog) = brand().backlog {
+        hub.set_backlog(backlog);
+    }
     hub.start();
     tauri::async_runtime::spawn(async move {
         loop {
