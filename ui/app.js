@@ -4462,9 +4462,15 @@ function openQuickStart() {
   el.welcomeNick.focus();
 }
 
+const WELCOME_STEPS = ['ways', 'quick', 'rules', 'notify', 'photo'];
+
 function showWelcomeStep(step) {
-  el.welcomeWays.hidden = step !== 'ways';
-  el.welcomeQuick.hidden = step !== 'quick';
+  for (const name of WELCOME_STEPS) {
+    $(`welcome-${name}`).hidden = name !== step;
+  }
+  // The channel's talk shows only behind the nick; the later steps fill the window.
+  $('welcome-peek').hidden = step !== 'quick';
+  el.welcome.scrollTop = 0;
 }
 
 for (const b of el.welcome.querySelectorAll('.way')) {
@@ -4540,14 +4546,91 @@ el.welcomeQuick.addEventListener('submit', async (e) => {
     .split(/[\s,]+/)
     .filter(Boolean)
     .map((c) => (isChannel(c) ? c : `#${c}`));
+  onboarding = { connection, plan: { net: name, channels } };
+  // A one-channel fork walks through its rules, notifications and a picture first.
+  if (ONLY) {
+    showRules();
+    return;
+  }
+  finishWelcome();
+});
+
+let onboarding = null;
+
+async function finishWelcome() {
   try {
-    await invoke('save_connection', { connection });
-    storeFlag(JOIN_AFTER_KEY, JSON.stringify({ net: name, channels }));
+    await invoke('save_connection', { connection: onboarding.connection });
+    storeFlag(JOIN_AFTER_KEY, JSON.stringify(onboarding.plan));
     location.reload();
   } catch (err) {
+    showWelcomeStep('quick');
     el.welcomeError.hidden = false;
     el.welcomeError.textContent = String(err);
   }
+}
+
+function showRules() {
+  const rules = BRAND.rules;
+  if (!rules) {
+    showNotifyStep();
+    return;
+  }
+  $('rules-title').textContent = rules.title;
+  $('rules-intro').textContent = rules.intro;
+  $('rules-link').href = rules.link;
+  $('rules-list').replaceChildren(
+    ...rules.items.map(({ title, body }) => {
+      const item = h('li');
+      item.append(h('b', null, title));
+      if (body) {
+        item.append(h('span', null, body));
+      }
+      return item;
+    }),
+  );
+  showWelcomeStep('rules');
+}
+
+function showNotifyStep() {
+  showWelcomeStep('notify');
+}
+
+function showPhotoStep() {
+  const nick = onboarding.connection.nick;
+  $('welcome-photo-nick').textContent = nick;
+  $('welcome-photo-lead').textContent = t(
+    'People using {app} or Lobby see it next to your messages. Other IRC programs show just your nick. Without a picture you get an animal.',
+    { app: BRAND.name },
+  );
+  $('welcome-photo-face').replaceChildren(onboarding.plan.photo ? image(onboarding.plan.photo) : avatar(nick, ''));
+  showWelcomeStep('photo');
+}
+
+$('rules-accept').addEventListener('click', showNotifyStep);
+$('welcome-notify').addEventListener('submit', (e) => {
+  e.preventDefault();
+  onboarding.plan.words = $('welcome-words').value.trim();
+  askToNotify();
+  showPhotoStep();
+});
+$('notify-later').addEventListener('click', () => {
+  onboarding.plan.words = $('welcome-words').value.trim();
+  showPhotoStep();
+});
+$('welcome-photo-file').addEventListener('change', async (e) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    onboarding.plan.photo = await photoFrom(file).catch(() => '');
+    showPhotoStep();
+  }
+});
+$('welcome-photo').addEventListener('submit', (e) => {
+  e.preventDefault();
+  finishWelcome();
+});
+$('photo-skip').addEventListener('click', () => {
+  delete onboarding.plan.photo;
+  finishWelcome();
 });
 
 let openWhenJoined = null;
@@ -4569,6 +4652,16 @@ function joinAfterSetup(net) {
     /* joined once anyway */
   }
   askToNotify();
+  // What the welcome asked for, kept until there was somewhere to save it.
+  if (plan.words) {
+    saveSetting(NOTIFY_WORDS_SETTING, plan.words);
+  }
+  const me = state.me[net];
+  if (plan.photo && me) {
+    invoke('save_person', { person: { id: 0, name: me, color: '', photo: plan.photo, nicks: [me] } }).catch((err) =>
+      renderStatus(String(err)),
+    );
+  }
   if (plan.channels.length) {
     openWhenJoined = key(net, plan.channels[0]);
     invoke('send', { net, buffer: '', text: `/join ${plan.channels.join(',')}` }).catch((err) => renderStatus(String(err)));

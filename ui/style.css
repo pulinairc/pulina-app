@@ -4564,3 +4564,88 @@ dialog.welcome::backdrop {
 .log-empty:not(:last-child) {
   display: none;
 }
+
+/* After the nick, a one-channel fork's rules, notifications and picture. */
+:root[data-only] .welcome-peek[hidden] {
+  display: none;
+}
+:root[data-only] .welcome-more {
+  flex: 1;
+  width: 100%;
+}
+.welcome-fill {
+  flex: 1;
+}
+.rules-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rule;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--panel);
+  overflow: hidden;
+}
+.rules-list li {
+  counter-increment: rule;
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  column-gap: 12px;
+  row-gap: 4px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.rules-list li:last-child {
+  border-bottom: 0;
+}
+.rules-list li::before {
+  content: counter(rule);
+  grid-row: span 2;
+  color: var(--accent);
+  font-weight: 700;
+  text-align: right;
+}
+.rules-list b {
+  color: var(--strong);
+  font-weight: 600;
+  line-height: 1.45;
+}
+.rules-list span {
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 1.55;
+}
+.rules-link {
+  align-self: center;
+  color: var(--faint);
+  font-size: 13px;
+}
+.photo-pick {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  cursor: pointer;
+}
+.photo-face {
+  --avatar: 96px;
+  display: flex;
+}
+.photo-face img {
+  width: 96px;
+  height: 96px;
+  border-radius: 26%;
+  object-fit: cover;
+}
+.photo-pick-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.photo-pick-text b {
+  color: var(--strong);
+  font-size: 20px;
+}
+.photo-pick-text span {
+  color: var(--accent);
+  font-size: 15px;
+}

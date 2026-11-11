@@ -254,6 +254,20 @@ export const FI = {
     'Valitse verkko ja nimimerkki. Keskusteluja tallentuu vain silloin, kun Lobby on auki.',
   'You are on {channel}. New messages show up here.': 'Olet kanavalla {channel}. Uudet viestit näkyvät tässä.',
   'Welcome to IRC chat': 'Tervetuloa irkkaamaan',
+  'I accept the rules': 'Hyväksyn säännöt',
+  'Read all the rules': 'Lue kaikki säännöt',
+  'Know when someone talks to you': 'Tiedät, kun sinulle puhutaan',
+  'You get a notification when someone mentions your nick or sends you a private message.':
+    'Saat ilmoituksen, kun joku mainitsee nimimerkkisi tai lähettää sinulle yksityisviestin.',
+  'Other words to hear about': 'Muut sanat, joista haluat tiedon',
+  'e.g. movie, sauna': 'esim. leffa, sauna',
+  'Your nick is always included. You can change these later in Settings.':
+    'Nimimerkkisi on mukana aina. Voit muuttaa näitä myöhemmin asetuksista.',
+  'Choose a profile picture': 'Valitse profiilikuva',
+  'People using {app} or Lobby see it next to your messages. Other IRC programs show just your nick. Without a picture you get an animal.':
+    'Kuva näkyy viestiesi vieressä niille, jotka käyttävät {app}- tai Lobby-sovellusta. Muissa IRC-ohjelmissa näkyy pelkkä nimimerkki. Ilman kuvaa saat eläinhahmon.',
+  'Choose a picture': 'Valitse kuva',
+  'Skip and join': 'Ohita ja liity',
   'The #pulina history is kept in the background.': '#pulina-kanavan keskusteluhistoria jää taustalle talteen.',
   'I run lobby-server': 'Minulla on oma lobby-server',
   'Lobby signs in over SSH. Your whole history, nothing opened to the internet.':
