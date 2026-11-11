@@ -1,0 +1,20 @@
+# Profile pictures for Lobby and Pulina; nginx proxies chat.pulina.fi/avatar and /a/ here.
+# Install: /etc/systemd/system/pulina-avatars.service
+[Unit]
+Description=Store and serve Lobby and Pulina profile pictures
+After=network.target
+
+[Service]
+User=rolle
+Group=www-data
+StateDirectory=pulina-avatars
+ExecStart=/usr/bin/python3 -I /var/www/pulina.fi/scripts/pulina-avatars.py
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
