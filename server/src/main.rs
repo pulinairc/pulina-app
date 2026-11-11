@@ -35,6 +35,10 @@ struct Config {
     token_file: Option<String>,
     #[serde(default)]
     allow_insecure: bool,
+    /// Lets clients add, change and remove networks. Off by default: on a shared server a client
+    /// could otherwise point a network at any host and make lobby-server read files for it.
+    #[serde(default)]
+    allow_network_changes: bool,
     #[serde(rename = "network", default)]
     networks: Vec<Network>,
     /// Where attachments sent through lobby-server go. Without it the app uses its own choice.
@@ -109,6 +113,7 @@ async fn run() -> Result<(), String> {
 
     let names: Vec<String> = config.networks.iter().map(|n| n.name.clone()).collect();
     let uploads = Arc::new(config.upload);
+    let changes = config.allow_network_changes;
     let hub = Hub::new(store, config.networks, config.nick);
     hub.start();
 
@@ -124,7 +129,7 @@ async fn run() -> Result<(), String> {
         let path = Arc::clone(&path);
         let uploads = Arc::clone(&uploads);
         tokio::spawn(async move {
-            if let Err(e) = serve(stream, hub, &token, &path, uploads).await {
+            if let Err(e) = serve(stream, hub, &token, &path, uploads, changes).await {
                 eprintln!("{peer}: {e}");
             }
         });
@@ -142,7 +147,9 @@ fn to_json<T: serde::Serialize>(r: Result<T, String>) -> Result<serde_json::Valu
     r.and_then(|v| serde_json::to_value(v).map_err(|e| e.to_string()))
 }
 
-fn answer(hub: &Arc<Hub>, path: &Path, msg: ClientMsg) -> Option<ServerMsg> {
+const NETWORK_CHANGES_OFF: &str = "This lobby-server does not allow changing networks (allow_network_changes in its config)";
+
+fn answer(hub: &Arc<Hub>, path: &Path, changes: bool, msg: ClientMsg) -> Option<ServerMsg> {
     Some(match msg {
         ClientMsg::Hello { .. } | ClientMsg::Upload { .. } => return None,
         ClientMsg::History { id, net, buffer, before } => reply(id, to_json(hub.history(&net, &buffer, before))),
@@ -157,7 +164,10 @@ fn answer(hub: &Arc<Hub>, path: &Path, msg: ClientMsg) -> Option<ServerMsg> {
         ClientMsg::DeletePerson { id, person } => reply(id, to_json(hub.delete_person(person))),
         ClientMsg::SetSetting { id, key, value } => reply(id, to_json(hub.set_setting(&key, &value))),
         ClientMsg::Networks { id } => reply(id, to_json(Ok(hub.network_views()))),
-        ClientMsg::SaveNetwork { id, network } => {
+        ClientMsg::SaveNetwork { id, .. } | ClientMsg::DeleteNetwork { id, .. } if !changes => reply(id, Err(NETWORK_CHANGES_OFF.into())),
+        ClientMsg::SaveNetwork { id, mut network } => {
+            // A file path from a client could be any file this user can read, sent on as PASS.
+            network.password_file = None;
             reply(id, to_json(hub.save_network(network).and_then(|_| save_networks(path, &hub.networks()))))
         }
         ClientMsg::DeleteNetwork { id, name } => {
@@ -174,7 +184,14 @@ async fn store_upload(target: &Option<upload::Target>, name: String, mime: Strin
     upload::send(target, upload::File { name, mime, bytes }).await
 }
 
-async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str, path: &Path, uploads: Arc<Option<upload::Target>>) -> Result<(), String> {
+async fn serve(
+    stream: TcpStream,
+    hub: Arc<Hub>,
+    token: &str,
+    path: &Path,
+    uploads: Arc<Option<upload::Target>>,
+    changes: bool,
+) -> Result<(), String> {
     let limits = WebSocketConfig::default().max_frame_size(Some(MAX_FRAME)).max_message_size(Some(MAX_FRAME));
     let ws = tokio_tungstenite::accept_async_with_config(stream, Some(limits)).await.map_err(|e| e.to_string())?;
     let (mut sink, mut incoming) = ws.split();
@@ -220,7 +237,7 @@ async fn serve(stream: TcpStream, hub: Arc<Hub>, token: &str, path: &Path, uploa
                         });
                         continue;
                     }
-                    if let Some(out) = answer(&hub, path, msg) {
+                    if let Some(out) = answer(&hub, path, changes, msg) {
                         sink.send(send(out)).await.map_err(|e| e.to_string())?;
                     }
                 }
@@ -250,6 +267,7 @@ mod tests {
         assert_eq!(config.listen, DEFAULT_LISTEN);
         assert_eq!(config.networks.len(), 1);
         assert!(!config.allow_insecure);
+        assert!(!config.allow_network_changes);
         assert!(config.upload.is_none());
     }
 

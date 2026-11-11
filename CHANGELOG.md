@@ -3,6 +3,8 @@
 * Add password strength meter and email to account applications
 * Add password reset for own accounts
 * Change account forms to full width
+* Fix lobby-server letting clients change networks and read files
+* Fix link previews reaching the local network through redirects
 
 ### 1.11.0: 2026-11-11
 

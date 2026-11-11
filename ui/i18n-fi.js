@@ -670,4 +670,6 @@ export const FI = {
     'Jos tunnukselle on annettu sähköposti, linkki uuden salasanan asettamiseen on matkalla sinne.',
   'A longer one would be even better.': 'Pidempi olisi vielä parempi.',
   'Guessing it would take only {time}.': 'Arvaaminen veisi vain {time}.',
+  'Too many wrong tries. Try again in 15 minutes.': 'Liian monta väärää yritystä. Yritä uudelleen vartin päästä.',
+  'Too many applications are waiting right now. Try again later.': 'Jonossa on nyt liikaa hakemuksia. Yritä myöhemmin uudelleen.',
 };
