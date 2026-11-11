@@ -4655,7 +4655,7 @@ dialog.welcome::backdrop {
 .welcome-peek {
   display: none;
 }
-:root[data-only] .welcome-peek {
+:root[data-sheet] .welcome-peek {
   position: fixed;
   inset: 0;
   display: flex;
@@ -4674,15 +4674,15 @@ dialog.welcome::backdrop {
   gap: 2px;
   max-width: 640px;
 }
-:root[data-only] dialog.welcome[open] {
+:root[data-sheet] dialog.welcome[open] {
   display: flex;
   flex-direction: column;
 }
 /* The nick sheet sits at the bottom; the later steps start from the top. */
-:root[data-only] #welcome-quick {
+:root[data-sheet] #welcome-quick {
   margin-top: auto;
 }
-:root[data-only] #welcome-quick {
+:root[data-sheet] #welcome-quick {
   position: relative;
   width: 100%;
   min-height: 0;
@@ -4694,15 +4694,15 @@ dialog.welcome::backdrop {
   /* The talk carries on faintly behind the form down to the window's edge. */
   background: linear-gradient(transparent, color-mix(in srgb, var(--bg) 82%, transparent) 34%);
 }
-:root[data-only] #welcome-quick h1 {
+:root[data-sheet] #welcome-quick h1 {
   font-size: 26px;
   font-weight: 650;
   letter-spacing: -0.02em;
 }
-:root[data-only] #welcome-quick .welcome-lead,
-:root[data-only] #welcome-quick .field-label,
-:root[data-only] #welcome-quick .hint:not(.error),
-:root[data-only] #welcome-join {
+:root[data-sheet] #welcome-quick .welcome-lead,
+:root[data-sheet] #welcome-quick .field-label,
+:root[data-sheet] #welcome-quick .hint:not(.error),
+:root[data-sheet] #welcome-join {
   display: none;
 }
 .welcome-talking {
@@ -4737,7 +4737,7 @@ dialog.welcome::backdrop {
 .nick-go {
   display: none;
 }
-:root[data-only] .nick-box {
+:root[data-sheet] .nick-box {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -4753,11 +4753,11 @@ dialog.welcome::backdrop {
     border-color 0.15s,
     box-shadow 0.15s;
 }
-:root[data-only] .nick-box:focus-within {
+:root[data-sheet] .nick-box:focus-within {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
 }
-:root[data-only] .nick-box .field {
+:root[data-sheet] .nick-box .field {
   flex: 1;
   min-width: 0;
   height: auto;
@@ -4769,14 +4769,14 @@ dialog.welcome::backdrop {
   font-weight: 600;
   outline: none;
 }
-:root[data-only] .nick-face {
+:root[data-sheet] .nick-face {
   --avatar: 26px;
   display: flex;
 }
-:root[data-only] .nick-face:empty {
+:root[data-sheet] .nick-face:empty {
   display: none;
 }
-:root[data-only] .nick-go {
+:root[data-sheet] .nick-go {
   display: flex;
   flex: none;
   align-items: center;
@@ -4792,13 +4792,13 @@ dialog.welcome::backdrop {
   font-weight: 650;
   cursor: pointer;
 }
-:root[data-only] .nick-go:disabled {
+:root[data-sheet] .nick-go:disabled {
   background: var(--line);
   color: var(--faint);
   cursor: default;
 }
-:root[data-only] #chan-net,
-:root[data-only] .any-net {
+:root[data-sheet] #chan-net,
+:root[data-sheet] .any-net {
   display: none !important;
 }
 
@@ -4813,10 +4813,10 @@ dialog.welcome::backdrop {
 }
 
 /* After the nick, a one-channel fork's rules, notifications and picture. */
-:root[data-only] .welcome-peek[hidden] {
+:root[data-sheet] .welcome-peek[hidden] {
   display: none;
 }
-:root[data-only] .welcome-more {
+:root[data-sheet] .welcome-more {
   flex: 1 0 auto;
   width: 100%;
   /* The same room above every step, clear of the window buttons. */

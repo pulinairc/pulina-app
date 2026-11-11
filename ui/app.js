@@ -1,5 +1,5 @@
 import { BRAND } from './brand.js';
-import { chooseLang, currentLang, LANGS, startLang, t } from './i18n.js';
+import { chooseLang, currentLang, LANGS, startLang, t, tv } from './i18n.js';
 import {
   CHAT_KINDS,
   colonOpensPicker,
@@ -332,6 +332,8 @@ const PLATFORM = { value: 'linux' };
 
 const key = (net, name) => `${net}\u0000${name.toLowerCase()}`;
 const label = (b) => b.name || b.net;
+/** The message box's hint: some languages say a channel, a person and a network differently. */
+const messageHint = (b) => tv('Message {name}', b.name === '' ? 'network' : isChannel(b.name) ? '' : 'person', { name: label(b) });
 const isPrivate = (b) => b.name !== '' && !isChannel(b.name);
 
 function h(tag, cls, text) {
@@ -1091,7 +1093,7 @@ function renderJoining() {
   const joining = isJoining(b);
   $('joining').hidden = !joining;
   el.input.disabled = joining;
-  el.input.placeholder = b ? t('Message {name}', { name: label(b) }) : '';
+  el.input.placeholder = b ? messageHint(b) : '';
   if (joining) {
     $('joining-text').textContent = t('Joining {name}…', { name: label(b) });
   }
@@ -1237,7 +1239,7 @@ function select(k) {
   } catch {
     /* storage may be unavailable */
   }
-  el.input.placeholder = t('Message {name}', { name: label(b) });
+  el.input.placeholder = messageHint(b);
   renderHeader();
   renderLog();
   if (shelf.open) {

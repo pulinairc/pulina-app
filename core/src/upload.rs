@@ -122,7 +122,7 @@ async fn file_host(url: &str, file: File) -> Result<String, String> {
         .body(file.bytes)
         .send()
         .await
-        .map_err(|e| format!("Upload failed: {e}"))?;
+        .map_err(|e| format!("Upload failed: {}", why(&e)))?;
     let status = res.status();
     if !status.is_success() {
         return Err(match status.as_u16() {
@@ -150,7 +150,7 @@ async fn s3(endpoint: &str, region: &str, bucket: &str, credentials: &Credential
         .body(file.bytes)
         .send()
         .await
-        .map_err(|e| format!("Upload failed: {e}"))?;
+        .map_err(|e| format!("Upload failed: {}", why(&e)))?;
     let status = res.status();
     if !status.is_success() {
         return Err(match status.as_u16() {
@@ -172,10 +172,22 @@ async fn folder(dir: &str, public_url: &str, file: File) -> Result<String, Strin
     Ok(joined(public_url, &name))
 }
 
+/// The error with its causes: reqwest's own text ("error sending request") hides the real reason.
+fn why(e: &dyn std::error::Error) -> String {
+    let mut text = e.to_string();
+    let mut cause = e.source();
+    while let Some(c) = cause {
+        text.push_str(": ");
+        text.push_str(&c.to_string());
+        cause = c.source();
+    }
+    text
+}
+
 async fn catbox(file: File) -> Result<String, String> {
     let part = reqwest::multipart::Part::bytes(file.bytes).file_name(file.name).mime_str(&file.mime).map_err(|e| e.to_string())?;
     let form = reqwest::multipart::Form::new().text("reqtype", "fileupload").part("fileToUpload", part);
-    let res = client()?.post(CATBOX_API).multipart(form).send().await.map_err(|e| format!("Upload failed: {e}"))?;
+    let res = client()?.post(CATBOX_API).multipart(form).send().await.map_err(|e| format!("Upload failed: {}", why(&e)))?;
     let status = res.status();
     let text = res.text().await.unwrap_or_default();
     let text = text.trim();
