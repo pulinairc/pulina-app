@@ -1,6 +1,7 @@
 ### [Unreleased]
 
 * Fix the update check saying up to date without update files
+* Change the start light to widen over the chat, beam to the bottom
 
 ### 1.9.1: 2026-11-11
 

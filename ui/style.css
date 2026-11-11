@@ -4481,7 +4481,7 @@ dialog.welcome::backdrop {
 }
 
 /* Cold start: a lamp switches on, its light grows and the cover fades into the chat. */
-/* The lamp sits at 50% across with its bulb at 34% down; its beam runs from there to the floor. */
+/* The lamp sits at 50% across with its bulb at 34% down; its beam runs from there to the bottom edge. */
 .splash {
   position: fixed;
   inset: 0;
@@ -4505,8 +4505,8 @@ dialog.welcome::backdrop {
       0 0,
       calc(50% - 24px) 34%,
       calc(50% + 24px) 34%,
-      calc(50% + 135px) min(85%, calc(34% + 330px)),
-      calc(50% - 135px) min(85%, calc(34% + 330px)),
+      calc(50% + max(135px, 40%)) 100%,
+      calc(50% - max(135px, 40%)) 100%,
       calc(50% - 24px) 34%
     );
   }
@@ -4517,7 +4517,7 @@ dialog.welcome::backdrop {
   inset: 0;
   z-index: 1001;
   pointer-events: none;
-  background: linear-gradient(rgb(176 104 143 / 45%), rgb(176 104 143 / 0%) 75%);
+  background: linear-gradient(rgb(176 104 143 / 45%), rgb(176 104 143 / 0%) 90%);
   clip-path: polygon(50% 34%, 50% 34%, 50% 34%, 50% 34%);
   opacity: 0;
   animation: splash-beam 0.4s ease-out 0.35s forwards;
@@ -4525,12 +4525,7 @@ dialog.welcome::backdrop {
 @keyframes splash-beam {
   to {
     opacity: 1;
-    clip-path: polygon(
-      calc(50% - 24px) 34%,
-      calc(50% + 24px) 34%,
-      calc(50% + 135px) min(85%, calc(34% + 330px)),
-      calc(50% - 135px) min(85%, calc(34% + 330px))
-    );
+    clip-path: polygon(calc(50% - 24px) 34%, calc(50% + 24px) 34%, calc(50% + max(135px, 40%)) 100%, calc(50% - max(135px, 40%)) 100%);
   }
 }
 /* Its own layer above the cover and the light, so their moving edges never cut through it. */
