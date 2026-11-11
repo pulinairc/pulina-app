@@ -35,6 +35,8 @@ struct AppState {
     /// Local file for link previews.
     store: Store,
     data: std::path::PathBuf,
+    /// Sent as QUIT when the app closes; the window keeps it current.
+    quit: std::sync::Mutex<String>,
 }
 
 impl AppState {
@@ -601,6 +603,14 @@ fn player() -> String {
     embed::base()
 }
 
+#[tauri::command]
+fn set_quit_message(state: State<'_, AppState>, text: String) {
+    *state.quit.lock().unwrap_or_else(|e| e.into_inner()) = text;
+}
+
+/// How long the QUIT gets to reach the server before the app is gone.
+const QUIT_FLUSH: std::time::Duration = std::time::Duration::from_millis(400);
+
 /// The version, the commit it was built from and that commit's date, for the About section in Settings.
 #[derive(Serialize)]
 struct AppInfo {
@@ -673,7 +683,7 @@ pub fn run() {
             let (source, error) = start_source(app.handle(), &data);
 
             let store = Store::open(&data.join("previews.db"))?;
-            app.manage(AppState { source: source.into(), error: error.into(), store, data });
+            app.manage(AppState { source: source.into(), error: error.into(), store, data, quit: String::new().into() });
 
             // A clicked notification brings Lobby forward and opens the message it was about.
             #[cfg(target_os = "macos")]
@@ -726,11 +736,23 @@ pub fn run() {
             server_networks,
             save_server_network,
             delete_server_network,
-            app_info
+            app_info,
+            set_quit_message
         ])
         .build(tauri::generate_context!())
         .expect("failed to start Lobby")
         .run(|app, event| {
+            // A direct connection says goodbye; lobby-server stays on IRC without the app.
+            if let tauri::RunEvent::ExitRequested { .. } = event
+                && let Some(state) = app.try_state::<AppState>()
+                && let Source::Local(hub) = state.source()
+            {
+                let reason = state.quit.lock().unwrap_or_else(|e| e.into_inner()).clone();
+                if !reason.is_empty() {
+                    hub.quit_all(&reason);
+                    std::thread::sleep(QUIT_FLUSH);
+                }
+            }
             if let tauri::RunEvent::Resumed = event {
                 #[cfg(target_os = "ios")]
                 ios_volume::resumed(app);

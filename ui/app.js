@@ -181,6 +181,7 @@ const el = {
   channelAlerts: $('channel-alerts'),
   notifyNicksField: $('notify-nicks-field'),
   notifyWordsField: $('notify-words-field'),
+  quitField: $('quit-field'),
   shortcodeToggle: $('shortcode-toggle'),
   iconChoices: $('icon-choices'),
   textSize: $('text-size'),
@@ -920,12 +921,15 @@ function setMuted(b, muted) {
 }
 
 /** A channel's own picture and colour, set from its header icon. */
+/** A channel's picture and colour as set here, else the one a fork ships for it. */
 function channelLook(b) {
+  let set = null;
   try {
-    return JSON.parse(state.settings[CHANNELS_SETTING] || '{}')[b.key] || {};
+    set = JSON.parse(state.settings[CHANNELS_SETTING] || '{}')[b.key];
   } catch {
-    return {};
+    /* none set */
   }
+  return set ?? BRAND.channels?.[b.name.toLowerCase()] ?? {};
 }
 
 function icon(b, node) {
@@ -1561,11 +1565,36 @@ el.updateCheck.addEventListener('click', async () => {
 // About: the version and the commit it was built from, linked to that commit.
 const REPO_URL = BRAND.site;
 
+const QUIT_SETTING = 'quitMessage';
+let appVersion = '';
+
+/** "Used Lobby v1.8.3 · its GitHub page", in the app's language, unless the user wrote their own. */
+function defaultQuit() {
+  const fi = currentLang() === 'fi';
+  const app = fi ? (BRAND.fiQuitName ?? `${BRAND.name}a`) : (BRAND.quitName ?? BRAND.name);
+  return `${t('Used {app} v{version}', { app, version: appVersion })} · ${BRAND.site}`;
+}
+
+function syncQuit() {
+  el.quitField.placeholder = defaultQuit();
+  if (document.activeElement !== el.quitField) {
+    el.quitField.value = state.settings[QUIT_SETTING] || '';
+  }
+  invoke('set_quit_message', { text: state.settings[QUIT_SETTING]?.trim() || defaultQuit() }).catch(() => {});
+}
+
+el.quitField.addEventListener('change', () => {
+  saveSetting(QUIT_SETTING, el.quitField.value.trim());
+  syncQuit();
+});
+
 async function showVersion() {
   const info = await invoke('app_info').catch(() => null);
   if (!info) {
     return;
   }
+  appVersion = info.version;
+  syncQuit();
   const link = $('about-version');
   link.textContent = `${BRAND.name} ${info.version}${info.commit ? `-${info.commit}` : ''}${info.date ? ` (${info.date})` : ''}`;
   link.href = info.commit ? `${REPO_URL}/commit/${info.commit}` : REPO_URL;
@@ -4391,6 +4420,7 @@ function applyStatus(st) {
   for (const info of st.channels) {
     onBuffer(info);
   }
+  syncQuit();
   state.setupError = st.error && !st.networks.length ? st.error : null;
   if (st.error && st.networks.length) {
     showToast(st.error);
@@ -5054,6 +5084,9 @@ async function start() {
   showVersion();
   await listen('setting', (e) => {
     state.settings[e.payload.key] = e.payload.value;
+    if (e.payload.key === QUIT_SETTING) {
+      syncQuit();
+    }
     if (e.payload.key === READ_SETTING) {
       applyReadSetting(e.payload.value);
     }

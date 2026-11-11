@@ -11,6 +11,11 @@ export const FI = {
   '{who} left (plural)': '{who} poistuivat',
   '{who} left (many)': '{who} henkilöä poistui',
   '{who} quit': '{who} lähti IRC:stä',
+  '{nick} quit ({reason})': '{nick} lähti IRC:stä ({reason})',
+  'Used {app} v{version}': 'Käytin {app} v{version}',
+  'Quit message': 'Lähtöviesti',
+  'Others see this when you close the app. Leave it empty for the one shown.':
+    'Muut näkevät tämän, kun suljet sovelluksen. Jätä tyhjäksi, niin käytetään näkyvää viestiä.',
   '{who} quit (plural)': '{who} lähtivät IRC:stä',
   '{who} quit (many)': '{who} henkilöä lähti IRC:stä',
   '{n} changes': '{n} muutosta',
