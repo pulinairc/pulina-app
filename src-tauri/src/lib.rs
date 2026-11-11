@@ -588,7 +588,19 @@ fn save_connection(app: AppHandle, state: State<AppState>, connection: Connectio
         "url" => Some(config::ServerLink { url: Some(connection.url.trim().to_string()), token, token_file, ..Default::default() }),
         _ => None,
     };
-    config::save(&config::Config { nick: connection.nick.trim().to_string(), server, networks: connection.networks })?;
+    // Only a file the config already names may stay: the page must never point the app at another file.
+    let networks = connection
+        .networks
+        .into_iter()
+        .map(|mut net| {
+            let kept = old.networks.iter().find(|o| o.name == net.name).and_then(|o| o.password_file.clone());
+            if net.password_file != kept {
+                net.password_file = None;
+            }
+            net
+        })
+        .collect();
+    config::save(&config::Config { nick: connection.nick.trim().to_string(), server, networks })?;
 
     let mut source = state.source.lock().unwrap_or_else(|e| e.into_inner());
     match &*source {

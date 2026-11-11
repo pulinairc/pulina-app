@@ -3,7 +3,7 @@
 use regex::Regex;
 use reqwest::Url;
 use serde::{Deserialize, Serialize};
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::LazyLock;
 use std::time::Duration;
 
@@ -26,27 +26,67 @@ pub struct Preview {
     pub site: String,
 }
 
+const MAX_REDIRECTS: usize = 5;
+
 fn is_public(ip: IpAddr) -> bool {
     match ip {
-        IpAddr::V4(v4) => !(v4.is_private() || v4.is_loopback() || v4.is_link_local() || v4.is_unspecified() || v4.is_broadcast()),
+        IpAddr::V4(v4) => {
+            let [a, b, ..] = v4.octets();
+            let shared = a == 100 && (64..128).contains(&b);
+            let benchmark = a == 198 && (18..20).contains(&b);
+            !(a == 0
+                || v4.is_private()
+                || v4.is_loopback()
+                || v4.is_link_local()
+                || v4.is_broadcast()
+                || v4.is_multicast()
+                || v4.is_documentation()
+                || shared
+                || benchmark
+                || a >= 240)
+        }
         IpAddr::V6(v6) => {
-            let local = (v6.segments()[0] & 0xfe00) == 0xfc00 || (v6.segments()[0] & 0xffc0) == 0xfe80;
-            !(v6.is_loopback() || v6.is_unspecified() || local)
+            if let Some(v4) = v6.to_ipv4_mapped() {
+                return is_public(IpAddr::V4(v4));
+            }
+            let first = v6.segments()[0];
+            let local = (first & 0xfe00) == 0xfc00 || (first & 0xffc0) == 0xfe80;
+            !(v6.is_loopback() || v6.is_unspecified() || v6.is_multicast() || local)
         }
     }
 }
 
-/// Refuse hosts that resolve to the local network, so a pasted link cannot probe it.
-// ponytail: checked before the request only; a redirect to a private address is not re-checked.
-async fn host_is_public(url: &Url) -> bool {
-    let (Some(host), Some(port)) = (url.host_str(), url.port_or_known_default()) else { return false };
-    match tokio::net::lookup_host((host, port)).await {
-        Ok(addrs) => {
-            let addrs: Vec<_> = addrs.collect();
-            !addrs.is_empty() && addrs.iter().all(|a| is_public(a.ip()))
-        }
-        Err(_) => false,
+/// The addresses a URL's host has, only when every one of them is public: a link must not reach
+/// the local network. The request then goes to exactly these, so a second DNS answer cannot.
+async fn public_addrs(url: &Url) -> Option<(String, Vec<SocketAddr>)> {
+    if !matches!(url.scheme(), "http" | "https") {
+        return None;
     }
+    let (host, port) = (url.host_str()?, url.port_or_known_default()?);
+    let addrs: Vec<SocketAddr> = tokio::net::lookup_host((host, port)).await.ok()?.collect();
+    (!addrs.is_empty() && addrs.iter().all(|a| is_public(a.ip()))).then(|| (host.to_string(), addrs))
+}
+
+/// GET that checks every redirect hop the same way as the first address.
+async fn get_public(url: &Url) -> Option<reqwest::Response> {
+    let mut url = url.clone();
+    for _ in 0..=MAX_REDIRECTS {
+        let (host, addrs) = public_addrs(&url).await?;
+        let client = lobby_core::http()
+            .timeout(TIMEOUT)
+            .user_agent(USER_AGENT)
+            .redirect(reqwest::redirect::Policy::none())
+            .resolve_to_addrs(&host, &addrs)
+            .build()
+            .ok()?;
+        let res = client.get(url.clone()).send().await.ok()?;
+        if !res.status().is_redirection() {
+            return Some(res);
+        }
+        let next = res.headers().get("location")?.to_str().ok()?;
+        url = url.join(next).ok()?;
+    }
+    None
 }
 
 /// A Dropbox share link opens a web page; with raw=1 it serves the file itself.
@@ -65,15 +105,11 @@ fn direct(url: &Url) -> Url {
 
 pub async fn fetch(raw: &str) -> Option<Preview> {
     let url = direct(&Url::parse(raw).ok()?);
-    if !matches!(url.scheme(), "http" | "https") || !host_is_public(&url).await {
-        return None;
-    }
-
-    let client = lobby_core::http().timeout(TIMEOUT).user_agent(USER_AGENT).build().ok()?;
     if is_youtube(&url) {
+        let client = lobby_core::http().timeout(TIMEOUT).user_agent(USER_AGENT).build().ok()?;
         return youtube(&client, raw).await;
     }
-    let mut res = client.get(url.clone()).send().await.ok()?;
+    let mut res = get_public(&url).await?;
     if !res.status().is_success() {
         return None;
     }
@@ -82,7 +118,7 @@ pub async fn fetch(raw: &str) -> Option<Preview> {
     let site = url.host_str().unwrap_or("").trim_start_matches("www.").to_string();
 
     if content_type.starts_with("image/") {
-        return Some(Preview { kind: "image".into(), url: raw.into(), image: url.to_string(), site, ..Default::default() });
+        return Some(Preview { kind: "image".into(), url: raw.into(), image: res.url().to_string(), site, ..Default::default() });
     }
     for kind in ["video", "audio"] {
         if content_type.starts_with(&format!("{kind}/")) {
@@ -109,6 +145,12 @@ pub async fn fetch(raw: &str) -> Option<Preview> {
     preview.url = raw.into();
     if preview.site.is_empty() {
         preview.site = site;
+    }
+    // The page names the picture; it gets the same check before the app loads it.
+    if let Ok(image) = Url::parse(&preview.image)
+        && public_addrs(&image).await.is_none()
+    {
+        preview.image.clear();
     }
     Some(preview)
 }
@@ -284,6 +326,9 @@ mod tests {
         assert!(!is_public("192.168.1.10".parse().unwrap()));
         assert!(!is_public("fe80::1".parse().unwrap()));
         assert!(is_public("93.184.216.34".parse().unwrap()));
+        for blocked in ["::ffff:127.0.0.1", "::ffff:10.0.0.1", "0.1.2.3", "100.100.1.1", "169.254.169.254", "224.0.0.1", "fd00::1"] {
+            assert!(!is_public(blocked.parse().unwrap()), "{blocked}");
+        }
     }
 
     #[test]
