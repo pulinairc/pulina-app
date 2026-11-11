@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.13.0: 2026-11-11
 
 * Add Sign out and Reset the app to Settings
 * Fix the lamp flashing before the welcome
