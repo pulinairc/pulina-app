@@ -1,4 +1,4 @@
-/* Pulina's colours, from pulina.fi: night blue with its neon green. */
+/* Pulina's colours, from pulina.fi: night blue with its neon green; mentions in Lobby's mint. */
 :root {
   --bg: #060d21;
   --panel: #0c162d;
@@ -12,7 +12,7 @@
   --faint: #7586aa;
   --accent: #20ffa7;
   --accent-bg: #0b3a2c;
-  --mention: #ff8fc7;
-  --mention-bg: #3a1c2e;
-  --private: #ff8fc7;
+  --mention: #5fe0b3;
+  --mention-bg: #12302a;
+  --private: #5fe0b3;
 }

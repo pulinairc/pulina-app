@@ -2,7 +2,7 @@
   <img src="docs/logo.png" width="96" alt="Pulina">
 </p>
 
-<h1 align="center">Pulina</h1>
+<h1 align="center">Pulina app for Finnish IRC</h1>
 
 <p align="center">
   <a href="https://github.com/pulinairc/pulina-app/actions/workflows/check.yml"><img src="https://img.shields.io/github/actions/workflow/status/pulinairc/pulina-app/check.yml?branch=main&style=for-the-badge&label=build" alt="Build"></a>
