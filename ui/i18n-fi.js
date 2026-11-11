@@ -462,6 +462,8 @@ export const FI = {
   More: 'Lisää toimintoja',
   '{nick} changed the topic to “{topic}”': '{nick} vaihtoi aiheeksi ”{topic}”',
   'Open in browser': 'Avaa selaimessa',
+  'Video not available': 'Video ei ole saatavilla',
+  'Private or removed': 'Yksityinen tai poistettu',
   'Open on YouTube': 'Avaa YouTubessa',
   'Play with sound': 'Toista äänen kanssa',
   '{name} muted': '{name} mykistetty',

@@ -3481,10 +3481,27 @@ function youtubeFrame(id, query) {
   return f;
 }
 
+/** YouTube's stand-in for a missing thumbnail is 120 px wide; a real hqdefault is 480. */
+const YT_MISSING_WIDTH = 120;
+
 function youtubeCard(url, { id, portrait }) {
   const box = h('div', `vid${portrait ? ' portrait' : ''}`);
   const poster = image(`https://i.ytimg.com/vi/${id}/hqdefault.jpg`, 'vid-poster');
+  poster.loading = 'eager';
   box.append(poster, openButton(url));
+  // A private or removed video has no thumbnail: YouTube answers with a small grey stand-in.
+  const gone = () => {
+    if (!box.classList.contains('playing') && box.isConnected) {
+      onScreen.unobserve(box);
+      box.replaceWith(pageCard({ url, site: 'youtube.com', title: t('Video not available'), description: t('Private or removed') }));
+    }
+  };
+  poster.addEventListener('error', gone);
+  poster.addEventListener('load', () => {
+    if (poster.naturalWidth <= YT_MISSING_WIDTH) {
+      gone();
+    }
+  });
   let preview = null;
   let failed = false;
 

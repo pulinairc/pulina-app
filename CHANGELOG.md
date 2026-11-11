@@ -1,5 +1,6 @@
 ### [Unreleased]
 
+* Fix private YouTube videos showing a big grey box
 * Fix a person's lines staying split after the New line
 
 ### 1.13.6: 2026-11-11
