@@ -38,6 +38,7 @@ import {
   nickHue,
   parseReaction,
   parseAddress,
+  quotedText,
   commandMatches,
   personFor,
   glob,
@@ -158,6 +159,8 @@ test('reads reactions and replies sent as plain IRC text', () => {
   assert.deepEqual(parseAddress('frostbyte: no niin'), { nick: 'frostbyte', rest: 'no niin' });
   assert.equal(parseAddress('https://example.org'), null);
   assert.equal(parseAddress('no niin'), null);
+  assert.equal(quotedText('frostbyte: no niin'), 'no niin');
+  assert.equal(quotedText('no niin'), 'no niin');
 });
 
 test('slash menu matches typed commands', () => {
@@ -217,6 +220,8 @@ test('turns standalone emoticons into emoji', () => {
   assert.equal(convertEmoticons('nice :D see you :)'), 'nice 😁 see you 🙂');
   assert.equal(convertEmoticons('https://example.org:D'), 'https://example.org:D');
   assert.equal(convertEmoticons('<3 xD'), '❤️ 😆');
+  assert.equal(convertEmoticons(':| :-) ^^ -_- >:( </3'), '😐 🙂 😊 😑 😠 💔');
+  assert.equal(convertEmoticons('a:|b'), 'a:|b');
 });
 
 test('finds the colon word before the caret', () => {

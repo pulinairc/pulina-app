@@ -387,6 +387,11 @@ export function parseAddress(text) {
   return m ? { nick: m[1], rest: m[2] } : null;
 }
 
+/** A quoted line without its own "nick:" in front, so quotes show only what was said. */
+export function quotedText(text) {
+  return parseAddress(text)?.rest ?? text;
+}
+
 /** Commands offered in the / menu. `local` ones are handled by the app itself. */
 export const COMMANDS = [
   { name: 'me', args: 'action', desc: 'Say what you are doing' },
@@ -539,6 +544,34 @@ const EMOTICONS = [
   ['<3', '❤️'],
   [':*', '😘'],
   [':/', '😕'],
+  [':|', '😐'],
+  [':-)', '🙂'],
+  [':-D', '😁'],
+  [':-(', '🙁'],
+  [';-)', '😉'],
+  [':-P', '😛'],
+  [':-p', '😛'],
+  [':-/', '😕'],
+  [':-|', '😐'],
+  ['=)', '🙂'],
+  ['=D', '😁'],
+  ['=(', '🙁'],
+  [':]', '🙂'],
+  [':>', '😊'],
+  ['^^', '😊'],
+  ['^_^', '😊'],
+  ['-_-', '😑'],
+  ['o_O', '🤨'],
+  ['O_o', '🤨'],
+  ['>:(', '😠'],
+  [':@', '😠'],
+  [':$', '😳'],
+  [':x', '🤐'],
+  [':X', '🤐'],
+  [':3', '😺'],
+  ['D:', '😧'],
+  ['xd', '😆'],
+  ['</3', '💔'],
 ];
 const EMOTICON_RE = new RegExp(`(^|\\s)(${EMOTICONS.map(([t]) => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})(?=\\s|$)`, 'g');
 const EMOTICON_MAP = Object.fromEntries(EMOTICONS);
