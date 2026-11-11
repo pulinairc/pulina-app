@@ -316,6 +316,8 @@ export const FI = {
   'Networks on lobby-server': 'lobby-serverin verkot',
   'Add a network': 'Lisää verkko',
   Nick: 'Nimimerkki',
+  'Others see your picture after you next connect.': 'Muut näkevät kuvasi, kun seuraavan kerran yhdistät.',
+  'Could not share your picture: {error}': 'Kuvan jakaminen ei onnistunut: {error}',
   'Joining {name}…': 'Liitytään kanavalle {name}…',
   '{count} chatting now': '{count} juttelee nyt',
   'Talked last': 'Viimeksi juttelivat',

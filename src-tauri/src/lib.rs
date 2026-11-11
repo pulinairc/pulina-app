@@ -337,6 +337,22 @@ fn forward(app: AppHandle, hub: Arc<Hub>) {
     });
 }
 
+/// Your photo, put where every Lobby and Pulina can fetch it; the link goes in your IRC real name.
+#[tauri::command]
+async fn share_avatar(photo: String) -> Result<String, String> {
+    use base64::Engine;
+    let (_, data) = photo.split_once(";base64,").ok_or("Expected a picture")?;
+    let bytes = base64::engine::general_purpose::STANDARD.decode(data).map_err(|e| e.to_string())?;
+    let client = lobby_core::http().build().map_err(|e| e.to_string())?;
+    let res = client.post(AVATAR_UPLOAD).body(bytes).send().await.map_err(|e| e.to_string())?;
+    let status = res.status();
+    let answer: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
+    let url = answer["url"].as_str().filter(|_| status.is_success());
+    url.and_then(lobby_core::net::avatar_in).ok_or_else(|| answer["error"].as_str().unwrap_or("Upload failed").to_string())
+}
+
+const AVATAR_UPLOAD: &str = "https://chat.pulina.fi/avatar";
+
 /// Desktop notifications take an icon as a file, so a person's photo is written to the cache once.
 #[tauri::command]
 fn notify_icon(app: tauri::AppHandle, request: tauri::ipc::Request<'_>) -> Result<String, String> {
@@ -770,7 +786,8 @@ pub fn run() {
             save_server_network,
             delete_server_network,
             app_info,
-            set_quit_message
+            set_quit_message,
+            share_avatar
         ])
         .build(tauri::generate_context!())
         .expect("failed to start Lobby")

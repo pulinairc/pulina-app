@@ -404,13 +404,32 @@ function personColor(person, nick) {
   return person?.color || (person?.photo && photoColorOf(person.photo)) || nickColor(nick);
 }
 
+// Your own photo goes to the shared picture service; its link becomes your real name at the next connect.
+const AVATAR_SETTING = 'avatar';
+
+async function shareOwnPhoto(photo) {
+  if (!photo) {
+    saveSetting(AVATAR_SETTING, '');
+    return;
+  }
+  try {
+    saveSetting(AVATAR_SETTING, await invoke('share_avatar', { photo }));
+    renderStatus(t('Others see your picture after you next connect.'));
+  } catch (err) {
+    renderStatus(t('Could not share your picture: {error}', { error: err }));
+  }
+}
+
+// Pictures people share through the link in their real name, by lower-case nick; your own photo of someone wins.
+const sharedAvatars = new Map();
+
 function identity(nick, mask = '') {
   const person = personFor(state.people, nick, mask);
   return {
     person,
     name: person?.name || nick,
     color: personColor(person, nick),
-    photo: shownPhoto(person?.photo),
+    photo: shownPhoto(person?.photo) || sharedAvatars.get(nick.toLowerCase()) || '',
   };
 }
 
@@ -744,6 +763,15 @@ function headerSoon() {
 
 function onBuffer(info) {
   const b = buffer(info.net, info.name);
+  const before = sharedAvatars.size;
+  let changed = false;
+  for (const [nick, url] of Object.entries(info.avatars || {})) {
+    changed ||= sharedAvatars.get(nick.toLowerCase()) !== url;
+    sharedAvatars.set(nick.toLowerCase(), url);
+  }
+  if (changed || sharedAvatars.size !== before) {
+    renderLog();
+  }
   b.topic = info.topic;
   b.joined = info.joined;
   b.members = new Set(info.members);
@@ -4747,6 +4775,12 @@ el.welcomeQuick.addEventListener('submit', async (e) => {
 let onboarding = null;
 
 async function finishWelcome() {
+  // Shared before connecting, so the very first real name already carries it.
+  if (onboarding.plan.photo) {
+    await invoke('share_avatar', { photo: onboarding.plan.photo })
+      .then((url) => saveSetting(AVATAR_SETTING, url))
+      .catch(() => {});
+  }
   try {
     await invoke('save_connection', { connection: onboarding.connection });
     storeFlag(JOIN_AFTER_KEY, JSON.stringify(onboarding.plan));
@@ -5856,6 +5890,9 @@ el.personEdit.addEventListener('submit', async (e) => {
   try {
     const { photoColor: _, ...person } = editing;
     await invoke('save_person', { person });
+    if (person.nicks.some(isMyNick)) {
+      shareOwnPhoto(person.photo);
+    }
     if (editingFromChat) {
       el.people.close();
     } else {
