@@ -2,6 +2,8 @@
 export const BRAND = {
   name: 'Pulina',
   site: 'https://github.com/pulinairc/pulina-app',
+  // Finnish until another language is picked in Settings.
+  lang: 'fi',
   // The welcome's quick start: #pulina on QuakeNet.
   start: { network: 'QuakeNet', channels: '#pulina' },
   icons: [
