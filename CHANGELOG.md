@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Fix the update check saying up to date without update files
+
 ### 1.9.1: 2026-11-11
 
 * Change the update bar to Update, Restart and Dismiss

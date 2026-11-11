@@ -17,13 +17,16 @@ pub fn can_install_updates() -> bool {
 }
 
 #[cfg(desktop)]
+const NO_UPDATE_FILES: &str = "The newest release has no update files yet";
+
+#[cfg(desktop)]
 #[tauri::command]
 pub async fn check_update(app: AppHandle) -> Result<Option<Available>, String> {
     use tauri_plugin_updater::{Error, UpdaterExt};
     let update = match app.updater().map_err(|e| e.to_string())?.check().await {
         Ok(update) => update,
-        // A release without update files says nothing about updates.
-        Err(Error::ReleaseNotFound) => None,
+        // The newest release is there but its update files are not (yet): saying "up to date" would be wrong.
+        Err(Error::ReleaseNotFound) => return Err(NO_UPDATE_FILES.into()),
         Err(e) => return Err(e.to_string()),
     };
     Ok(update.map(|u| Available { version: u.version, installable: can_install_updates() }))
