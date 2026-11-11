@@ -4990,3 +4990,127 @@ dialog.welcome::backdrop {
   color: var(--faint);
   font-size: 13px;
 }
+
+/* A fork's own accounts: the choice, the application and signing in. */
+.account-link {
+  align-self: flex-start;
+  color: var(--dim);
+  font-size: 14px;
+}
+.account-link:hover {
+  color: var(--strong);
+}
+.account-link[hidden] {
+  display: none;
+}
+.applied-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  max-width: 460px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  color: var(--dim);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.applied-card[hidden] {
+  display: none;
+}
+.applied-card b {
+  color: var(--strong);
+  font-weight: 600;
+}
+.applied-mark {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--mention-bg);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+.account-cards {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.account-card {
+  flex: 1 1 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 18px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+}
+.account-card.own {
+  border-color: var(--accent);
+}
+.account-card-top {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.account-card-top b {
+  color: var(--strong);
+  font-size: 17px;
+}
+.account-card-top span {
+  color: var(--dim);
+  font-size: 13px;
+}
+.account-card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.account-card li {
+  display: flex;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.account-card li::before {
+  flex: none;
+  width: 16px;
+}
+.account-card li.yes::before {
+  content: "✓";
+  color: var(--accent);
+}
+.account-card li.no {
+  color: var(--faint);
+}
+.account-card li.no::before {
+  content: "–";
+}
+.account-btn {
+  height: 46px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--strong);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.account-btn.go {
+  border: 0;
+  background: var(--accent);
+  color: var(--bg);
+}
+.field.narrow {
+  max-width: 320px;
+}
