@@ -3,6 +3,7 @@
 * Fix the empty window after the welcome
 * Add the Allow prompt for notifications after the welcome
 * Change the unread count to a number on phones
+* Add a note in a channel with no messages yet
 
 ### 1.8.1: 2026-11-11
 

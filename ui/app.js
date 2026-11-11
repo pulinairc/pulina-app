@@ -1625,6 +1625,10 @@ function renderLog() {
   }
   // With unread lines older than what is loaded, the true New line is not here to show.
   view.separatorAfter = b.window ? (b.windowSeparator ?? null) : b.unreadGap ? null : (readMap[b.key] ?? lastId(b));
+  // Straight to IRC there is no backlog: say where you are until someone speaks.
+  if (!b.lines.length && isChannel(b.name)) {
+    el.col.append(h('p', 'log-empty', t('You are on {channel}. New messages show up here.', { channel: b.name })));
+  }
   for (const l of b.window ?? b.lines) {
     appendLine(l);
   }
