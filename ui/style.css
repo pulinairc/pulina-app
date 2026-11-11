@@ -857,10 +857,10 @@ a:hover {
   cursor: not-allowed;
   opacity: 0.6;
 }
-/* A first start goes straight to the welcome: the lamp is only for loading a chat. */
-.no-splash .splash,
-.no-splash .splash-light,
-.no-splash .splash-lamp {
+/* The lamp is only for loading a chat: hidden unless boot.js knows a chat comes next. */
+:root:not(.splash-on) .splash,
+:root:not(.splash-on) .splash-light,
+:root:not(.splash-on) .splash-lamp {
   display: none;
 }
 
@@ -5222,4 +5222,23 @@ dialog.welcome::backdrop {
   margin-left: 14px;
   padding-left: 14px;
   border-left: 1px solid var(--line-strong);
+}
+
+.start-over {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.start-over-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.start-over-row .link-btn {
+  font-size: 14px;
+  font-weight: 600;
+}
+.start-over-row .hint {
+  margin: 0;
 }

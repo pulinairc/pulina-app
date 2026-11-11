@@ -670,6 +670,22 @@ fn say_goodbye(app: &AppHandle) {
     }
 }
 
+/// Everything this app keeps on the device goes: the connection, history and previews. The SSH key
+/// stays, since servers may already trust it. The page clears its own storage first; then a restart.
+#[tauri::command]
+fn reset_app(app: AppHandle, state: State<AppState>) -> Result<(), String> {
+    match &*state.source.lock().unwrap_or_else(|e| e.into_inner()) {
+        Source::Local(hub) => hub.stop(),
+        Source::Remote(remote) => remote.stop(),
+        Source::Unconfigured => {}
+    }
+    let _ = std::fs::remove_file(config::path());
+    for name in ["history.db", "history.db-wal", "history.db-shm", "previews.db", "previews.db-wal", "previews.db-shm"] {
+        let _ = std::fs::remove_file(state.data.join(name));
+    }
+    app.restart();
+}
+
 /// The version, the commit it was built from and that commit's date, for the About section in Settings.
 #[derive(Serialize)]
 struct AppInfo {
@@ -815,7 +831,8 @@ pub fn run() {
             app_info,
             set_quit_message,
             share_avatar,
-            account_call
+            account_call,
+            reset_app
         ])
         .build(tauri::generate_context!())
         .expect("failed to start Lobby")

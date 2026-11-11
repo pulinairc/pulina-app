@@ -682,4 +682,12 @@ export const FI = {
   'The code ran out. Press Continue for a new one.': 'Koodi vanheni. Paina Jatka, niin saat uuden.',
   'I already have an account': 'Minulla on jo tunnus',
   'I have a shell account': 'Minulla on pulina.fi-shell',
+  'Sign out or start over': 'Kirjaudu ulos tai aloita alusta',
+  'Sign out': 'Kirjaudu ulos',
+  'Disconnects and forgets this connection. History, settings and people stay.':
+    'Katkaisee yhteyden ja unohtaa sen. Viestihistoria, asetukset ja ihmiset säilyvät.',
+  'Reset the app': 'Nollaa sovellus',
+  'Removes everything the app keeps on this device: connections, history, settings and people. It starts as if new.':
+    'Poistaa kaiken, mitä sovellus on tallentanut tälle laitteelle: yhteydet, viestihistorian, asetukset ja ihmiset. Sovellus käynnistyy kuin uutena.',
+  'Press again to confirm': 'Vahvista painamalla uudelleen',
 };
