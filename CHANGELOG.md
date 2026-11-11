@@ -1,3 +1,9 @@
+### [Unreleased]
+
+* Add password strength meter and email to account applications
+* Add password reset for own accounts
+* Change account forms to full width
+
 ### 1.11.0: 2026-11-11
 
 * Add own accounts for forks: apply, wait and sign in

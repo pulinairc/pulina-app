@@ -4387,6 +4387,10 @@ dialog.welcome::backdrop {
   align-items: flex-start;
   text-align: left;
 }
+/* Forms that start from the left fill the column: heading, text and fields one width. */
+.welcome-top-left .welcome-lead {
+  max-width: none;
+}
 .welcome h1 {
   margin: 0;
   font-size: 28px;
@@ -5124,4 +5128,64 @@ dialog.welcome::backdrop {
 }
 .field.narrow {
   max-width: 320px;
+}
+
+/* Password field with Show beside it, and the strength meter under it. */
+.password-box {
+  position: relative;
+  width: 100%;
+}
+.password-box .field {
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 72px;
+}
+.password-show {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--dim);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.password-show:hover {
+  color: var(--strong);
+  background: var(--hover);
+}
+.pw-meter {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+.pw-meter span {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line-strong);
+  transition: background-color 0.2s ease;
+}
+.pw-meter[data-level="1"] span:nth-child(-n + 1),
+.pw-meter[data-level="2"] span:nth-child(-n + 2) {
+  background: var(--new);
+}
+.pw-meter.ok[data-level="3"] span:nth-child(-n + 3),
+.pw-meter.ok[data-level="4"] span {
+  background: var(--mention);
+}
+.pw-verdict {
+  min-height: 1.5em;
+}
+.pw-tip {
+  color: var(--faint);
+}
+.signin-forgot {
+  align-self: flex-start;
+  font-size: 14px;
 }

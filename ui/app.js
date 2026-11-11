@@ -4706,9 +4706,65 @@ const IDENT_MAX = 10;
 const ACCOUNT_ERRORS = {
   taken: 'That account is already taken.',
   bad_name: 'An account can have letters, digits, - and _.',
+  bad_email: 'Check the email address.',
   short_password: 'The password needs at least 10 characters.',
+  weak_password: 'That password is too easy to guess.',
+  name_in_password: "The password can't contain the account name.",
+  breached_password: 'This password has turned up in a data breach. Pick another one.',
   wrong: 'Wrong account or password.',
 };
+// zxcvbn scores 0-4; 3 is the least the form takes. It guesses like a cracker would, against
+// common passwords, names, words, dates and keyboard runs, in English and Finnish.
+const PASSWORD_MIN = 10;
+const PASSWORD_OK_SCORE = 3;
+const PASSWORD_LEVELS = ['Weak', 'Weak', 'Weak', 'Okay', 'Strong'];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+let passwordCheck = null;
+
+/** The estimator, loaded only when someone starts typing a password: its word lists are large. */
+async function passwordEstimator() {
+  passwordCheck ??= import('./vendor/zxcvbn.js').then((m) => m.estimator(t));
+  return passwordCheck;
+}
+
+/** Score, verdict and what to fix for the password in the apply form. */
+async function judgePassword() {
+  const password = $('apply-password').value;
+  const account = $('apply-account').value.trim().toLowerCase();
+  if (!password) {
+    return { score: -1, text: t('At least 10 characters. A longer one is better.') };
+  }
+  if (account && password.toLowerCase().includes(account)) {
+    return { score: 0, text: t("The password can't contain the account name.") };
+  }
+  const est = await passwordEstimator();
+  const hints = [account, $('apply-email').value, $('apply-known').value, BRAND.accounts?.host, BRAND.name].filter(Boolean);
+  const r = est.check(password, hints);
+  const score = password.length < PASSWORD_MIN ? Math.min(r.score, 1) : r.score;
+  const level = t(PASSWORD_LEVELS[score]);
+  if (password.length < PASSWORD_MIN) {
+    return { score, text: `${level} · ${t('Characters still missing: {n}.', { n: PASSWORD_MIN - password.length })}` };
+  }
+  const time = r.crackTimes.offlineSlowHashingXPerSecond.display;
+  if (score === PASSWORD_OK_SCORE) {
+    return { score, text: `${level} · ${t('A longer one would be even better.')}` };
+  }
+  const why =
+    score > PASSWORD_OK_SCORE
+      ? t('Guessing it would take {time}.', { time })
+      : r.feedback.warning || t('Guessing it would take only {time}.', { time });
+  return { score, text: `${level} · ${why}` };
+}
+
+async function renderPasswordMeter() {
+  const verdict = await judgePassword();
+  $('pw-meter').dataset.level = String(
+    verdict.score < 0 ? 0 : verdict.score < PASSWORD_OK_SCORE ? Math.max(1, verdict.score) : verdict.score,
+  );
+  $('pw-meter').classList.toggle('ok', verdict.score >= PASSWORD_OK_SCORE);
+  $('pw-verdict').textContent = verdict.text;
+  return verdict;
+}
 
 function accountWaiting() {
   try {
@@ -4731,8 +4787,10 @@ function showAccountChoice() {
   $('accounts-lead').textContent = acc.lead;
   $('accounts-own-title').textContent = t('Own {host} account', { host });
   $('accounts-mask-line').textContent = t('Others see you as nick!account@{host}, your own address stays hidden', { host });
-  $('apply-title').textContent = t('Apply for a {host} account', { host });
-  $('signin-title').textContent = t('Sign in with your {host} account', { host });
+  // "pulina.fi-tunnus" must not break at its hyphen: a non-breaking one keeps it whole.
+  const whole = (text) => text.replaceAll(`${host}-`, `${host}\u2011`);
+  $('apply-title').textContent = whole(t('Apply for a {host} account', { host }));
+  $('signin-title').textContent = whole(t('Sign in with your {host} account', { host }));
   showApplied();
 }
 
@@ -4770,10 +4828,30 @@ function accountError(box, answer) {
   box.textContent = t(ACCOUNT_ERRORS[answer?.error] ?? 'Sending the application failed. Try again in a moment.');
 }
 
+$('apply-password').addEventListener('input', () => {
+  $('pw-tip').hidden = false;
+  renderPasswordMeter();
+});
+$('apply-show').addEventListener('click', () => {
+  const field = $('apply-password');
+  const shown = field.type === 'text';
+  field.type = shown ? 'password' : 'text';
+  $('apply-show').textContent = t(shown ? 'Show' : 'Hide');
+});
+
 $('welcome-apply').addEventListener('submit', async (e) => {
   e.preventDefault();
   const account = $('apply-account').value.trim().toLowerCase();
-  const body = { account, password: $('apply-password').value, known: $('apply-known').value.trim() };
+  const email = $('apply-email').value.trim();
+  if (!EMAIL_RE.test(email)) {
+    return accountError($('apply-error'), { error: 'bad_email' });
+  }
+  const verdict = await renderPasswordMeter();
+  if (verdict.score < PASSWORD_OK_SCORE) {
+    const error = $('apply-password').value.length < PASSWORD_MIN ? 'short_password' : 'weak_password';
+    return accountError($('apply-error'), { error });
+  }
+  const body = { account, email, password: $('apply-password').value, known: $('apply-known').value.trim() };
   const answer = await invoke('account_call', { action: 'apply', body }).catch(() => null);
   if (answer?.status !== 'pending') {
     return accountError($('apply-error'), answer);
@@ -4793,6 +4871,19 @@ $('welcome-signin').addEventListener('submit', async (e) => {
     return accountError($('signin-error'), answer?.error ? answer : { error: 'wrong' });
   }
   useAccount(account, answer);
+});
+
+$('signin-forgot').addEventListener('click', async () => {
+  const account = $('signin-account').value.trim().toLowerCase();
+  const note = $('signin-note');
+  note.hidden = false;
+  if (!account) {
+    note.textContent = t('Write your account name first.');
+    $('signin-account').focus();
+    return;
+  }
+  await invoke('account_call', { action: 'forgot', body: { account } }).catch(() => null);
+  note.textContent = t('If the account has an email address, a link for a new password is on its way there.');
 });
 
 $('welcome-cancel-apply').addEventListener('click', async () => {
