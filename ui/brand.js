@@ -13,7 +13,12 @@ export const BRAND = {
   // Only #pulina: the welcome asks the nick and nothing else. The network shows as Pulina.
   start: { network: 'Pulina', host: 'irc.quakenet.org', channels: '#pulina', only: true },
   // Own accounts on chat.pulina.fi: an always-on connection that shows as nick!account@pulina.fi.
-  accounts: { host: 'pulina.fi', title: 'Liity pulinalaiseksi', lead: 'Pulina-tunnuksia ja shellejä myönnetään kanavan vakiokasvoille.' },
+  accounts: {
+    host: 'pulina.fi',
+    title: 'Liity pulinalaiseksi',
+    lead: 'Pulina-tunnuksia ja shellejä myönnetään kanavan vakiokasvoille.',
+    shell: true,
+  },
   welcome: 'Welcome to IRC chat',
   startNote: 'The #pulina history is kept in the background.',
   // #pulina's rules from https://www.pulina.fi/saannot/, shown in the welcome before joining.

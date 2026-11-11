@@ -10,6 +10,9 @@ Group=pulina-accounts
 EnvironmentFile=/etc/pulina-accounts.env
 StateDirectory=pulina-accounts
 StateDirectoryMode=0700
+# pulina-verify reaches the service through a socket here.
+RuntimeDirectory=pulina-accounts
+RuntimeDirectoryMode=0755
 UMask=0077
 ExecStart=/usr/bin/python3 -I /var/www/pulina.fi/scripts/pulina-accounts.py
 Restart=always

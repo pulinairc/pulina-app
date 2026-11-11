@@ -1,0 +1,75 @@
+#!/usr/bin/python3 -I
+"""pulina-shell-setup <user> <port>: an always-on lobby-server for an existing shell user.
+
+It connects through the user's own irssi (irssiproxy), so the Pulina app shows their irssi
+session with their nick instead of opening a second connection. The user then signs in from
+the app with pulina-verify. Run as root, once per user.
+
+Everything in the user's home is read and written as that user, so a symlink there can never
+make root read or write another file.
+"""
+import os
+import pwd
+import re
+import secrets
+import sqlite3
+import subprocess
+import sys
+import time
+
+DB = '/var/lib/pulina-accounts/accounts.db'
+MAP = '/etc/nginx/pulina-accounts.map'
+NAME_RE = re.compile(r'[a-z][a-z0-9_-]{1,14}')
+
+
+def as_user(name, *cmd, stdin=None):
+    return subprocess.run(['runuser', '-u', name, '--', *cmd], input=stdin, capture_output=True, text=True, check=True).stdout
+
+
+def toml_string(value):
+    if any(c in value for c in '"\\\n\r'):
+        sys.exit('irssiproxy password has characters this script does not quote')
+    return f'"{value}"'
+
+
+def main(name, port):
+    if not NAME_RE.fullmatch(name) or not port.isdigit() or not 1024 < int(port) < 65536:
+        sys.exit('bad name or port')
+    user = pwd.getpwnam(name)
+    if user.pw_uid < 1000:
+        sys.exit('not a shell user')
+    irssi = as_user(name, 'cat', f'{user.pw_dir}/.irssi/config')
+    proxy_port = re.search(r'irssiproxy_ports\s*=\s*"QuakeNet=(\d+)"', irssi)
+    proxy_pass = re.search(r'irssiproxy_password\s*=\s*"([^"]*)"', irssi)
+    nick = re.search(r'\bnick\s*=\s*"([^"]+)"', irssi)
+    if not (proxy_port and proxy_pass and nick):
+        sys.exit('no irssiproxy for QuakeNet in their irssi config')
+    token = secrets.token_urlsafe(32)
+    config = (f'listen = "127.0.0.1:{port}"\nnick = {toml_string(nick.group(1))}\ntoken = "{token}"\n\n'
+              f'[[network]]\nname = "Pulina"\nhost = "127.0.0.1"\nport = {proxy_port.group(1)}\n'
+              f'password = {toml_string(proxy_pass.group(1))}\n')
+    home = user.pw_dir
+    as_user(name, 'sh', '-c', 'umask 077 && mkdir -p "$1/.config/lobby-server" "$1/.local/share/lobby-server" '
+            '&& cat > "$1/.config/lobby-server/config.toml"', 'sh', home, stdin=config)
+
+    with sqlite3.connect(DB) as conn:
+        if conn.execute('SELECT 1 FROM accounts WHERE name = ?', (name,)).fetchone():
+            sys.exit('already an account')
+        conn.execute('INSERT INTO accounts (name, salt, hash, known, status, decision, created, port, token, shell) '
+                     'VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 1)',
+                     (name, b'', b'', '', 'shell', secrets.token_urlsafe(24), int(time.time()), int(port), token))
+    subprocess.run(['systemctl', 'enable', '--now', f'lobby-server@{name}.service'], check=True)
+    with open(MAP) as f:
+        known = f.read()
+    if not re.search(rf'^{name} ', known, re.M):
+        with open(MAP, 'a') as f:
+            f.write(f'{name} {port};\n')
+    subprocess.run(['nginx', '-t', '-q'], check=True)
+    subprocess.run(['systemctl', 'reload', 'nginx'], check=True)
+    print(f'{name}: lobby-server on {port}, through irssiproxy {proxy_port.group(1)}')
+
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        sys.exit('usage: pulina-shell-setup <user> <port>')
+    main(sys.argv[1], sys.argv[2])

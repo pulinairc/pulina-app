@@ -5,6 +5,9 @@ POST /accounts/apply    {account, email, password, known} -> {status: "pending",
 POST /accounts/status   {account, password or check} -> {status} and, once approved, {url, token}
 POST /accounts/cancel   {account, password}         -> {status: "cancelled"}
 POST /accounts/forgot   {account}                   -> {status: "sent"}, mails a reset link if it can
+POST /accounts/shell    {account, password}         -> {status: "verifying", code} for a shell user set up beforehand
+POST /accounts/shell/check {account, code}          -> {status} and, once proven, {url, token}
+unix socket VERIFY_SOCK  <code>                      -> pulina-verify, run in the shell, proves the account is theirs
 GET  /accounts/reset/<token>                            -> the page for a new password
 POST /accounts/reset/<token>  password
 GET  /accounts/pending  (X-Key: Kummitus' key)     -> applications Rolle has not been told about
@@ -25,9 +28,12 @@ import hmac
 import html
 import json
 import os
+import pwd
 import re
 import secrets
+import socket
 import sqlite3
+import struct
 import subprocess
 import sys
 import threading
@@ -71,6 +77,11 @@ CONTROL_RE = re.compile(r'[\x00-\x1f\x7f]')
 HASHING = threading.BoundedSemaphore(4)
 FAILURES = {}
 FAILURES_LOCK = threading.Lock()
+VERIFY_SOCK = os.environ.get('VERIFY_SOCK', '/run/pulina-accounts/verify.sock')
+CODE_SECONDS = 600
+# No 0/O or 1/I: the code is typed off a screen.
+CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+CODE_LEN = 6
 MAX_KNOWN = 200
 MAX_BODY = 4096
 SCRYPT = dict(n=2 ** 14, r=8, p=1, dklen=32)
@@ -84,7 +95,8 @@ def db():
         status TEXT NOT NULL, decision TEXT NOT NULL, notified INTEGER NOT NULL DEFAULT 0,
         port INTEGER, token TEXT, created INTEGER NOT NULL, "check" TEXT)""")
     have = {r[1] for r in conn.execute('PRAGMA table_info(accounts)')}
-    for column in ('email TEXT', 'reset TEXT', 'reset_until INTEGER', 'reset_sent INTEGER'):
+    for column in ('email TEXT', 'reset TEXT', 'reset_until INTEGER', 'reset_sent INTEGER', 'shell INTEGER',
+                   'code TEXT', 'code_until INTEGER', 'code_ok INTEGER', 'pending_salt BLOB', 'pending_hash BLOB'):
         if column.split()[0] not in have:
             conn.execute(f'ALTER TABLE accounts ADD COLUMN {column}')
     return conn
@@ -244,7 +256,8 @@ class Handler(BaseHTTPRequestHandler):
         if data is None:
             return self.json(400, {'error': 'bad request'})
         routes = {'/accounts/apply': self.apply, '/accounts/status': self.status, '/accounts/cancel': self.cancel,
-                  '/accounts/forgot': self.forgot, '/accounts/notified': self.notified, '/accounts/admin/remove': self.remove}
+                  '/accounts/forgot': self.forgot, '/accounts/notified': self.notified, '/accounts/admin/remove': self.remove,
+                  '/accounts/shell': self.shell_start, '/accounts/shell/check': self.shell_check}
         if url.path in routes:
             return routes[url.path](data)
         if url.path.startswith('/accounts/review/'):
@@ -292,6 +305,40 @@ class Handler(BaseHTTPRequestHandler):
                 # The waiting key has done its job; from now on only the password signs in.
                 conn.execute('UPDATE accounts SET "check" = NULL WHERE name = ?', (row['name'],))
         self.json(200, answer)
+
+    def shell_start(self, data):
+        """A shell user picks an app password; it counts once pulina-verify proves the shell is theirs."""
+        name = str(data.get('account', '')).strip().lower()
+        password = str(data.get('password', ''))
+        if failed_recently('shell:' + name):
+            return self.json(429, {'error': 'locked'})
+        note_failure('shell:' + name)
+        with db() as conn:
+            row = conn.execute("SELECT * FROM accounts WHERE name = ? AND shell = 1", (name,)).fetchone()
+            if not row:
+                return self.json(404, {'error': 'no_shell'})
+            problem = password_problem(name, password)
+            if problem:
+                return self.json(400, {'error': problem})
+            code = ''.join(secrets.choice(CODE_CHARS) for _ in range(CODE_LEN))
+            salt = secrets.token_bytes(16)
+            conn.execute('UPDATE accounts SET code = ?, code_until = ?, code_ok = 0, pending_salt = ?, pending_hash = ? WHERE name = ?',
+                         (code, int(time.time()) + CODE_SECONDS, salt, hashed(password, salt), name))
+        self.json(200, {'status': 'verifying', 'code': code})
+
+    def shell_check(self, data):
+        name = str(data.get('account', '')).strip().lower()
+        code = str(data.get('code', '')).strip().upper()
+        with db() as conn:
+            row = conn.execute('SELECT * FROM accounts WHERE name = ? AND shell = 1', (name,)).fetchone()
+            if not row or not row['code'] or not hmac.compare_digest(row['code'], code):
+                return self.json(401, {'error': 'wrong'})
+            if not row['code_ok']:
+                if row['code_until'] < time.time():
+                    return self.json(410, {'error': 'expired'})
+                return self.json(200, {'status': 'verifying'})
+            conn.execute('UPDATE accounts SET code = NULL, code_ok = 0 WHERE name = ?', (name,))
+        self.json(200, {'status': 'approved', 'url': f"wss://chat.pulina.fi/u/{name}/", 'token': row['token']})
 
     def cancel(self, data):
         name = str(data.get('account', '')).strip().lower()
@@ -438,7 +485,53 @@ class Handler(BaseHTTPRequestHandler):
         pass
 
 
+def verify(name, code):
+    """pulina-verify from the shell of `name`: the waiting app password becomes the real one."""
+    now = int(time.time())
+    with db() as conn:
+        row = conn.execute('SELECT * FROM accounts WHERE name = ? AND shell = 1', (name,)).fetchone()
+        if not row or not row['code'] or not hmac.compare_digest(row['code'], code):
+            return 'Koodi ei käy. Tarkista se Pulina-sovelluksesta.'
+        if row['code_until'] < now:
+            return 'Koodi on vanhentunut. Aloita alusta Pulina-sovelluksessa.'
+        token_ws = row['token']
+        if row['status'] == 'approved':
+            # A second proof is a new password: whoever had the old one is shut out.
+            fresh = secrets.token_urlsafe(32)
+            done = subprocess.run(['sudo', '-n', TOKEN_SCRIPT, name, fresh], capture_output=True, text=True, timeout=60)
+            if done.returncode != 0:
+                print(f'token change for {name} failed: {done.stderr[-300:]}', file=sys.stderr)
+                return 'Jokin meni vikaan. Yritä hetken päästä uudelleen.'
+            token_ws = fresh
+        conn.execute("UPDATE accounts SET salt = pending_salt, hash = pending_hash, pending_salt = NULL, pending_hash = NULL, "
+                     "status = 'approved', code_ok = 1, token = ? WHERE name = ?", (token_ws, name))
+    return 'Valmis! Palaa Pulina-sovellukseen.'
+
+
+def serve_verify():
+    """The kernel says who connected (SO_PEERCRED), so the shell account proves itself."""
+    os.makedirs(os.path.dirname(VERIFY_SOCK), exist_ok=True)
+    if os.path.exists(VERIFY_SOCK):
+        os.unlink(VERIFY_SOCK)
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    server.bind(VERIFY_SOCK)
+    os.chmod(VERIFY_SOCK, 0o666)
+    server.listen(8)
+    while True:
+        client, _ = server.accept()
+        with client:
+            client.settimeout(5)
+            try:
+                _, uid, _ = struct.unpack('3i', client.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, struct.calcsize('3i')))
+                name = pwd.getpwuid(uid).pw_name
+                code = client.recv(64).decode(errors='replace').strip().upper()
+                client.sendall((verify(name, code) + '\n').encode())
+            except (OSError, KeyError) as e:
+                print(f'verify failed: {e}', file=sys.stderr)
+
+
 if __name__ == '__main__':
     os.makedirs(os.path.dirname(DB), exist_ok=True)
     db().close()
+    threading.Thread(target=serve_verify, daemon=True).start()
     ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()

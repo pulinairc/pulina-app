@@ -1,0 +1,23 @@
+#!/usr/bin/python3 -I
+"""pulina-verify <code>: proves to the Pulina app that this shell account is yours.
+
+The accounts service asks the kernel which user is on the other end of the socket, so only
+the account's own shell can confirm its code. Install: /usr/local/bin/pulina-verify
+"""
+import socket
+import sys
+
+SOCK = '/run/pulina-accounts/verify.sock'
+
+if len(sys.argv) != 2:
+    print('Käyttö: pulina-verify KOODI')
+    sys.exit(2)
+with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+    s.settimeout(10)
+    try:
+        s.connect(SOCK)
+        s.sendall(sys.argv[1].strip().upper().encode()[:32])
+        print(s.recv(256).decode(errors='replace').strip())
+    except OSError:
+        print('Pulina-tunnuspalvelu ei vastaa juuri nyt. Yritä hetken päästä uudelleen.')
+        sys.exit(1)
