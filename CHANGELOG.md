@@ -7,6 +7,7 @@
 * Fix the start lamp splitting from its light
 * Change the cursor to sit before a sent file's link
 * Add Settings to the Mac app menu
+* Fix the maker's name in About
 
 ### 1.8.1: 2026-11-11
 
