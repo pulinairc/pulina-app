@@ -6,8 +6,8 @@ export const BRAND = {
   site: 'https://github.com/pulinairc/pulina-app',
   // Finnish until another language is picked in Settings.
   lang: 'fi',
-  // The welcome's quick start: #pulina on QuakeNet.
-  start: { network: 'QuakeNet', channels: '#pulina' },
+  // Only #pulina on QuakeNet: the welcome asks the nick and nothing else.
+  start: { network: 'QuakeNet', channels: '#pulina', only: true },
   startNote: 'The #pulina history is kept in the background.',
   icons: [
     ['pulina-neon', 'Pulina neon'],
