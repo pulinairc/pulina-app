@@ -587,14 +587,22 @@ fn app_info() -> AppInfo {
 
 #[cfg(desktop)]
 const ABOUT_MENU_ID: &str = "about";
+#[cfg(desktop)]
+const SETTINGS_MENU_ID: &str = "settings";
 
 /// macOS: the standard menu bar, with Help > About Lobby opening the About section in Settings.
 #[cfg(target_os = "macos")]
 fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
-    use tauri::menu::{HELP_SUBMENU_ID, Menu, MenuItem};
+    use tauri::menu::{HELP_SUBMENU_ID, Menu, MenuItem, PredefinedMenuItem};
     let menu = Menu::default(app)?;
+    let name = &app.package_info().name;
     if let Some(help) = menu.get(HELP_SUBMENU_ID).and_then(|m| m.as_submenu().cloned()) {
-        help.append(&MenuItem::with_id(app, ABOUT_MENU_ID, "About Lobby", true, None::<&str>)?)?;
+        help.append(&MenuItem::with_id(app, ABOUT_MENU_ID, format!("About {name}"), true, None::<&str>)?)?;
+    }
+    // The app's own menu: About, then Settings… as on every Mac app.
+    if let Some(own) = menu.items()?.first().and_then(|m| m.as_submenu().cloned()) {
+        own.insert(&MenuItem::with_id(app, SETTINGS_MENU_ID, "Settings…", true, Some("CmdOrCtrl+,"))?, 2)?;
+        own.insert(&PredefinedMenuItem::separator(app)?, 3)?;
     }
     Ok(menu)
 }
@@ -610,6 +618,9 @@ pub fn run() {
         .on_menu_event(|app, event| {
             if event.id().0 == ABOUT_MENU_ID {
                 let _ = app.emit("show-about", ());
+            }
+            if event.id().0 == SETTINGS_MENU_ID {
+                let _ = app.emit("show-settings", ());
             }
         })
         .plugin({

@@ -128,6 +128,7 @@ const el = {
   statusAction: $('status-action'),
   splash: $('splash'),
   splashLight: $('splash-light'),
+  splashLamp: $('splash-lamp'),
   welcome: $('welcome'),
   welcomeWays: $('welcome-ways'),
   welcomeQuick: $('welcome-quick'),
@@ -1670,7 +1671,7 @@ const CONE_TOP_HALF_PX = 24;
 const CONE_SPREAD = 0.41;
 const splashStart = performance.now();
 let splashDone = false;
-requestAnimationFrame(() => el.splash.classList.add('lit'));
+requestAnimationFrame(() => el.splashLamp.classList.add('lit'));
 setTimeout(splashReady, SPLASH_MAX_MS);
 
 function splashReady() {
@@ -1683,66 +1684,51 @@ function splashReady() {
 
 const px = (points) => points.map(([x, y]) => `${x}px ${y}px`).join(', ');
 
-/** The cover with a hole in it, cut by the four points. */
-function splashHole(points) {
-  const w = innerWidth;
-  const hgt = innerHeight;
-  const hole = px([...points, points[0]]);
-  return `polygon(evenodd, 0 0, ${w}px 0, ${w}px ${hgt}px, 0 ${hgt}px, 0 0, ${hole})`;
-}
-
+// Only opacity and transform move, so the animation runs smoothly while the app is busy starting.
 function openSplash() {
   const cover = el.splash;
   const light = el.splashLight;
+  const lamp = el.splashLamp;
+  const done = () => {
+    cover.remove();
+    light.remove();
+    lamp.remove();
+  };
+  // Whatever a slow frame does, nothing of the splash outlives this.
+  setTimeout(done, SPLASH_CONE_MS + SPLASH_OPEN_MS + 400);
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    cover.style.opacity = '0';
-    setTimeout(() => {
-      cover.remove();
-      light.remove();
-    }, 250);
+    cover.style.opacity = lamp.style.opacity = '0';
+    setTimeout(done, 250);
     return;
   }
-  const bulb = cover.querySelector('.splash-bulb').getBoundingClientRect();
+  const bulb = lamp.querySelector('.splash-bulb').getBoundingClientRect();
   const x = bulb.left + bulb.width / 2;
   const y = bulb.top + bulb.height / 2;
   const foot = Math.min(innerHeight * 0.85, y + 330);
   const half = (foot - y) * CONE_SPREAD;
-  const far = 60;
-  // The hole in the cover and the light over it take the same shape at each step.
-  const shape = (points) => {
-    cover.style.clipPath = splashHole(points);
-    light.style.clipPath = `polygon(${px(points)})`;
-  };
-  shape([
-    [x, y],
-    [x, y],
-    [x, y],
-    [x, y],
-  ]);
-  cover.getBoundingClientRect();
-  cover.classList.add('opening');
-  cover.style.transition = light.style.transition = `clip-path ${SPLASH_CONE_MS}ms ease-out`;
-  shape([
+  light.style.clipPath = `polygon(${px([
     [x - CONE_TOP_HALF_PX, y],
     [x + CONE_TOP_HALF_PX, y],
     [x + half, foot],
     [x - half, foot],
-  ]);
+  ])})`;
+  light.style.transformOrigin = `${x}px ${y}px`;
+  light.style.transform = 'scale(0.3, 0)';
+  light.style.opacity = '0';
+  light.getBoundingClientRect();
+  light.style.transition = `transform ${SPLASH_CONE_MS}ms ease-out, opacity ${SPLASH_CONE_MS}ms ease-out`;
+  light.style.transform = 'none';
+  light.style.opacity = '1';
   setTimeout(() => {
     const open = `${SPLASH_OPEN_MS}ms cubic-bezier(0.65, 0, 0.35, 1)`;
-    cover.style.transition = `clip-path ${open}`;
-    light.style.transition = `clip-path ${open}, opacity ${open}`;
+    cover.classList.add('opening');
+    cover.style.transition = `opacity ${open}`;
+    cover.style.opacity = '0';
+    light.style.transition = `transform ${open}, opacity ${open}`;
+    light.style.transform = 'scale(2.4, 2.2)';
     light.style.opacity = '0';
-    shape([
-      [-far, -far],
-      [innerWidth + far, -far],
-      [innerWidth + far, innerHeight + far],
-      [-far, innerHeight + far],
-    ]);
-    setTimeout(() => {
-      cover.remove();
-      light.remove();
-    }, SPLASH_OPEN_MS + 50);
+    lamp.classList.add('opening');
+    setTimeout(done, SPLASH_OPEN_MS + 50);
   }, SPLASH_CONE_MS + 80);
 }
 
@@ -3514,7 +3500,9 @@ async function runLocal(b, text) {
 }
 
 async function send() {
-  const text = settingOn(EMOTICON_SETTING) ? convertEmoticons(el.input.value) : el.input.value;
+  // A file's link sent without words keeps no space from the gap left in front of it.
+  const typed = el.input.value.replace(/^ (?=https?:\/\/)/, '');
+  const text = settingOn(EMOTICON_SETTING) ? convertEmoticons(typed) : typed;
   const b = state.buffers.get(state.current);
   if (!text.trim() || !b) {
     return;
@@ -4902,6 +4890,7 @@ async function start() {
   await listen('whois', (e) => onWhois(e.payload));
   await listen('notification-click', (e) => openNotified(e.payload));
   await listen('show-about', showAbout);
+  await listen('show-settings', () => el.settings.open || el.gear.click());
   // iPhone: the volume buttons step the text size.
   await listen('volume-key', (e) => applyTextSize(textSize() + e.payload * TEXT_SIZE_STEP));
   showVersion();
@@ -6920,6 +6909,17 @@ function insertAtCursor(text) {
   el.input.focus();
 }
 
+/** A sent file's link, with the cursor left in front of it for a few words about the file. */
+function insertLink(url) {
+  const start = el.input.selectionStart ?? el.input.value.length;
+  const before = el.input.value.slice(0, start);
+  const gap = before && !before.endsWith(' ') ? ' ' : '';
+  el.input.setRangeText(`${gap} ${url}`, start, el.input.selectionEnd ?? start, 'start');
+  el.input.setSelectionRange(start + gap.length, start + gap.length);
+  fitInput();
+  el.input.focus();
+}
+
 async function uploadFiles(files) {
   const targets = await uploadTargets();
   for (const file of files) {
@@ -6936,7 +6936,7 @@ async function uploadFiles(files) {
             'x-type': file.type || 'application/octet-stream',
           },
         });
-        insertAtCursor(url);
+        insertLink(url);
         failure = '';
         break;
       } catch (e) {

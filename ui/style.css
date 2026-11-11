@@ -4429,8 +4429,7 @@ dialog.welcome::backdrop {
   align-self: flex-start;
 }
 
-/* Cold start: a lamp switches on and the chat opens through its light. app.js moves the
-   hole in this cover from the bulb to the cone to the whole window, then removes it. */
+/* Cold start: a lamp switches on, its light grows and the cover fades into the chat. */
 .splash {
   position: fixed;
   inset: 0;
@@ -4449,24 +4448,27 @@ dialog.welcome::backdrop {
   background: linear-gradient(rgb(176 104 143 / 55%), rgb(176 104 143 / 0%) 75%);
   clip-path: polygon(50% 0, 50% 0, 50% 0, 50% 0);
 }
+/* Its own layer above the cover and the light, so their moving edges never cut through it. */
 .splash-lamp {
-  position: absolute;
+  position: fixed;
+  z-index: 1002;
+  pointer-events: none;
   left: 50%;
   top: calc(34% - 132px);
   margin-left: -60px;
   overflow: visible;
   transition:
-    opacity 0.35s ease 0.25s,
-    transform 0.6s cubic-bezier(0.65, 0, 0.35, 1) 0.2s;
+    opacity 0.35s ease 0.15s,
+    transform 0.6s cubic-bezier(0.65, 0, 0.35, 1);
 }
-.splash.opening .splash-lamp {
+.splash-lamp.opening {
   opacity: 0;
   transform: translateY(-40px);
 }
 .splash-bulb {
   opacity: 0.15;
 }
-.splash.lit .splash-bulb {
+.splash-lamp.lit .splash-bulb {
   animation: splash-flicker 0.3s linear forwards;
 }
 @keyframes splash-flicker {
