@@ -4863,7 +4863,6 @@ function accountError(box, answer) {
 }
 
 wirePassword('apply');
-wirePassword('shell');
 
 $('welcome-apply').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -4897,7 +4896,8 @@ $('welcome-signin').addEventListener('submit', async (e) => {
   useAccount(account, answer);
 });
 
-// A shell user proves the shell is theirs with pulina-verify; the app waits for it here.
+// A shell user needs no password: pulina-verify, run in their shell, proves who they are on
+// each device. The app waits for it here.
 const SHELL_POLL_MS = 2500;
 let shellPoll = null;
 
@@ -4912,13 +4912,11 @@ $('welcome-shell').addEventListener('submit', async (e) => {
   e.preventDefault();
   const error = $('shell-error');
   error.hidden = true;
-  if (shellPoll || !(await passwordOk('shell', error))) {
+  const account = $('shell-account').value.trim().toLowerCase();
+  if (shellPoll || !account) {
     return;
   }
-  const account = $('shell-account').value.trim().toLowerCase();
-  const answer = await invoke('account_call', { action: 'shell', body: { account, password: $('shell-password').value } }).catch(
-    () => null,
-  );
+  const answer = await invoke('account_call', { action: 'shell', body: { account } }).catch(() => null);
   if (!answer?.code) {
     return accountError(error, answer);
   }

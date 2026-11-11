@@ -1,3 +1,8 @@
+### [Unreleased]
+
+* Change sign-in choices to two buttons side by side
+* Change shell sign-in to need no password
+
 ### 1.12.0: 2026-11-11
 
 * Add password strength meter and email to account applications

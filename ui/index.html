@@ -512,8 +512,19 @@
           <button id="accounts-apply" class="account-btn go" type="button">Apply for an account</button>
         </div>
       </div>
-      <button id="accounts-signin" class="link-btn account-link" type="button">I already have an account</button>
-      <button id="accounts-shell" class="link-btn account-link" type="button" hidden>I have a shell account</button>
+      <div class="account-existing">
+        <span class="account-existing-label">Already have one?</span>
+        <div class="account-existing-row">
+          <button id="accounts-signin" class="account-chip" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="M11 12l8-8M16 7l3 3M14 9l2 2"/></svg>
+            <span>Sign in with an account</span>
+          </button>
+          <button id="accounts-shell" class="account-chip" type="button" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9l3 3-3 3M12 15h5"/></svg>
+            <span>Sign in with a shell</span>
+          </button>
+        </div>
+      </div>
     </div>
     <form id="welcome-apply" class="welcome-step welcome-more" hidden>
       <div class="welcome-top welcome-top-left">
@@ -553,22 +564,11 @@
       <div class="welcome-top welcome-top-left">
         <button class="link-btn step-back" type="button" data-back="accounts">← Back</button>
         <h1 id="shell-title"></h1>
-        <p class="welcome-lead">The app connects through your own irssi, so you see the same chat with your own nick. Your irssi stays as it is.</p>
+        <p class="welcome-lead">The app connects through your own irssi, so you see the same chat with your own nick. No password needed: your shell confirms it is you.</p>
       </div>
       <div class="welcome-field">
         <label class="field-label" for="shell-account">Shell account</label>
         <input id="shell-account" class="field" type="text" maxlength="15" autocomplete="username" autocapitalize="off" spellcheck="false">
-      </div>
-      <div class="welcome-field">
-        <label class="field-label" for="shell-password">A password for the app</label>
-        <div class="password-box">
-          <input id="shell-password" class="field" type="password" maxlength="256" autocomplete="new-password" autocapitalize="off" spellcheck="false">
-          <button id="shell-show" class="password-show" type="button">Show</button>
-        </div>
-        <div id="shell-meter" class="pw-meter" data-level="0" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-        <span id="shell-verdict" class="hint pw-verdict" aria-live="polite">At least 10 characters. A longer one is better.</span>
-        <span id="shell-tip" class="hint pw-tip" hidden>A password manager such as Bitwarden makes up a strong password and remembers it for you.</span>
-        <span class="hint">Only for the app. Your shell password stays as it is.</span>
       </div>
       <div id="shell-proof" class="shell-proof" hidden>
         <p class="hint">Log in to your shell and run this within 10 minutes:</p>

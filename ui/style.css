@@ -5194,6 +5194,9 @@ dialog.welcome::backdrop {
   flex-direction: column;
   gap: 8px;
 }
+.shell-proof[hidden] {
+  display: none;
+}
 .shell-command {
   padding: 12px 14px;
   border: 1px solid var(--line-strong);
@@ -5206,4 +5209,65 @@ dialog.welcome::backdrop {
     Menlo,
     monospace;
   user-select: all;
+}
+
+/* Signing in with what you already have: two equal buttons under one question. */
+.account-existing {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 6px;
+}
+.account-existing-label {
+  color: var(--dim);
+  font-size: 14px;
+}
+.account-existing-row {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 10px;
+}
+.account-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--raised) 60%, transparent);
+  color: var(--strong);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+.account-chip:hover {
+  border-color: var(--mention);
+  background: var(--raised);
+}
+.account-chip[hidden] {
+  display: none;
+}
+.account-chip svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: var(--mention);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+@media (max-width: 380px) {
+  .account-existing-row {
+    grid-auto-flow: row;
+  }
 }
