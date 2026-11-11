@@ -19,6 +19,12 @@ export const BRAND = {
     lead: 'Pulina-tunnuksia ja shellejä myönnetään kanavan vakiokasvoille.',
     shell: true,
   },
+  // Files go to Pulina's own host (backlog/uploads-worker), never to catbox.moe.
+  upload: {
+    url: 'https://up.pulina.fi/pulina',
+    name: 'up.pulina.fi',
+    note: 'Pulinan oma, ei asetuksia. Tiedostot ovat julkisia: linkin saanut voi avata ne.',
+  },
   welcome: 'Welcome to IRC chat',
   startNote: 'The #pulina history is kept in the background.',
   // #pulina's rules from https://www.pulina.fi/saannot/, shown in the welcome before joining.

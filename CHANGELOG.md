@@ -1,5 +1,6 @@
 ### [Unreleased]
 
+* Change uploads to up.pulina.fi, no catbox.moe
 * Add a brand setting for a fork's own file host
 
 ### 1.13.5: 2026-11-11
