@@ -183,6 +183,7 @@ export const FI = {
   '{artist}, {title} and {album} are filled in.': '{artist}, {title} ja {album} täyttyvät itsestään.',
   'File storage': 'Tiedostojen tallennus',
   Automatic: 'Automaattinen',
+  'Your lobby-server first, then your own file host, then {name}': 'Ensin oma lobby-server, sitten oma tiedostopalvelin, sitten {name}',
   'Your lobby-server first, then your own file host, then catbox.moe':
     'Ensin oma lobby-server, sitten oma tiedostopalvelin, sitten catbox.moe',
   'Your lobby-server': 'Oma lobby-server',
