@@ -1,1 +1,18 @@
-/* A fork's own look goes here, over style.css. */
+/* Pulina's colours, from pulina.fi: night blue with its neon green. */
+:root {
+  --bg: #060d21;
+  --panel: #0c162d;
+  --raised: #13203d;
+  --hover: #1c2b4b;
+  --line: #17233f;
+  --line-strong: #2a3a5e;
+  --text: #d3dcef;
+  --strong: #ffffff;
+  --dim: #94a7cc;
+  --faint: #7586aa;
+  --accent: #20ffa7;
+  --accent-bg: #0b3a2c;
+  --mention: #ff8fc7;
+  --mention-bg: #3a1c2e;
+  --private: #ff8fc7;
+}

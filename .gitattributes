@@ -2,3 +2,7 @@
 README.md merge=ours
 ui/brand.js merge=ours
 ui/brand.css merge=ours
+src-tauri/icons/default.txt merge=ours
+src-tauri/icons/icon.png merge=ours
+src-tauri/icons/icon.ico merge=ours
+src-tauri/icons/macos.png merge=ours
