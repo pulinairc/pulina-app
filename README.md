@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/pulina.webp" width="760" alt="Pulina in Finnish: #pulina on QuakeNet, a question answered and cheered with reactions, a jump to #kahvi through the channel search, and the highlights list">
+  <img src="docs/pulina.webp" width="760" alt="Pulina in Finnish: #pulina, a question answered and cheered with reactions, a jump to #kahvi through the channel search, and the highlights list">
 </p>
 
 ## Features
