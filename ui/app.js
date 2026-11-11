@@ -1,4 +1,5 @@
 import { BRAND } from './brand.js';
+import { chooseLang, currentLang, LANGS, startLang, t } from './i18n.js';
 import {
   CHAT_KINDS,
   colonOpensPicker,
@@ -255,7 +256,33 @@ const el = {
   serverNetsHint: $('server-nets-hint'),
   serverNetNew: $('server-net-new'),
   serverNetAdd: $('server-net-add'),
+  langChoices: $('lang-choices'),
 };
+
+startLang(BRAND.lang ?? 'en');
+translatePage();
+
+/** The page's own text and labels in the chosen language, once at start. */
+function translatePage() {
+  if (currentLang() === 'en') {
+    return;
+  }
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const text = node.nodeValue.trim().replace(/\s+/g, ' ');
+    const said = text && t(text);
+    if (said && said !== text) {
+      const [lead] = node.nodeValue.match(/^\s*/);
+      const [trail] = node.nodeValue.match(/\s*$/);
+      node.nodeValue = lead + said + trail;
+    }
+  }
+  for (const attr of ['placeholder', 'aria-label', 'data-tip', 'title']) {
+    for (const node of document.body.querySelectorAll(`[${attr}]`)) {
+      node.setAttribute(attr, t(node.getAttribute(attr)));
+    }
+  }
+}
 
 const state = { networks: [], buffers: new Map(), current: null, me: {}, conn: {}, configPath: '', people: [], settings: {} };
 const previews = new Map();
@@ -766,8 +793,8 @@ function bellButton(b) {
   const bell = h('button', 'row-bell');
   bell.type = 'button';
   bell.setAttribute('aria-pressed', String(muted));
-  bell.setAttribute('aria-label', `${muted ? 'Unmute' : 'Mute'} ${label(b)}`);
-  bell.dataset.tip = muted ? 'Unmute' : 'Mute';
+  bell.setAttribute('aria-label', muted ? t('Unmute {name}', { name: label(b) }) : t('Mute {name}', { name: label(b) }));
+  bell.dataset.tip = muted ? t('Unmute') : t('Mute');
   bell.append(svg(muted ? BELL_OFF : BELL));
   bell.addEventListener('click', () => setMuted(b, !muted));
   return bell;
@@ -783,8 +810,8 @@ function eyeButton(b) {
   const eye = h('button', 'row-bell row-eye');
   eye.type = 'button';
   eye.setAttribute('aria-pressed', String(hidden));
-  eye.setAttribute('aria-label', `${hidden ? 'Show' : 'Hide'} ${label(b)}`);
-  eye.dataset.tip = hidden ? 'Show in the list' : 'Hide from the list';
+  eye.setAttribute('aria-label', hidden ? t('Show {name}', { name: label(b) }) : t('Hide {name}', { name: label(b) }));
+  eye.dataset.tip = hidden ? t('Show in the list') : t('Hide from the list');
   eye.append(svg(hidden ? EYE_OFF : EYE));
   eye.addEventListener('click', () => setHidden(b, !hidden));
   return eye;
@@ -882,8 +909,8 @@ function renderHeader() {
     icon(b, el.chanIcon);
     el.chanName.textContent = label(b);
     // First line: the name in full, the network beside it. Second line: the topic.
-    el.chanNet.textContent = `${b.net}${isMuted(b) ? ' · muted' : ''}`;
-    const topic = isPrivate(b) ? 'private' : b.name === '' ? 'server messages' : stripFormatting(b.topic || '');
+    el.chanNet.textContent = `${b.net}${isMuted(b) ? ` · ${t('muted')}` : ''}`;
+    const topic = isPrivate(b) ? t('private') : b.name === '' ? t('server messages') : stripFormatting(b.topic || '');
     el.chanMeta.textContent = topic;
     el.chanMeta.hidden = !topic;
     el.title.dataset.tip = b.topic || '';
@@ -894,7 +921,7 @@ function renderHeader() {
   const others = [...state.buffers.values()].filter((x) => x.key !== state.current && wantsAttention(x));
   const total = others.reduce((n, x) => n + attentionCount(x), 0);
   el.unread.hidden = total === 0;
-  el.unread.textContent = `${total} unread`;
+  el.unread.textContent = t('{n} unread', { n: total });
   el.unread.classList.toggle(
     'mention',
     others.some((x) => x.mention),
@@ -942,27 +969,31 @@ function hideToast() {
 
 function connectionText() {
   if (state.setupError) {
-    return { level: 'error', text: `${BRAND.name} is not connected to anything yet.` };
+    return { level: 'error', text: t('{app} is not connected to anything yet.', { app: BRAND.name }) };
   }
   if (state.serverDown) {
-    return { level: 'warn', text: `Can't reach lobby-server (${state.serverDown}). Trying again every few seconds.` };
+    return { level: 'warn', text: t("Can't reach lobby-server ({reason}). Trying again every few seconds.", { reason: state.serverDown }) };
   }
   const down = state.networks.filter((n) => state.conn[n] && state.conn[n] !== 'connected');
   if (!down.length) {
     return null;
   }
   if (down.every((n) => state.conn[n] === UNREACHABLE)) {
-    return { level: 'warn', text: "Can't reach lobby-server. Trying again every few seconds." };
+    return { level: 'warn', text: t("Can't reach lobby-server. Trying again every few seconds.") };
   }
   const connecting = down.filter((n) => state.conn[n] === 'connecting');
   const parts = [];
   if (connecting.length) {
-    parts.push(`Connecting to ${connecting.join(', ')}…`);
+    parts.push(t('Connecting to {networks}…', { networks: connecting.join(', ') }));
   }
   for (const n of down.filter((x) => !connecting.includes(x))) {
     const reason = state.conn[n].replace(/^disconnected:?\s*/, '').replace(/\s*\(os error \d+\)/, '');
-    const why = reason && reason !== UNREACHABLE ? `: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}` : '';
-    parts.push(`${n} is disconnected${why}. Trying again.`);
+    const why = reason && reason !== UNREACHABLE ? `${reason.charAt(0).toLowerCase()}${reason.slice(1)}` : '';
+    parts.push(
+      why
+        ? t('{network} is disconnected: {reason}. Trying again.', { network: n, reason: why })
+        : t('{network} is disconnected. Trying again.', { network: n }),
+    );
   }
   return { level: connecting.length === down.length ? 'info' : 'warn', text: parts.join(' ') };
 }
@@ -978,7 +1009,7 @@ function renderConnection() {
   }
   el.status.dataset.level = c.level;
   el.statusText.textContent = c.text;
-  el.statusAction.textContent = c.level === 'error' ? 'Set up' : 'Connection';
+  el.statusAction.textContent = c.level === 'error' ? t('Set up') : t('Connection');
 }
 
 function select(k) {
@@ -1006,7 +1037,7 @@ function select(k) {
   } catch {
     /* storage may be unavailable */
   }
-  el.input.placeholder = `Message ${label(b)}`;
+  el.input.placeholder = t('Message {name}', { name: label(b) });
   renderHeader();
   renderLog();
   if (shelf.open) {
@@ -1107,7 +1138,7 @@ function renderList() {
 /** "Hidden · 3" at the end of the list opens and closes the hidden channels. */
 function hiddenToggle() {
   const n = sortedBuffers().filter(isHidden).length;
-  const b = h('button', 'list-hidden', `Hidden · ${n}`);
+  const b = h('button', 'list-hidden', t('Hidden · {n}', { n }));
   b.type = 'button';
   b.setAttribute('aria-expanded', String(showHidden));
   b.addEventListener('click', () => {
@@ -1180,7 +1211,7 @@ function alertSwitch(b, setting, what) {
   const box = h('input', 'switch');
   box.type = 'checkbox';
   box.setAttribute('role', 'switch');
-  box.setAttribute('aria-label', `${what}: every message in ${label(b)}`);
+  box.setAttribute('aria-label', t('{what}: every message in {name}', { what, name: label(b) }));
   box.checked = keySet(setting).has(b.key);
   box.addEventListener('change', () => {
     setKey(setting, b.key, box.checked);
@@ -1196,14 +1227,14 @@ function renderChannelAlerts() {
       const row = h('div', 'alert-row');
       row.append(
         h('span', 'alert-name', label(b)),
-        alertSwitch(b, BADGE_ALL_SETTING, 'App icon'),
-        alertSwitch(b, NOTIFY_ALL_SETTING, 'Notify'),
+        alertSwitch(b, BADGE_ALL_SETTING, t('App icon')),
+        alertSwitch(b, NOTIFY_ALL_SETTING, t('Notify')),
       );
       return row;
     });
   const head = h('div', 'alert-row alert-head');
-  head.append(h('span', ''), h('span', '', 'App icon'), h('span', '', 'Notify'));
-  el.channelAlerts.replaceChildren(...(rows.length ? [head, ...rows] : [h('p', 'hint', 'No channels yet.')]));
+  head.append(h('span', ''), h('span', '', t('App icon')), h('span', '', t('Notify')));
+  el.channelAlerts.replaceChildren(...(rows.length ? [head, ...rows] : [h('p', 'hint', t('No channels yet.'))]));
 }
 
 function renderSettings() {
@@ -1216,6 +1247,7 @@ function renderSettings() {
   el.notifyNicksField.value = commaList(state.settings[NOTIFY_NICKS_SETTING]);
   el.notifyWordsField.value = commaList(state.settings[NOTIFY_WORDS_SETTING]);
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
+  renderLangChoices();
   renderIconChoices();
   renderShortcuts();
   renderUploadSettings();
@@ -1228,11 +1260,37 @@ function renderSettings() {
     const row = h('div', 'conn');
     const name = h('span', '', state.me[n] ? `${n} · ${state.me[n]}` : n);
     const st = state.conn[n] || 'waiting';
-    row.append(name, h('span', `state${st === 'connected' ? ' ok' : ''}`, st));
+    row.append(name, h('span', `state${st === 'connected' ? ' ok' : ''}`, connState(st)));
     return row;
   });
-  el.connections.replaceChildren(...(rows.length ? rows : [h('p', 'hint', 'No networks configured.')]));
+  el.connections.replaceChildren(...(rows.length ? rows : [h('p', 'hint', t('No networks configured.'))]));
   el.configPath.textContent = state.configPath;
+}
+
+/** A network's state as the core reports it, in words. */
+function connState(st) {
+  const reason = /^disconnected:\s*(.+)$/.exec(st)?.[1];
+  return reason ? t('disconnected: {reason}', { reason }) : t(st);
+}
+
+/** Settings > General > Language: the page loads again in the one picked. */
+function renderLangChoices() {
+  el.langChoices.replaceChildren(
+    ...LANGS.map(([code, name]) => {
+      const b = h('button', null, name);
+      b.type = 'button';
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', String(code === currentLang()));
+      b.addEventListener('click', () => {
+        if (code === currentLang()) {
+          return;
+        }
+        chooseLang(code);
+        location.reload();
+      });
+      return b;
+    }),
+  );
 }
 
 el.gear.addEventListener('click', () => {
@@ -1298,13 +1356,13 @@ function renderUpdate() {
   const name = `${BRAND.name} ${found.version}`;
   el.updateGo.hidden = update.busy;
   if (update.ready) {
-    el.updateText.textContent = `${name} is installed.`;
-    el.updateGo.textContent = 'Restart';
+    el.updateText.textContent = t('{name} is installed.', { name });
+    el.updateGo.textContent = t('Restart');
   } else if (update.busy) {
-    el.updateText.textContent = `Installing ${name}…`;
+    el.updateText.textContent = t('Installing {name}…', { name });
   } else {
-    el.updateText.textContent = `${name} is out.`;
-    el.updateGo.textContent = found.installable ? 'Update' : 'Download';
+    el.updateText.textContent = t('{name} is out.', { name });
+    el.updateGo.textContent = found.installable ? t('Update') : t('Download');
   }
 }
 
@@ -1315,7 +1373,7 @@ async function installUpdate() {
     await invoke('install_update');
     update.ready = true;
   } catch (e) {
-    renderStatus(`Update: ${e}`);
+    renderStatus(t('Update: {error}', { error: e }));
   }
   update.busy = false;
   renderUpdate();
@@ -1366,12 +1424,14 @@ function renderUpdateSettings() {
 el.updateAuto.addEventListener('change', () => storeFlag(UPDATE_AUTO_KEY, el.updateAuto.checked ? 'on' : 'off'));
 el.updateCheck.addEventListener('click', async () => {
   el.updateResult.hidden = false;
-  el.updateResult.textContent = 'Checking…';
+  el.updateResult.textContent = t('Checking…');
   try {
     const found = await checkUpdate();
-    el.updateResult.textContent = found ? `${BRAND.name} ${found.version} is out.` : `${BRAND.name} is up to date.`;
+    el.updateResult.textContent = found
+      ? t('{name} is out.', { name: `${BRAND.name} ${found.version}` })
+      : t('{name} is up to date.', { name: BRAND.name });
   } catch (e) {
-    el.updateResult.textContent = `Could not check: ${e}`;
+    el.updateResult.textContent = t('Could not check: {error}', { error: e });
   }
 });
 
@@ -1459,7 +1519,7 @@ function renderLog() {
   if (b.window) {
     stuck = false;
     countAfterWindow(b);
-    el.windowWhen.textContent = `Earlier: ${dayLabel(b.window.find((l) => l.id === b.windowAt)?.ts ?? b.window[0].ts)}`;
+    el.windowWhen.textContent = t('Earlier: {day}', { day: dayLabel(b.window.find((l) => l.id === b.windowAt)?.ts ?? b.window[0].ts) });
     if (view.separator) {
       toSeparator();
     } else {
@@ -1815,7 +1875,7 @@ function newGroup(l) {
   const group = h('div', 'group');
   const who = identity(l.nick, l.mask);
   const av = avatar(l.nick, l.mask);
-  av.dataset.tip = 'Edit person';
+  av.dataset.tip = t('Edit person');
   av.addEventListener('click', () => openPerson(l.nick, l.mask));
 
   const body = h('div', 'gb');
@@ -1834,7 +1894,7 @@ function newGroup(l) {
 function narration(l) {
   const group = h('div', 'group narration');
   const av = avatar(l.nick, l.mask);
-  av.dataset.tip = 'Edit person';
+  av.dataset.tip = t('Edit person');
   av.addEventListener('click', () => openPerson(l.nick, l.mask));
   const body = h('div', 'gb');
   body.append(row(l));
@@ -1976,28 +2036,28 @@ function personCard(net, nick, { spoke = true } = {}) {
 
   const rows = [];
   if (w && !w.found) {
-    rows.push(['Now', 'not online']);
+    rows.push([t('Now'), t('not online')]);
   }
   if (w?.realname && w.realname !== nick && w.realname !== who.name) {
-    rows.push(['Name', w.realname]);
+    rows.push([t('Name'), w.realname]);
   }
   if (w?.account) {
-    rows.push(['Account', w.account]);
+    rows.push([t('Account'), w.account]);
   }
   // WHOIS lists every channel they are on; until it answers, only the ones shared with you are known.
   if (w?.channels) {
-    rows.push(['On', w.channels]);
+    rows.push([t('On'), w.channels]);
   } else if (about.chans.length) {
-    rows.push(['With you', about.chans.join(' ')]);
+    rows.push([t('With you'), about.chans.join(' ')]);
   }
   if (spoke && about.last) {
-    rows.push(['Spoke', ago(about.last.ts)]);
+    rows.push([t('Spoke'), ago(about.last.ts)]);
   }
   if (w?.idle_secs != null) {
-    rows.push(['Idle', span(w.idle_secs)]);
+    rows.push([t('Idle'), span(w.idle_secs)]);
   }
   if (w?.away) {
-    rows.push(['Away', w.away]);
+    rows.push([t('Away'), w.away]);
   }
   if (!rows.length) {
     return card;
@@ -2247,7 +2307,7 @@ function quickRow() {
   row.append(
     ...topReactions().map((e) =>
       menuButton(
-        `React ${e}`,
+        t('React {emoji}', { emoji: e }),
         e,
         (line) => {
           closePanel();
@@ -2256,7 +2316,7 @@ function quickRow() {
         'act emoji',
       ),
     ),
-    menuButton('More emojis', ICONS.moreH, (line, button) => {
+    menuButton(t('More emojis'), ICONS.moreH, (line, button) => {
       openPicker(button, (e) => react(line, e));
     }),
   );
@@ -2279,9 +2339,9 @@ function moreMenu() {
     return b;
   };
   menu.append(
-    item('Reply', startReply),
-    item('Copy text', (line) => navigator.clipboard?.writeText(stripFormatting(line.text))),
-    item('Edit person', (line) => openPerson(line.nick, line.mask)),
+    item(t('Reply'), startReply),
+    item(t('Copy text'), (line) => navigator.clipboard?.writeText(stripFormatting(line.text))),
+    item(t('Edit person'), (line) => openPerson(line.nick, line.mask)),
   );
   return menu;
 }
@@ -2290,9 +2350,9 @@ function fillActions() {
   closePanel();
   const tools = h('div', 'glass action-row');
   tools.append(
-    menuButton('Add reaction', ICONS.addReaction, () => togglePanel(quickRow)),
-    menuButton('Reply', ICONS.reply, startReply),
-    menuButton('More', ICONS.moreV, () => togglePanel(moreMenu)),
+    menuButton(t('Add reaction'), ICONS.addReaction, () => togglePanel(quickRow)),
+    menuButton(t('Reply'), ICONS.reply, startReply),
+    menuButton(t('More'), ICONS.moreV, () => togglePanel(moreMenu)),
   );
   actions.replaceChildren(tools);
 }
@@ -2386,7 +2446,7 @@ function openSheet(row) {
   for (const emoji of topReactions()) {
     const b = h('button', 'sheet-react', emoji);
     b.type = 'button';
-    b.setAttribute('aria-label', `React ${emoji}`);
+    b.setAttribute('aria-label', t('React {emoji}', { emoji }));
     b.addEventListener(
       'click',
       pick(() => react(line, emoji)),
@@ -2401,10 +2461,10 @@ function openSheet(row) {
     b.addEventListener('click', pick(run));
     pill.append(b);
   };
-  tool('Reply', ICONS.reply, () => startReply(line));
+  tool(t('Reply'), ICONS.reply, () => startReply(line));
   // Text cannot be selected on touch, so the sheet copies it.
-  tool('Copy', ICONS.copy, () => navigator.clipboard?.writeText(stripFormatting(line.text)));
-  tool('More emojis', ICONS.moreH, () => openPicker(row, (e) => react(line, e)));
+  tool(t('Copy'), ICONS.copy, () => navigator.clipboard?.writeText(stripFormatting(line.text)));
+  tool(t('More emojis'), ICONS.moreH, () => openPicker(row, (e) => react(line, e)));
   dim.addEventListener('click', closeSheet);
   sheet.addEventListener('pointerdown', (e) => e.stopPropagation());
   sheet.addEventListener('touchmove', (e) => e.target === dim && e.preventDefault(), { passive: false });
@@ -2489,8 +2549,7 @@ window.addEventListener('blur', () => {
 
 const PILL_FACES = 5;
 const DOCK_KEY = 'lobby.nicklist';
-const VOICE =
-  '<svg class="voiced" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" role="img" aria-label="voice"><path d="M5 9v6M9 6v12M13 9v6M17 4v16"/></svg>';
+const VOICE = `<svg class="voiced" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" role="img" aria-label="${t('voice')}"><path d="M5 9v6M9 6v12M13 9v6M17 4v16"/></svg>`;
 const CAN_OP = /[~&@]/;
 const CAN_VOICE = /[~&@%]/;
 
@@ -2583,7 +2642,8 @@ function renderPill() {
   const faces = h('span', 'pill-faces');
   faces.append(...talking.slice(0, PILL_FACES).map((n) => avatar(n, '')));
   el.pill.replaceChildren(talking.length ? faces : svg(PEOPLE_ICON));
-  const count = `${b.members.size} ${b.members.size === 1 ? 'person' : 'people'}, ${talking.length} talking now`;
+  const vars = { n: b.members.size, talking: talking.length };
+  const count = b.members.size === 1 ? t('{n} person, {talking} talking now', vars) : t('{n} people, {talking} talking now', vars);
   el.pill.setAttribute('aria-label', count);
   el.pill.dataset.tip = count;
   const dock = dockPrefs();
@@ -2598,7 +2658,7 @@ function openNicklist() {
   const side = Boolean(dockPrefs().side);
   nicklist.el = h('div', side ? 'nicklist docked' : 'glass nicklist');
   nicklist.el.setAttribute('role', side ? 'complementary' : 'dialog');
-  nicklist.el.setAttribute('aria-label', 'People');
+  nicklist.el.setAttribute('aria-label', t('People'));
   nicklist.el.addEventListener('pointerdown', (e) => e.stopPropagation());
   document.body.append(nicklist.el);
   document.body.classList.toggle('docked', side);
@@ -2650,11 +2710,12 @@ function renderNicklist() {
   const dock = h('button', 'icon-btn nl-dock');
   dock.type = 'button';
   dock.setAttribute('aria-pressed', String(side));
-  dock.setAttribute('aria-label', side ? 'Show as a drop-down' : 'Keep beside the chat');
-  dock.dataset.tip = side ? 'Show as a drop-down' : 'Keep beside the chat';
+  dock.setAttribute('aria-label', side ? t('Show as a drop-down') : t('Keep beside the chat'));
+  dock.dataset.tip = side ? t('Show as a drop-down') : t('Keep beside the chat');
   dock.append(svg(ICONS.dock));
   dock.addEventListener('click', toggleDock);
-  top.append(h('span', 'nl-total', `${b.members.size} ${b.members.size === 1 ? 'person' : 'people'}`), dock);
+  const total = b.members.size === 1 ? t('{n} person', { n: 1 }) : t('{n} people', { n: b.members.size });
+  top.append(h('span', 'nl-total', total), dock);
   scroll.append(top, peopleTabs());
   if (nicklist.tab === 'today') {
     scroll.append(...todayRanking(b));
@@ -2732,8 +2793,10 @@ function myPowers(b) {
   return { op: CAN_OP.test(mine), voice: CAN_VOICE.test(mine) };
 }
 
+const MODE_LABELS = { voice: ['Give voice', 'Take voice'], op: ['Give op', 'Take op'] };
+
 function modeLabel(act, word) {
-  return `${act.give ? 'Give' : 'Take'} ${word}`;
+  return t(MODE_LABELS[word][act.give ? 0 : 1]);
 }
 
 function sendModes(b, act, word) {
@@ -2766,14 +2829,14 @@ function pickedBar(b) {
   const top = h('div', 'nl-bar-top');
   const clear = h('button', 'icon-btn nl-clear');
   clear.type = 'button';
-  clear.setAttribute('aria-label', 'Clear picks');
-  clear.dataset.tip = 'Clear';
+  clear.setAttribute('aria-label', t('Clear picks'));
+  clear.dataset.tip = t('Clear');
   clear.append(svg(ICONS.close));
   clear.addEventListener('click', () => {
     nicklist.picked.clear();
     renderNicklist();
   });
-  top.append(h('span', 'nl-count', `${picked.length} picked`), clear);
+  top.append(h('span', 'nl-count', t('{n} picked', { n: picked.length })), clear);
   const actions = h('div', 'nl-actions');
   const can = myPowers(b);
   for (const [word, symbol] of [
@@ -2791,8 +2854,8 @@ function pickedBar(b) {
   }
   if (picked.length === 1) {
     for (const [label, run] of [
-      ['Message', () => message(b, picked[0])],
-      ['Edit', () => editListed(b, picked[0])],
+      [t('Message'), () => message(b, picked[0])],
+      [t('Edit'), () => editListed(b, picked[0])],
     ]) {
       const btn = h('button', 'nl-act plain', label);
       btn.type = 'button';
@@ -2820,24 +2883,23 @@ function peopleMenu(nick, x, y) {
     menu.append(btn);
   };
   const can = myPowers(b);
-  const many = targets.length > 1 ? ` to ${targets.length}` : '';
   for (const [word, symbol] of [
     ['voice', '+'],
     ['op', '@'],
   ]) {
     if (can[word]) {
       const act = modeAction(targets, b.modes, symbol);
-      item(`${modeLabel(act, word)}${act.give ? many : targets.length > 1 ? ` from ${targets.length}` : ''}`, () =>
-        sendModes(b, act, word),
-      );
+      const vars = { action: modeLabel(act, word), n: targets.length };
+      const text = targets.length === 1 ? vars.action : act.give ? t('{action} to {n}', vars) : t('{action} from {n}', vars);
+      item(text, () => sendModes(b, act, word));
     }
   }
   if (targets.length === 1) {
-    item('Message', () => message(b, nick));
-    item('Edit person', () => editListed(b, nick));
+    item(t('Message'), () => message(b, nick));
+    item(t('Edit person'), () => editListed(b, nick));
   }
   if (nicklist.picked.size) {
-    item('Clear picks', () => {
+    item(t('Clear picks'), () => {
       nicklist.picked.clear();
       closePeopleMenu();
       renderNicklist();
@@ -2931,7 +2993,11 @@ document.addEventListener(
 );
 
 function note(l) {
-  const said = { topic: `${l.nick} changed the topic to “${l.text}”`, ctcp: `${l.nick} ${l.text}`, dcc: `${l.nick} ${l.text}` };
+  const said = {
+    topic: t('{nick} changed the topic to “{topic}”', { nick: l.nick, topic: l.text }),
+    ctcp: `${l.nick} ${l.text}`,
+    dcc: `${l.nick} ${l.text}`,
+  };
   const text = said[l.kind] ?? l.text;
   const n = h('div', 'events', text);
   n.dataset.tip = clock(l.ts);
@@ -2994,7 +3060,7 @@ const onScreen = new IntersectionObserver(
 function openButton(url) {
   const b = h('button', 'glass media-open');
   b.type = 'button';
-  b.dataset.tip = 'Open in browser';
+  b.dataset.tip = t('Open in browser');
   b.innerHTML = ICONS.external;
   b.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -3056,10 +3122,10 @@ function youtubeCard(url, { id, portrait }) {
     if (!poster.isConnected) {
       box.prepend(poster);
     }
-    box.dataset.tip = 'Open on YouTube';
+    box.dataset.tip = t('Open on YouTube');
   };
 
-  box.dataset.tip = 'Play with sound';
+  box.dataset.tip = t('Play with sound');
   box.addEventListener('click', () => {
     if (failed) {
       return openUrl(url);
@@ -3109,7 +3175,7 @@ function videoCard(p) {
   };
   onScreen.observe(box);
 
-  box.dataset.tip = 'Play with sound';
+  box.dataset.tip = t('Play with sound');
   box.addEventListener('click', () => {
     if (box.classList.contains('playing')) {
       return;
@@ -3245,7 +3311,7 @@ async function runLocal(b, text) {
     case 'mute':
     case 'unmute':
       setMuted(b, cmd.toLowerCase() === 'mute');
-      localNote(cmd.toLowerCase() === 'mute' ? `${label(b)} muted` : `${label(b)} unmuted`);
+      localNote(cmd.toLowerCase() === 'mute' ? t('{name} muted', { name: label(b) }) : t('{name} unmuted', { name: label(b) }));
       return true;
     case 'clear':
       b.lines = [];
@@ -3258,7 +3324,7 @@ async function runLocal(b, text) {
       select(buffer(b.net, rest.split(' ')[0]).key);
       return true;
     case 'names':
-      localNote(`${b.members.size} people: ${[...b.members].sort((x, y) => x.localeCompare(y)).join(', ')}`);
+      localNote(t('{n} people: {names}', { n: b.members.size, names: [...b.members].sort((x, y) => x.localeCompare(y)).join(', ') }));
       return true;
     default:
       return false;
@@ -3397,7 +3463,7 @@ function menuEntries() {
   const commands = commandMatches(el.input.value);
   if (commands?.length) {
     return commands.map((c) => ({
-      parts: [h('span', 'slash-name', `/${c.name}`), h('span', 'slash-args', c.args), h('span', 'slash-desc', c.desc)],
+      parts: [h('span', 'slash-name', `/${c.name}`), h('span', 'slash-args', t(c.args)), h('span', 'slash-desc', t(c.desc))],
       apply: () => applySlash(c),
     }));
   }
@@ -3521,7 +3587,7 @@ function renderRoom() {
   el.room.textContent = room === null ? '' : String(room);
   el.room.classList.toggle('over', room !== null && room < 0);
   el.room.dataset.tip =
-    room !== null && room < 0 ? 'Too long for one IRC message: shorten it, or send it in two' : 'Characters left in this IRC message';
+    room !== null && room < 0 ? t('Too long for one IRC message: shorten it, or send it in two') : t('Characters left in this IRC message');
 }
 
 // ":D " becomes 😀 the moment a space lands after it; sending converts a last one too.
@@ -3687,26 +3753,26 @@ el.input.addEventListener('keydown', (e) => {
 let IS_MAC = false;
 const SHORTCUT_SETTING = 'shortcuts';
 const SHORTCUT_ACTIONS = [
-  ['switcher', 'Find a channel'],
-  ['markRead', 'Mark this channel read and go to the newest'],
-  ['jumpUnread', 'Jump to the first unread'],
-  ['nextUnreadChannel', 'Next channel with unread'],
-  ['prevChannel', 'Previous channel'],
-  ['nextChannel', 'Next channel'],
-  ['channelNumber', 'Channel 1 to 9 (with a number)'],
-  ['latest', 'Back to the latest'],
-  ['scrollUp', 'Scroll the chat up'],
-  ['scrollDown', 'Scroll the chat down'],
-  ['reply', 'Reply to the last message'],
-  ['highlights', 'Highlights'],
-  ['shelf', 'Chat or Shelf'],
-  ['people', 'People'],
-  ['settings', 'Settings'],
-  ['complete', 'Complete a nick'],
-  ['recall', 'Bring back the last message'],
-  ['textLarger', 'Larger text'],
-  ['textSmaller', 'Smaller text'],
-  ['textDefault', 'Default text size'],
+  ['switcher', t('Find a channel')],
+  ['markRead', t('Mark this channel read and go to the newest')],
+  ['jumpUnread', t('Jump to the first unread')],
+  ['nextUnreadChannel', t('Next channel with unread')],
+  ['prevChannel', t('Previous channel')],
+  ['nextChannel', t('Next channel')],
+  ['channelNumber', t('Channel 1 to 9 (with a number)')],
+  ['latest', t('Back to the latest')],
+  ['scrollUp', t('Scroll the chat up')],
+  ['scrollDown', t('Scroll the chat down')],
+  ['reply', t('Reply to the last message')],
+  ['highlights', t('Highlights')],
+  ['shelf', t('Chat or Shelf')],
+  ['people', t('People')],
+  ['settings', t('Settings')],
+  ['complete', t('Complete a nick')],
+  ['recall', t('Bring back the last message')],
+  ['textLarger', t('Larger text')],
+  ['textSmaller', t('Smaller text')],
+  ['textDefault', t('Default text size')],
 ];
 let recordingShortcut = null;
 
@@ -3788,9 +3854,9 @@ document.addEventListener(
 
 /** Tooltips that name a shortcut follow the current setting. */
 function refreshShortcutTips() {
-  el.jumpUnread.dataset.tip = `Jump to the first unread (${shortcutLabel('jumpUnread')})`;
+  el.jumpUnread.dataset.tip = t('Jump to the first unread ({key})', { key: shortcutLabel('jumpUnread') });
   for (const m of document.querySelectorAll('.sep-mark')) {
-    m.dataset.tip = `Mark as read (${shortcutLabel('markRead')})`;
+    m.dataset.tip = t('Mark as read ({key})', { key: shortcutLabel('markRead') });
   }
 }
 
@@ -3798,7 +3864,7 @@ function renderShortcuts() {
   el.shortcutList.replaceChildren(
     ...SHORTCUT_ACTIONS.map(([action, label]) => {
       const row = h('div', 'shortcut-row');
-      const key = h('button', 'shortcut-key', recordingShortcut === action ? 'Press keys…' : shortcutLabel(action));
+      const key = h('button', 'shortcut-key', recordingShortcut === action ? t('Press keys…') : shortcutLabel(action));
       key.type = 'button';
       key.classList.toggle('recording', recordingShortcut === action);
       key.addEventListener('click', () => {
@@ -3862,11 +3928,11 @@ function separatorNode() {
   sep.setAttribute('role', 'separator');
   const mark = h('button', 'sep-mark');
   mark.type = 'button';
-  mark.dataset.tip = `Mark as read (${shortcutLabel('markRead')})`;
-  mark.setAttribute('aria-label', 'Mark as read');
+  mark.dataset.tip = t('Mark as read ({key})', { key: shortcutLabel('markRead') });
+  mark.setAttribute('aria-label', t('Mark as read'));
   mark.innerHTML = ICONS.check;
   mark.addEventListener('click', markCurrentRead);
-  sep.append(h('span', 'sep-label', 'New'), mark);
+  sep.append(h('span', 'sep-label', t('New')), mark);
   return sep;
 }
 
@@ -3945,18 +4011,18 @@ function updateJumps() {
   const unloaded = Boolean(b?.unreadGap) && !view?.separator;
   el.jumpUnread.hidden = !(count && (above || below || unloaded));
   el.jumpUnread.classList.toggle('down', Boolean(below));
-  const messages = count === 1 ? 'message' : 'messages';
   el.jumpLatest.hidden = atBottom() || glide !== 0;
   if (!el.jumpLatest.hidden) {
     // In an earlier view, the messages not drawn yet count too.
     const more = messagesBelow(log.bottom) + (b?.window ? b.windowAfter || 0 : 0);
-    el.jumpLatestLabel.textContent = more ? `${more} more` : 'Latest';
+    el.jumpLatestLabel.textContent = more ? t('{n} more', { n: more }) : t('Latest');
   }
   el.markRead.hidden = count === 0;
   // Said in words in the middle, so a busy chat at the bottom still shows what is unread.
   el.unreadCount.hidden = count === 0;
-  el.unreadCount.textContent = `${count} unread`;
-  el.markRead.dataset.tip = `Mark ${count} ${messages} read (${shortcutLabel('markRead')})`;
+  el.unreadCount.textContent = t('{n} unread', { n: count });
+  const vars = { n: count, key: shortcutLabel('markRead') };
+  el.markRead.dataset.tip = count === 1 ? t('Mark {n} message read ({key})', vars) : t('Mark {n} messages read ({key})', vars);
 }
 
 el.markRead.addEventListener('click', markCurrentRead);
@@ -4213,7 +4279,7 @@ function renderWelcomeNets() {
   const names = [...START_NETWORKS.map(([name]) => name), OTHER_SERVER];
   el.welcomeNets.replaceChildren(
     ...names.map((name) => {
-      const b = h('button', null, name);
+      const b = h('button', null, name === OTHER_SERVER ? t(OTHER_SERVER) : name);
       b.type = 'button';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(name === welcomeNet));
@@ -4234,10 +4300,10 @@ el.welcomeQuick.addEventListener('submit', async (e) => {
   // Another server may name its port: irc.example.org:6697.
   const [host, port] = preset ? [preset[1]] : el.welcomeHost.value.trim().split(':');
   const problem = !NICK_RE.test(nick)
-    ? 'Pick a nick that starts with a letter: letters, digits and - _ after it.'
+    ? t('Pick a nick that starts with a letter: letters, digits and - _ after it.')
     : host
       ? null
-      : 'Write the server address.';
+      : t('Write the server address.');
   el.welcomeError.hidden = !problem;
   el.welcomeError.textContent = problem || '';
   if (problem) {
@@ -4301,11 +4367,11 @@ function checklistItems() {
   const net = state.networks[0];
   const me = state.me[net];
   return [
-    { label: net ? `Connect to ${net}` : 'Connect', done: Object.values(state.conn).includes('connected') },
-    { label: 'Join a channel', done: [...state.buffers.values()].some((b) => isChannel(b.name)), go: openSwitcher },
-    { label: 'Add your photo', done: Boolean(me && identity(me).photo), go: () => me && openPerson(me) },
-    { label: 'Turn on notifications', done: notifyOn() && notifyAllowed === true, go: () => openSettingsTab('notifications') },
-    { label: 'Pick your highlight words', done: highlightWords().length > 0, go: () => openSettingsTab('notifications') },
+    { label: net ? t('Connect to {network}', { network: net }) : t('Connect'), done: Object.values(state.conn).includes('connected') },
+    { label: t('Join a channel'), done: [...state.buffers.values()].some((b) => isChannel(b.name)), go: openSwitcher },
+    { label: t('Add your photo'), done: Boolean(me && identity(me).photo), go: () => me && openPerson(me) },
+    { label: t('Turn on notifications'), done: notifyOn() && notifyAllowed === true, go: () => openSettingsTab('notifications') },
+    { label: t('Pick your highlight words'), done: highlightWords().length > 0, go: () => openSettingsTab('notifications') },
   ];
 }
 
@@ -4320,7 +4386,7 @@ function renderChecklist() {
     return;
   }
   checklistShown = shown;
-  el.checklistCount.textContent = `${done} of ${items.length}`;
+  el.checklistCount.textContent = t('{done} of {total}', { done, total: items.length });
   el.checklistFill.style.width = `${(done / items.length) * 100}%`;
   el.checklistItems.replaceChildren(
     ...items.map((item) => {
@@ -4363,9 +4429,12 @@ function linkNames(text) {
 }
 
 const CONNECTION_ABOUT = {
-  ssh: `${BRAND.name} signs in to the machine where lobby-server runs and reaches it from there. Your whole history, and nothing on the server is opened to the internet.`,
-  url: 'lobby-server behind a web server with TLS, at an address of its own. Your whole history.',
-  irc: `${BRAND.name} connects to IRC servers or irssiproxy itself. History only covers the time ${BRAND.name} is open.`,
+  ssh: t(
+    '{app} signs in to the machine where lobby-server runs and reaches it from there. Your whole history, and nothing on the server is opened to the internet.',
+    { app: BRAND.name },
+  ),
+  url: t('lobby-server behind a web server with TLS, at an address of its own. Your whole history.'),
+  irc: t('{app} connects to IRC servers or irssiproxy itself. History only covers the time {app} is open.', { app: BRAND.name }),
 };
 let connectionMode = 'ssh';
 /** The way Lobby is connected now, as saved; the dialog's tabs may show another. */
@@ -4374,23 +4443,24 @@ let activeMode = null;
 /** Connected or not, for the tab on show: only the mode in use can be connected. */
 function connectionStatus(mode) {
   if (state.setupError || mode !== activeMode) {
-    return { ok: false, text: 'Not connected' };
+    return { ok: false, text: t('Not connected') };
   }
   if (mode !== 'irc') {
     const unreachable = state.serverDown || (state.networks.length && state.networks.every((n) => state.conn[n] === UNREACHABLE));
     if (unreachable) {
-      return { ok: false, text: `Not connected${state.serverDown ? `: ${state.serverDown}` : ''}` };
+      return { ok: false, text: state.serverDown ? t('Not connected: {reason}', { reason: state.serverDown }) : t('Not connected') };
     }
-    return { ok: true, text: 'Connected to lobby-server' };
+    return { ok: true, text: t('Connected to lobby-server') };
   }
   const up = state.networks.filter((n) => state.conn[n] === 'connected');
   if (!up.length) {
-    return { ok: false, text: 'Not connected' };
+    return { ok: false, text: t('Not connected') };
   }
   if (up.length === state.networks.length) {
-    return { ok: true, text: 'Connected' };
+    return { ok: true, text: t('Connected') };
   }
-  return { ok: true, text: `Connected to ${up.join(', ')}, not to ${state.networks.filter((n) => !up.includes(n)).join(', ')}` };
+  const down = state.networks.filter((n) => !up.includes(n)).join(', ');
+  return { ok: true, text: t('Connected to {up}, not to {down}', { up: up.join(', '), down }) };
 }
 
 function renderConnectionStatus() {
@@ -4429,21 +4499,21 @@ async function renderServerNetworks() {
     nets = await invoke('server_networks');
   } catch {
     el.serverNets.replaceChildren();
-    el.serverNetsHint.textContent = 'Connect to lobby-server first, then its networks can be changed here.';
+    el.serverNetsHint.textContent = t('Connect to lobby-server first, then its networks can be changed here.');
     el.serverNetAdd.hidden = true;
     return;
   }
-  el.serverNetsHint.textContent = 'Removing a network disconnects it on the server. Its history stays.';
+  el.serverNetsHint.textContent = t('Removing a network disconnects it on the server. Its history stays.');
   el.serverNets.replaceChildren(
     ...nets.map((n) => {
       const row = h('div', 'server-net');
       row.append(h('span', 'server-net-name', n.name), h('span', 'server-net-where', `${n.host}:${n.port}`));
-      const remove = h('button', 'link-btn danger', 'Remove');
+      const remove = h('button', 'link-btn danger', t('Remove'));
       remove.type = 'button';
       remove.addEventListener('click', async () => {
         if (!remove.dataset.sure) {
           remove.dataset.sure = '1';
-          remove.textContent = `Remove ${n.name}?`;
+          remove.textContent = t('Remove {name}?', { name: n.name });
           return;
         }
         try {
@@ -4462,7 +4532,7 @@ async function renderServerNetworks() {
 el.serverNetAdd.addEventListener('click', () => {
   const row = networkRow({ port: 45000 });
   row.querySelector('.icon-btn').remove();
-  const add = h('button', 'primary-btn', 'Add');
+  const add = h('button', 'primary-btn', t('Add'));
   add.type = 'button';
   add.addEventListener('click', async () => {
     const network = {
@@ -4508,17 +4578,17 @@ function networkRow(n = {}) {
   };
   const remove = h('button', 'icon-btn');
   remove.type = 'button';
-  remove.setAttribute('aria-label', 'Remove network');
-  remove.dataset.tip = 'Remove';
+  remove.setAttribute('aria-label', t('Remove network'));
+  remove.dataset.tip = t('Remove');
   remove.innerHTML =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>';
   remove.addEventListener('click', () => row.remove());
   row.append(
-    field('name', 'Name', n.name),
-    field('host', 'Host', n.host),
-    field('port', 'Port', n.port),
+    field('name', t('Name'), n.name),
+    field('host', t('Host'), n.host),
+    field('port', t('Port'), n.port),
     remove,
-    field('pass', 'Password, if any', n.password, 'password'),
+    field('pass', t('Password, if any'), n.password, 'password'),
   );
   if (n.password_file) {
     row.dataset.passwordFile = n.password_file;
@@ -4552,19 +4622,19 @@ function readConnection() {
 
 function connectionProblem(c) {
   if (c.mode === 'ssh' && !/^[^@\s]+@[^@\s]+$/.test(c.ssh.trim())) {
-    return 'Write the SSH login as you@host.';
+    return t('Write the SSH login as you@host.');
   }
   if (c.mode === 'url' && !/^wss?:\/\//.test(c.url.trim())) {
-    return 'The server address starts with wss:// or ws://.';
+    return t('The server address starts with wss:// or ws://.');
   }
   if (c.mode !== 'irc' && !c.token.trim()) {
-    return 'Paste the lobby-server token.';
+    return t('Paste the lobby-server token.');
   }
   if (c.mode === 'irc' && !c.nick.trim()) {
-    return 'Pick a nick.';
+    return t('Pick a nick.');
   }
   if (c.mode === 'irc' && !c.networks.length) {
-    return 'Add at least one network with a name and a host.';
+    return t('Add at least one network with a name and a host.');
   }
   return null;
 }
@@ -4579,7 +4649,7 @@ el.connAddNet.addEventListener('click', () => el.connNetworks.append(networkRow(
 el.connCopy.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(el.connKey.textContent);
-    el.connCopy.textContent = 'Copied';
+    el.connCopy.textContent = t('Copied');
   } catch {
     getSelection().selectAllChildren(el.connKey);
   }
@@ -4826,7 +4896,7 @@ let editing = null;
 let editingFromChat = false;
 
 function personSubtitle(p) {
-  return p.nicks.length ? p.nicks.join(', ') : 'No nicks yet';
+  return p.nicks.length ? p.nicks.join(', ') : t('No nicks yet');
 }
 
 function renderPeople() {
@@ -4839,7 +4909,7 @@ function renderPeople() {
     row.addEventListener('click', () => editPerson(p));
     return row;
   });
-  el.peopleItems.replaceChildren(...(rows.length ? rows : [h('p', 'people-empty', 'Nobody yet. Click a name in the chat, or use +.')]));
+  el.peopleItems.replaceChildren(...(rows.length ? rows : [h('p', 'people-empty', t('Nobody yet. Click a name in the chat, or use +.'))]));
 }
 
 function personAvatar(p, cls) {
@@ -4860,7 +4930,7 @@ function personAvatar(p, cls) {
 function showList() {
   editing = null;
   editingFromChat = false;
-  el.peopleTitle.textContent = 'People';
+  el.peopleTitle.textContent = t('People');
   el.peopleBack.hidden = true;
   el.personNew.hidden = false;
   el.personEdit.hidden = true;
@@ -4878,7 +4948,7 @@ function editChannel(b) {
 function editPerson(p) {
   editing = structuredClone(p);
   el.personEdit.classList.toggle('channel-mode', Boolean(p.channel));
-  el.peopleTitle.textContent = p.channel ? p.name : p.id ? p.name : 'New person';
+  el.peopleTitle.textContent = p.channel ? p.name : p.id ? p.name : t('New person');
   el.peopleBack.hidden = Boolean(p.channel);
   el.personNew.hidden = true;
   el.peopleList.hidden = true;
@@ -4949,12 +5019,12 @@ function renderEditor() {
   el.personPhoto.lastChild.append(svg(CAMERA_ICON));
   el.personPhotoRemove.hidden = !p.photo;
 
-  const swatches = [swatch(auto, 'Automatic', !p.color, h('span', 'swatch-mark', 'A'))];
+  const swatches = [swatch(auto, t('Automatic'), !p.color, h('span', 'swatch-mark', 'A'))];
   for (const c of SWATCHES) {
     swatches.push(swatch(c, c, p.color === c));
   }
   const custom = !swatches.some((b) => b.getAttribute('aria-checked') === 'true');
-  swatches.push(swatch(custom ? color : 'var(--raised)', 'Pick any colour', custom, h('span', 'swatch-mark', '+')));
+  swatches.push(swatch(custom ? color : 'var(--raised)', t('Pick any colour'), custom, h('span', 'swatch-mark', '+')));
   const values = ['', ...SWATCHES];
   for (const [i, b] of swatches.entries()) {
     b.addEventListener('click', () => {
@@ -4974,7 +5044,7 @@ function renderEditor() {
       const chip = h('span', 'chip', n);
       const x = h('button', '', '×');
       x.type = 'button';
-      x.setAttribute('aria-label', `Remove ${n}`);
+      x.setAttribute('aria-label', t('Remove {name}', { name: n }));
       x.addEventListener('click', () => {
         p.nicks.splice(i, 1);
         renderEditor();
@@ -5003,11 +5073,11 @@ function openPerson(nick, mask) {
 function loadImage(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(new Error('Could not read the file'));
+    reader.onerror = () => reject(new Error(t('Could not read the file')));
     reader.onload = () => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('Not an image'));
+      img.onerror = () => reject(new Error(t('Not an image')));
       img.src = reader.result;
     };
     reader.readAsDataURL(file);
@@ -5194,7 +5264,7 @@ el.personEdit.addEventListener('submit', async (e) => {
     editing.nicks.push(pending);
   }
   el.personNick.value = '';
-  editing.name = el.personName.value.trim() || editing.nicks[0] || 'Someone';
+  editing.name = el.personName.value.trim() || editing.nicks[0] || t('Someone');
   if (editing.channel) {
     let all = {};
     try {
@@ -5331,12 +5401,12 @@ async function buildPicker() {
   const data = await emojiData();
   const root = h('div', 'glass picker');
   root.setAttribute('role', 'dialog');
-  root.setAttribute('aria-label', 'Emoji');
+  root.setAttribute('aria-label', t('Emoji'));
 
   const search = h('label', 'picker-search');
   const input = h('input');
-  input.placeholder = 'Search';
-  input.setAttribute('aria-label', 'Search emoji');
+  input.placeholder = t('Search');
+  input.setAttribute('aria-label', t('Search emoji'));
   search.append(
     svg(
       '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>',
@@ -5355,27 +5425,27 @@ async function buildPicker() {
     },
     { root: scroll, rootMargin: `${PICKER_AHEAD_PX}px 0px` },
   );
-  const results = section('results', 'Search results', [grid([])]);
+  const results = section('results', t('Search results'), [grid([])]);
   results.hidden = true;
-  const frequent = section('frequent', 'Frequently used', [grid(frequentButtons())]);
-  const cats = data.map((c) => section(c.id, c.name, emptyGrids(c.emojis, observer)));
+  const frequent = section('frequent', t('Frequently used'), [grid(frequentButtons())]);
+  const cats = data.map((c) => section(c.id, t(c.name), emptyGrids(c.emojis, observer)));
   scroll.append(results, frequent, ...cats);
 
   const tabs = h('nav', 'picker-tabs');
   const ids = ['frequent', ...data.map((c) => c.id)];
   pickerState.tabs = ids.map((id) => {
-    const t = h('button', 'picker-tab');
-    t.type = 'button';
-    t.dataset.cat = id;
-    t.setAttribute('aria-label', id === 'frequent' ? 'Frequently used' : data.find((c) => c.id === id).name);
-    t.append(categoryIcon(id));
-    t.addEventListener('click', () => {
+    const tab = h('button', 'picker-tab');
+    tab.type = 'button';
+    tab.dataset.cat = id;
+    tab.setAttribute('aria-label', t(id === 'frequent' ? 'Frequently used' : data.find((c) => c.id === id).name));
+    tab.append(categoryIcon(id));
+    tab.addEventListener('click', () => {
       input.value = '';
       showSearch('');
       const target = scroll.querySelector(`section[data-cat="${id}"]`);
       scroll.scrollTop = target.offsetTop - scroll.offsetTop;
     });
-    return t;
+    return tab;
   });
   tabs.append(...pickerState.tabs);
 
@@ -5595,7 +5665,7 @@ function chosenIcon() {
 }
 
 function useIcon(name) {
-  invoke('set_app_icon', { name }).catch((e) => renderStatus(`App icon: ${e}`));
+  invoke('set_app_icon', { name }).catch((e) => renderStatus(t('App icon: {error}', { error: e })));
 }
 
 function renderIconChoices() {
@@ -5606,8 +5676,8 @@ function renderIconChoices() {
       b.type = 'button';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(name === current));
-      b.setAttribute('aria-label', label);
-      b.dataset.tip = label;
+      b.setAttribute('aria-label', t(label));
+      b.dataset.tip = t(label);
       const img = h('img');
       img.src = `icons/${name}.png`;
       img.alt = '';
@@ -5643,10 +5713,10 @@ async function notify(b, l) {
     return;
   }
   const who = identity(l.nick, l.mask);
-  const title = isPrivate(b) ? l.nick : `${who.name} in ${label(b)}`;
+  const title = isPrivate(b) ? l.nick : t('{name} in {channel}', { name: who.name, channel: label(b) });
   const icon = await notifyIcon(who.photo);
   showNotification(title, stripFormatting(l.text).slice(0, NOTIFY_TEXT_CHARS), icon, { key: b.key, line: l.id }).catch((e) =>
-    renderStatus(`Notification: ${e}`),
+    renderStatus(t('Notification: {error}', { error: e })),
   );
 }
 
@@ -5948,13 +6018,13 @@ function renderInbox() {
   const { fresh, archived } = inboxParts();
   el.inboxPill.hidden = fresh.length === 0;
   el.inboxPill.textContent = `@${fresh.length}`;
-  el.inboxPill.dataset.tip = `${fresh.length} ${fresh.length === 1 ? 'highlight' : 'highlights'} for you`;
+  el.inboxPill.dataset.tip = fresh.length === 1 ? t('{n} highlight for you', { n: 1 }) : t('{n} highlights for you', { n: fresh.length });
   if (el.inbox.hidden) {
     return;
   }
   const query = el.inboxFilter.value;
   const list = (inbox.archive ? archived : fresh).filter((l) => looseMatch(l, query));
-  el.inboxFreshTab.textContent = fresh.length ? `For you · ${fresh.length}` : 'For you';
+  el.inboxFreshTab.textContent = fresh.length ? t('For you · {n}', { n: fresh.length }) : t('For you');
   el.inboxFreshTab.setAttribute('aria-selected', String(!inbox.archive));
   el.inboxArchiveTab.setAttribute('aria-selected', String(inbox.archive));
   el.inboxAll.hidden = inbox.archive || fresh.length === 0;
@@ -5965,11 +6035,11 @@ function renderInbox() {
     [...el.inboxList.children].find((r) => r.line?.id === focused)?.focus();
   }
   if (!list.length) {
-    const empty = query.trim() ? 'Nothing matches.' : inbox.archive ? 'Nothing here yet.' : 'All caught up.';
+    const empty = query.trim() ? t('Nothing matches.') : inbox.archive ? t('Nothing here yet.') : t('All caught up.');
     el.inboxList.append(h('div', 'inbox-empty', empty));
   }
   el.inboxFoot.hidden = !inbox.archive || !inbox.older;
-  el.inboxFoot.textContent = 'Load older';
+  el.inboxFoot.textContent = t('Load older');
 }
 
 function inboxText(l) {
@@ -5993,8 +6063,8 @@ function inboxRow(l, fresh) {
   if (fresh) {
     const done = h('button', 'inbox-done');
     done.type = 'button';
-    done.dataset.tip = 'Done';
-    done.setAttribute('aria-label', 'Done');
+    done.dataset.tip = t('Done');
+    done.setAttribute('aria-label', t('Done'));
     done.innerHTML =
       '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
     done.addEventListener('click', (e) => {
@@ -6171,7 +6241,7 @@ async function loadShelf(more = false) {
     shelf.key = b.key;
     shelf.lines = [];
     shelf.older = true;
-    el.shelf.replaceChildren(h('div', 'shelf-empty', 'Looking…'));
+    el.shelf.replaceChildren(h('div', 'shelf-empty', t('Looking…')));
   }
   shelf.loading = true;
   const fromBottom = el.shelf.scrollHeight - el.shelf.scrollTop;
@@ -6222,8 +6292,8 @@ function alignTiles(grid) {
 function shelfTabs(links, pictures) {
   const bar = h('div', 'shelf-tabs');
   for (const [name, label, count] of [
-    ['pictures', 'Pictures', pictures],
-    ['links', 'Links', links],
+    ['pictures', t('Pictures'), pictures],
+    ['links', t('Links'), links],
   ]) {
     const tab = h('button', 'shelf-tab', `${label} ${count}`);
     tab.type = 'button';
@@ -6244,7 +6314,7 @@ function renderShelf(keepFromBottom = null) {
   const pictures = items.filter((i) => i.kind !== 'link');
   const nodes = [shelfTabs(links.length, pictures.length)];
   if (shelf.older && shelf.lines.length) {
-    const more = h('button', 'shelf-more', 'Older');
+    const more = h('button', 'shelf-more', t('Older'));
     more.type = 'button';
     more.addEventListener('click', () => loadShelf(true));
     nodes.push(more);
@@ -6266,7 +6336,7 @@ function renderShelf(keepFromBottom = null) {
     }
   }
   if (!shown.length) {
-    nodes.push(h('div', 'shelf-empty', shelf.tab === 'pictures' ? 'No pictures or videos here yet.' : 'No links here yet.'));
+    nodes.push(h('div', 'shelf-empty', shelf.tab === 'pictures' ? t('No pictures or videos here yet.') : t('No links here yet.')));
   }
   el.shelf.replaceChildren(...nodes);
   el.shelf.scrollTop = keepFromBottom === null ? el.shelf.scrollHeight : el.shelf.scrollHeight - keepFromBottom;
@@ -6305,7 +6375,7 @@ function shelfLink(l, url) {
   const row = h('div', 'shelf-link');
   const who = h('button', 'shelf-who');
   who.type = 'button';
-  who.dataset.tip = 'Show in the chat';
+  who.dataset.tip = t('Show in the chat');
   who.append(avatar(l.nick, l.mask), h('span', 'shelf-nick', l.nick), h('span', 'shelf-time', shortWhen(l.ts)));
   who.addEventListener('click', () => openLine(l));
   // Every card keeps three lines, so cards filling in as they scroll into view never move the list.
@@ -6373,12 +6443,12 @@ async function showNotification(title, body, icon, target = null) {
 // hide a notification the system took, so the green line says where to look.
 el.notifyTest.addEventListener('click', async () => {
   let ok = true;
-  let text = IS_MAC ? `Sent. Not seeing it? A Focus mode may be hiding ${BRAND.name}.` : 'Sent';
+  let text = IS_MAC ? t('Sent. Not seeing it? A Focus mode may be hiding {app}.', { app: BRAND.name }) : t('Sent');
   try {
-    await showNotification(BRAND.name, 'Notifications work.', null);
+    await showNotification(BRAND.name, t('Notifications work.'), null);
   } catch (e) {
     ok = false;
-    text = `Not sent: ${e}`;
+    text = t('Not sent: {error}', { error: e });
   }
   el.notifyResult.textContent = text;
   el.notifyResult.classList.toggle('ok', ok);
@@ -6397,9 +6467,9 @@ async function notifyPermission() {
 async function fixNotifications() {
   const p = await notifyPermission();
   if (p?.state === 'ask') {
-    await invoke('allow_notifications').catch((e) => renderStatus(`Notifications: ${e}`));
+    await invoke('allow_notifications').catch((e) => renderStatus(t('Notifications: {error}', { error: e })));
   } else {
-    await invoke('open_notify_settings').catch((e) => renderStatus(`System Settings: ${e}`));
+    await invoke('open_notify_settings').catch((e) => renderStatus(t('System Settings: {error}', { error: e })));
   }
   renderNotifyState();
 }
@@ -6598,7 +6668,7 @@ el.settings.addEventListener('change', (e) => {
 el.sftpCopy.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(el.sftpKey.textContent);
-    el.sftpCopy.textContent = 'Copied';
+    el.sftpCopy.textContent = t('Copied');
   } catch {
     getSelection().selectAllChildren(el.sftpKey);
   }
@@ -6618,7 +6688,7 @@ async function uploadFiles(files) {
   const targets = await uploadTargets();
   for (const file of files) {
     const name = file.name || `pasted.${file.type.split('/')[1] || 'png'}`;
-    renderStatus(`Uploading ${name}…`);
+    renderStatus(t('Uploading {name}…', { name }));
     const bytes = new Uint8Array(await file.arrayBuffer());
     let failure = '';
     for (const target of targets) {
@@ -6754,7 +6824,7 @@ function fillNp() {
   el.npCover.hidden = !nowPlaying.image;
   el.npCover.style.backgroundImage = nowPlaying.image ? `url("${CSS.escape(nowPlaying.image)}")` : '';
   el.npLine.textContent = npText();
-  el.npSend.textContent = b ? `Send to ${label(b)}` : 'Send';
+  el.npSend.textContent = b ? t('Send to {name}', { name: label(b) }) : t('Send');
   el.npSend.disabled = !b;
 }
 
@@ -6827,7 +6897,7 @@ const CROWN =
 function crown() {
   const c = h('span', 'crown');
   c.innerHTML = CROWN;
-  c.setAttribute('aria-label', 'Most active');
+  c.setAttribute('aria-label', t('Most active'));
   return c;
 }
 const recaps = new Map();
@@ -6879,35 +6949,35 @@ async function addRecap(b) {
 function recapCard(b, list) {
   const card = h('div', 'recap');
   const words = list.reduce((n, t) => n + t.words, 0);
-  const people = list.length === 1 ? 'person' : 'people';
+  const vars = { n: list.length, words: words.toLocaleString('fi-FI') };
   card.append(
-    h('div', 'recap-title', `Yesterday in ${label(b)}`),
-    h('div', 'recap-sub', `${list.length} ${people} said ${words.toLocaleString('fi-FI')} words`),
+    h('div', 'recap-title', t('Yesterday in {name}', { name: label(b) })),
+    h('div', 'recap-sub', list.length === 1 ? t('{n} person said {words} words', vars) : t('{n} people said {words} words', vars)),
   );
   const podium = h('div', 'podium');
   // Second, first, third, as on a podium.
   for (const place of [1, 0, 2]) {
-    const t = list[place];
-    if (!t) {
+    const who = list[place];
+    if (!who) {
       continue;
     }
     const spot = h('div', 'podium-spot');
-    const name = h('span', 'podium-name', identity(t.nick).name);
-    name.classList.toggle('me', t.nick.toLowerCase() === (state.me[b.net] || '').toLowerCase());
+    const name = h('span', 'podium-name', identity(who.nick).name);
+    name.classList.toggle('me', who.nick.toLowerCase() === (state.me[b.net] || '').toLowerCase());
     const step = h('div', 'podium-step', String(place + 1));
     step.style.height = `${PODIUM_STEP_PX[place]}px`;
     step.dataset.place = String(place + 1);
     spot.append(
       ...(place === 0 ? [crown()] : []),
-      avatar(t.nick, ''),
+      avatar(who.nick, ''),
       name,
-      h('span', 'podium-count', t.words.toLocaleString('fi-FI')),
+      h('span', 'podium-count', who.words.toLocaleString('fi-FI')),
       step,
     );
-    personTip(name, b.net, t.nick);
+    personTip(name, b.net, who.nick);
     podium.append(spot);
   }
-  const more = h('button', 'recap-more', 'Today so far');
+  const more = h('button', 'recap-more', t('Today so far'));
   more.type = 'button';
   more.addEventListener('click', () => openToday());
   card.append(podium, more);
@@ -6932,36 +7002,36 @@ const TODAY_FRESH_MS = 30_000;
 function peopleTabs() {
   const tabs = h('div', 'nl-tabs');
   for (const [id, name] of [
-    ['people', 'People'],
-    ['today', 'Today'],
+    ['people', t('People')],
+    ['today', t('Today')],
   ]) {
-    const t = h('button', null, name);
-    t.type = 'button';
-    t.setAttribute('aria-pressed', String(nicklist.tab === id));
-    t.addEventListener('click', () => {
+    const tab = h('button', null, name);
+    tab.type = 'button';
+    tab.setAttribute('aria-pressed', String(nicklist.tab === id));
+    tab.addEventListener('click', () => {
       nicklist.tab = id;
       renderNicklist();
     });
-    tabs.append(t);
+    tabs.append(tab);
   }
   return tabs;
 }
 
 function todayRanking(b) {
-  const t = nicklist.today;
-  if (!t || t.key !== b.key || Date.now() - t.at > TODAY_FRESH_MS) {
+  const today = nicklist.today;
+  if (!today || today.key !== b.key || Date.now() - today.at > TODAY_FRESH_MS) {
     refreshToday(b);
   }
-  if (t?.key !== b.key) {
-    return [h('div', 'nl-empty', 'Counting…')];
+  if (today?.key !== b.key) {
+    return [h('div', 'nl-empty', t('Counting…'))];
   }
-  const list = t.list;
+  const list = today.list;
   // An older lobby-server does not count words; it never answers the request.
   if (!list) {
-    return [h('div', 'nl-empty', 'Your lobby-server needs an update to count this.')];
+    return [h('div', 'nl-empty', t('Your lobby-server needs an update to count this.'))];
   }
   if (!list.length) {
-    return [h('div', 'nl-empty', 'Nobody has said anything here today.')];
+    return [h('div', 'nl-empty', t('Nobody has said anything here today.'))];
   }
   const me = (state.me[b.net] || '').toLowerCase();
   const place = list.findIndex((x) => x.nick.toLowerCase() === me);
@@ -7016,11 +7086,14 @@ async function refreshToday(b) {
 function standing(list, place) {
   const line = h('div', 'nl-standing');
   if (place === -1) {
-    line.textContent = 'You have not said anything here today.';
+    line.textContent = t('You have not said anything here today.');
     return line;
   }
-  // The count and "words." stay together, so "words." never wraps onto a line of its own.
-  line.append('You are ', h('b', null, ordinal(place + 1)), ` with ${list[place].words.toLocaleString('fi-FI')}\u00a0words.`);
+  // The place is bold, so the sentence is split around it. The count and "words." stay together,
+  // so "words." never wraps onto a line of its own.
+  const text = t('You are {place} with {words} words.', { words: list[place].words.toLocaleString('fi-FI') });
+  const [before, after] = text.split('{place}');
+  line.append(before, h('b', null, ordinal(place + 1)), keepLastTwo(after));
   return line;
 }
 
@@ -7051,13 +7124,14 @@ async function usualWords(b) {
 /** "23% more than usual by this time." */
 function usualLine(words, usual) {
   if (!usual) {
-    return words ? 'More than usual by this time.' : 'Quiet as usual by this time.';
+    return words ? t('More than usual by this time.') : t('Quiet as usual by this time.');
   }
   const percent = Math.round((words / usual - 1) * 100);
   if (Math.abs(percent) < ABOUT_SAME_PERCENT) {
-    return 'About as much as usual by this time.';
+    return t('About as much as usual by this time.');
   }
-  return `${Math.abs(percent)}% ${percent > 0 ? 'more' : 'less'} than usual by this time.`;
+  const n = Math.abs(percent);
+  return percent > 0 ? t('{n}% more than usual by this time.', { n }) : t('{n}% less than usual by this time.', { n });
 }
 
 /** Joins the last two words, so the last one never ends up alone on a line. */
@@ -7066,7 +7140,11 @@ function keepLastTwo(text) {
   return at === -1 ? text : `${text.slice(0, at)}\u00a0${text.slice(at + 1)}`;
 }
 
+/** 3rd in English, 3. in Finnish. */
 function ordinal(n) {
+  if (currentLang() === 'fi') {
+    return `${n}.`;
+  }
   const teen = n % 100 >= 11 && n % 100 <= 13;
   const end = teen ? 'th' : ({ 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th');
   return `${n}${end}`;

@@ -1,4 +1,5 @@
 // Pure helpers for the chat view, kept apart so they can be tested in Node.
+import { t, tv } from './i18n.js';
 
 export const GROUP_GAP_MS = 5 * 60 * 1000;
 export const EVENT_KINDS = new Set(['join', 'part', 'quit', 'nick', 'kick', 'mode']);
@@ -32,10 +33,10 @@ export function clock(ts) {
 
 export function dayLabel(ts, now = Date.now()) {
   if (sameDay(ts, now)) {
-    return 'Today';
+    return t('Today');
   }
   if (sameDay(ts, now - 86_400_000)) {
-    return 'Yesterday';
+    return t('Yesterday');
   }
   const d = new Date(ts);
   return `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
@@ -52,13 +53,18 @@ export function continues(prev, line) {
   return line.ts - prev.ts < GROUP_GAP_MS && sameDay(prev.ts, line.ts);
 }
 
+/** "kaisla and otso" from a list of nicks. */
+function andList(list) {
+  return list.length > 1 ? t('{list} and {last}', { list: list.slice(0, -1).join(', '), last: list.at(-1) }) : list[0];
+}
+
+/** `verb` is a template like "{who} joined"; Finnish has a plural form of each. */
 function names(list, verb) {
   const unique = [...new Set(list)];
   if (unique.length > NAMES_SHOWN) {
-    return `${unique.length} ${verb}`;
+    return tv(verb, 'many', { who: unique.length });
   }
-  const last = unique.pop();
-  return unique.length ? `${unique.join(', ')} and ${last} ${verb}` : `${last} ${verb}`;
+  return tv(verb, unique.length > 1 ? 'plural' : '', { who: andList(unique) });
 }
 
 /** One readable line for a run of joins, parts, quits and nick changes. */
@@ -70,10 +76,10 @@ export function summarize(events) {
       by[e.kind].push(e.nick);
     }
     if (e.kind === 'nick') {
-      extra.push(`${e.nick} is now ${e.text}`);
+      extra.push(t('{nick} is now {name}', { nick: e.nick, name: e.text }));
     }
     if (e.kind === 'kick') {
-      extra.push(`${e.nick} was kicked by ${e.text.split(':')[0]}`);
+      extra.push(t('{nick} was kicked by {by}', { nick: e.nick, by: e.text.split(':')[0] }));
     }
     if (e.kind === 'mode') {
       extra.push(describeMode(e.nick, e.text));
@@ -81,16 +87,16 @@ export function summarize(events) {
   }
   const parts = [];
   if (by.join.length) {
-    parts.push(names(by.join, 'joined'));
+    parts.push(names(by.join, '{who} joined'));
   }
   if (by.part.length) {
-    parts.push(names(by.part, 'left'));
+    parts.push(names(by.part, '{who} left'));
   }
   if (by.quit.length) {
-    parts.push(names(by.quit, 'quit'));
+    parts.push(names(by.quit, '{who} quit'));
   }
   if (extra.length > NAMES_SHOWN) {
-    parts.push(`${extra.length} changes`);
+    parts.push(t('{n} changes', { n: extra.length }));
   } else {
     parts.push(...extra);
   }
@@ -127,11 +133,12 @@ export function describeMode(setter, text) {
     }
   }
   const parts = [...given].map(([k, nicks]) => {
-    const list = nicks.length > 1 ? `${nicks.slice(0, -1).join(', ')} and ${nicks.at(-1)}` : nicks[0];
-    return k[0] === '+' ? `gave ${MODE_WORDS[k[1]]} to ${list}` : `took ${MODE_WORDS[k[1]]} from ${list}`;
+    const vars = { mode: tv(MODE_WORDS[k[1]], 'mode'), who: andList(nicks) };
+    const many = nicks.length > 1 ? 'plural' : '';
+    return k[0] === '+' ? tv('gave {mode} to {who}', many, vars) : tv('took {mode} from {who}', many, vars);
   });
   if (plain.length) {
-    parts.push(`set ${plain.join(' ')}`);
+    parts.push(t('set {modes}', { modes: plain.join(' ') }));
   }
   return `${setter} ${parts.join(', ')}`;
 }
@@ -544,38 +551,38 @@ export function span(secs) {
   if (secs < DAY_S) {
     return `${Math.floor(secs / HOUR_S)} h ${Math.floor((secs % HOUR_S) / MINUTE_S)} min`;
   }
-  return `${Math.floor(secs / DAY_S)} d`;
+  return t('{n} d', { n: Math.floor(secs / DAY_S) });
 }
 
 /** How long ago a time was, in words. */
 export function ago(ts, now = Date.now()) {
   const secs = Math.floor((now - ts) / 1000);
-  return secs < MINUTE_S ? 'just now' : `${span(secs)} ago`;
+  return secs < MINUTE_S ? t('just now') : t('{time} ago', { time: span(secs) });
 }
 
 /** WHOIS as tooltip lines. */
 export function formatWhois(w) {
   if (!w.found) {
-    return `${w.nick} is not online`;
+    return t('{nick} is not online', { nick: w.nick });
   }
   const lines = [w.realname && w.realname !== w.nick ? `${w.nick} (${w.realname})` : w.nick, `${w.user}@${w.host}`];
   if (w.account) {
-    lines.push(`Logged in as ${w.account}`);
+    lines.push(t('Logged in as {account}', { account: w.account }));
   }
   if (w.channels) {
-    lines.push(`On ${w.channels}`);
+    lines.push(t('On {channels}', { channels: w.channels }));
   }
   if (w.server) {
-    lines.push(`Via ${w.server}${w.server_info ? `, ${w.server_info}` : ''}`);
+    lines.push(t('Via {server}', { server: `${w.server}${w.server_info ? `, ${w.server_info}` : ''}` }));
   }
   if (w.idle_secs != null) {
-    const since = w.signon ? `, online since ${new Date(w.signon * 1000).toLocaleDateString('fi-FI')}` : '';
-    lines.push(`Idle ${span(w.idle_secs)}${since}`);
+    const vars = { time: span(w.idle_secs), date: w.signon && new Date(w.signon * 1000).toLocaleDateString('fi-FI') };
+    lines.push(w.signon ? t('Idle {time}, online since {date}', vars) : t('Idle {time}', vars));
   }
   if (w.away) {
-    lines.push(`Away: ${w.away}`);
+    lines.push(t('Away: {message}', { message: w.away }));
   }
-  const extra = [w.secure && 'secure connection', w.oper && 'IRC operator'].filter(Boolean);
+  const extra = [w.secure && t('secure connection'), w.oper && t('IRC operator')].filter(Boolean);
   if (extra.length) {
     lines.push(extra.join(', '));
   }
@@ -696,21 +703,25 @@ export function notifyAdvice(permission) {
   }
   if (permission.state === 'ask') {
     return {
-      text: 'macOS asks once whether Lobby may show notifications. Lobby uses them for mentions and private messages.',
-      action: 'Allow notifications',
+      text: t('macOS asks once whether Lobby may show notifications. Lobby uses them for mentions and private messages.'),
+      action: t('Allow notifications'),
     };
   }
   if (permission.state === 'denied') {
     return {
-      text: 'Notifications are off for Lobby in System Settings, so mentions and private messages make no sound or banner.',
-      action: 'Open System Settings',
+      text: t('Notifications are off for Lobby in System Settings, so mentions and private messages make no sound or banner.'),
+      action: t('Open System Settings'),
     };
   }
-  const off = [!permission.banners && 'banners', !permission.badge && 'the Dock badge'].filter(Boolean);
+  const off = [!permission.banners && t('banners'), !permission.badge && t('the Dock badge')].filter(Boolean);
   if (off.length) {
+    const vars = { what: andList(off) };
     return {
-      text: `Lobby may notify, but ${off.join(' and ')} ${off.length > 1 ? 'are' : 'is'} off in System Settings.`,
-      action: 'Open System Settings',
+      text:
+        off.length > 1
+          ? t('Lobby may notify, but {what} are off in System Settings.', vars)
+          : t('Lobby may notify, but {what} is off in System Settings.', vars),
+      action: t('Open System Settings'),
     };
   }
   return null;
@@ -750,15 +761,15 @@ export function quietFor(ts, now = Date.now()) {
   }
   const ms = now - ts;
   if (ms < MINUTE_MS) {
-    return 'now';
+    return t('now');
   }
   if (ms < HOUR_MS) {
     return `${Math.floor(ms / MINUTE_MS)} min`;
   }
   if (ms < DAY_MS) {
-    return `${Math.floor(ms / HOUR_MS)}h`;
+    return t('{n}h', { n: Math.floor(ms / HOUR_MS) });
   }
-  return `${Math.floor(ms / DAY_MS)}d`;
+  return t('{n}d', { n: Math.floor(ms / DAY_MS) });
 }
 
 /** Opacity for someone who last spoke at `ts`. */
@@ -785,10 +796,10 @@ export function peopleGroups(nicks, modes, spokeAt, now, dayStart) {
   });
   const rest = people.filter((p) => p.role !== 'op');
   return [
-    { id: 'ops', title: 'Ops', people: people.filter((p) => p.role === 'op') },
-    { id: 'now', title: 'Talking now', people: rest.filter((p) => p.ts && now - p.ts < TALKING_MS) },
-    { id: 'today', title: 'Earlier today', people: rest.filter((p) => p.ts >= dayStart && now - p.ts >= TALKING_MS) },
-    { id: 'away', title: 'Away', people: rest.filter((p) => p.ts < dayStart) },
+    { id: 'ops', title: t('Ops'), people: people.filter((p) => p.role === 'op') },
+    { id: 'now', title: t('Talking now'), people: rest.filter((p) => p.ts && now - p.ts < TALKING_MS) },
+    { id: 'today', title: t('Earlier today'), people: rest.filter((p) => p.ts >= dayStart && now - p.ts >= TALKING_MS) },
+    { id: 'away', title: t('Away'), people: rest.filter((p) => p.ts < dayStart) },
   ].filter((g) => g.people.length);
 }
 

@@ -1,4 +1,5 @@
 // What a fork such as the Pulina app changes: its name, where it links, its icons. Its look is brand.css.
+// `lang` is the UI language until one is picked in Settings: 'en' or 'fi', English when left out.
 export const BRAND = {
   name: 'Lobby',
   site: 'https://github.com/rollecode/lobby',
