@@ -5211,63 +5211,15 @@ dialog.welcome::backdrop {
   user-select: all;
 }
 
-/* Signing in with what you already have: two equal buttons under one question. */
-.account-existing {
+/* The two ways to sign in with what you already have, side by side, a thin line between. */
+.account-links {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 6px;
-}
-.account-existing-label {
-  color: var(--dim);
-  font-size: 14px;
-}
-.account-existing-row {
-  display: grid;
-  grid-auto-columns: minmax(0, 1fr);
-  grid-auto-flow: column;
-  gap: 10px;
-}
-.account-chip {
-  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 52px;
-  padding: 8px 14px;
-  border: 1px solid var(--line-strong);
-  border-radius: 14px;
-  background: color-mix(in srgb, var(--raised) 60%, transparent);
-  color: var(--strong);
-  font: inherit;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.25;
-  text-align: left;
-  cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease;
+  row-gap: 8px;
 }
-.account-chip:hover {
-  border-color: var(--mention);
-  background: var(--raised);
-}
-.account-chip[hidden] {
-  display: none;
-}
-.account-chip svg {
-  flex: none;
-  width: 20px;
-  height: 20px;
-  fill: none;
-  stroke: var(--mention);
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-@media (max-width: 380px) {
-  .account-existing-row {
-    grid-auto-flow: row;
-  }
+.account-links .account-link + .account-link:not([hidden]) {
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid var(--line-strong);
 }
