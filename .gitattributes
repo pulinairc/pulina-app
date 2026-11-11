@@ -6,3 +6,4 @@ src-tauri/icons/default.txt merge=ours
 src-tauri/icons/icon.png merge=ours
 src-tauri/icons/icon.ico merge=ours
 src-tauri/icons/macos.png merge=ours
+PRIVACY.md merge=ours
