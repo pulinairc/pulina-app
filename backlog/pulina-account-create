@@ -3,7 +3,7 @@
 # its own lobby-server on #pulina and the nginx route /u/<account>/. Run as root by pulina-accounts.
 set -eu
 NAME=$1 PORT=$2 TOKEN=$3
-printf '%s\n' "$NAME" | grep -Eq '^[a-z][a-z0-9_-]{1,9}$' || { echo "bad name" >&2; exit 1; }
+printf '%s\n' "$NAME" | grep -Eq '^[a-z][a-z0-9_-]{1,14}$' || { echo "bad name" >&2; exit 1; }
 printf '%s\n' "$PORT" | grep -Eq '^[0-9]{4,5}$' || { echo "bad port" >&2; exit 1; }
 printf '%s\n' "$TOKEN" | grep -Eq '^[A-Za-z0-9_-]{32,}$' || { echo "bad token" >&2; exit 1; }
 id "$NAME" >/dev/null 2>&1 && { echo "user exists" >&2; exit 1; }

@@ -38,8 +38,8 @@ MAX_ACCOUNTS = int(os.environ.get('MAX_ACCOUNTS', '10'))
 CREATE = os.environ.get('ACCOUNT_CREATE', '/usr/local/sbin/pulina-account-create')
 REMOVE = os.environ.get('ACCOUNT_REMOVE', '/usr/local/sbin/pulina-account-remove')
 FIRST_PORT = 9201
-# Ident is at most 10 characters on QuakeNet, and the account name is the ident.
-NAME_RE = re.compile(r'^[a-z][a-z0-9_-]{1,9}$')
+# The account name is the nick (15 on QuakeNet); the ident shows its first 10.
+NAME_RE = re.compile(r'^[a-z][a-z0-9_-]{1,14}$')
 MIN_PASSWORD = 10
 MAX_KNOWN = 200
 MAX_BODY = 4096
