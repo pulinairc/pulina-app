@@ -1,0 +1,9 @@
+# Pulina's uploads: files live in R2, chat.pulina.fi's nginx is the only way in (up.pulina.fi).
+name = "pulina-uploads"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "FILES"
+bucket_name = "pulina-uploads"
