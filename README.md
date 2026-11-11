@@ -14,7 +14,7 @@
 
 <p align="center">
   The chat app for <a href="https://www.pulina.fi">#pulina</a>, made for that one channel.<br>
-  Pick a nick and you are in, on your computer or your phone. In Finnish, or in English if you like.
+  Pick a nick and you are in, on your computer or your phone. The channel talks Finnish only.
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@ The welcome asks for a nick and takes you to #pulina. No server, no config file,
 
 ### 🇫🇮 Finnish first
 
-Pulina speaks Finnish out of the box. English is one switch away in Settings.
+Pulina speaks Finnish out of the box. The app's own menus can switch to English in Settings, but on #pulina everyone writes in Finnish.
 
 ### 💬 Grouped chat
 
