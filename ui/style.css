@@ -249,6 +249,19 @@ a:focus-visible {
   color: var(--text);
   font-size: 14px;
 }
+/* Waiting for a restart: the one thing left to do, so it stands out. */
+.update-bar.ready {
+  background: color-mix(in srgb, var(--accent) 16%, var(--panel));
+  border-bottom-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  color: var(--strong);
+  font-weight: 500;
+}
+.update-bar.ready #update-go {
+  padding: 5px 12px;
+  background: var(--accent);
+  color: var(--bg);
+  font-weight: 600;
+}
 .update-bar[hidden],
 #update-auto-row[hidden] {
   display: none;
@@ -2897,7 +2910,8 @@ label.switch-row {
 }
 body.docked #logwrap,
 body.docked #composer,
-body.docked #status {
+body.docked #status,
+body.docked #update-bar {
   margin-right: 200px;
 }
 .nl-top {
@@ -2931,7 +2945,8 @@ body.docked #status {
   }
   body.docked #logwrap,
   body.docked #composer,
-  body.docked #status {
+  body.docked #status,
+  body.docked #update-bar {
     margin-right: 127px;
   }
   /* Faces and names only: times and voice marks wait for a wider window. */

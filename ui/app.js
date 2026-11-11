@@ -1475,9 +1475,10 @@ function renderUpdate() {
   }
   const name = `${BRAND.name} ${found.version}`;
   el.updateGo.hidden = update.busy;
+  el.updateBar.classList.toggle('ready', Boolean(update.ready));
   if (update.ready) {
-    el.updateText.textContent = t('{name} is installed.', { name });
-    el.updateGo.textContent = t('Restart');
+    el.updateText.textContent = t('{name} is ready. Restart to start using it.', { name });
+    el.updateGo.textContent = t('Restart now');
   } else if (update.busy) {
     el.updateText.textContent = t('Installing {name}…', { name });
   } else {
@@ -1547,9 +1548,12 @@ el.updateCheck.addEventListener('click', async () => {
   el.updateResult.textContent = t('Checking…');
   try {
     const found = await checkUpdate();
-    el.updateResult.textContent = found
-      ? t('{name} is out.', { name: `${BRAND.name} ${found.version}` })
-      : t('{name} is up to date.', { name: BRAND.name });
+    const name = found && `${BRAND.name} ${found.version}`;
+    el.updateResult.textContent = !found
+      ? t('{name} is up to date.', { name: BRAND.name })
+      : update.ready
+        ? t('{name} is ready. Restart to start using it.', { name })
+        : t('{name} is out.', { name });
   } catch (e) {
     el.updateResult.textContent = t('Could not check: {error}', { error: e });
   }

@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Fix the hidden Restart button after an update
+
 ### 1.8.2: 2026-11-11
 
 * Fix the empty window after the welcome
