@@ -286,6 +286,9 @@ HTMLDialogElement.prototype.showModal = function showModal() {
 };
 
 startLang(BRAND.lang ?? 'en');
+// A fork made for one channel, such as Pulina, hides every network choice.
+const ONLY = Boolean(BRAND.start?.only);
+document.documentElement.toggleAttribute('data-only', ONLY);
 translatePage();
 
 /** The page's own text and labels in the chosen language, once at start. */
@@ -816,7 +819,8 @@ function hiddenKeys() {
 }
 
 function isHidden(b) {
-  return hiddenKeys().has(b.key);
+  // A one-channel fork has no use for the network's own window.
+  return hiddenKeys().has(b.key) || (ONLY && b.name === '');
 }
 
 function setHidden(b, hidden) {
@@ -2763,9 +2767,13 @@ function dockSetting() {
   return `${DOCK_KEY}.${PLATFORM.value || 'desktop'}`;
 }
 
+// Until someone chooses, a window wide enough keeps the list open beside the chat.
+const DOCK_DEFAULT_MIN_PX = 600;
+
 function dockPrefs() {
   try {
-    return JSON.parse(state.settings[dockSetting()] || 'null') || {};
+    const saved = JSON.parse(state.settings[dockSetting()] || 'null');
+    return saved || (innerWidth >= DOCK_DEFAULT_MIN_PX ? { side: true, shown: true } : {});
   } catch {
     return {};
   }
@@ -4408,9 +4416,6 @@ const CHECK_OPEN =
 const CHECK_DONE =
   '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="var(--mention)"/><path d="M7.5 12.5l3 3 6-6.5" stroke="var(--bg)" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 let welcomeWay = 'irc';
-// A fork made for one channel, such as Pulina, hides every network choice.
-const ONLY = Boolean(BRAND.start?.only);
-document.documentElement.toggleAttribute('data-only', ONLY);
 let welcomeNet = BRAND.start?.network ?? START_NETWORKS[0][0];
 
 function openWelcome() {
@@ -4485,7 +4490,9 @@ function renderWelcomeNets() {
 el.welcomeQuick.addEventListener('submit', async (e) => {
   e.preventDefault();
   const nick = el.welcomeNick.value.trim();
-  const preset = START_NETWORKS.find(([name]) => name === welcomeNet);
+  // A fork may name its network after itself: BRAND.start.host says where it really is.
+  const own = BRAND.start?.host && [BRAND.start.network, BRAND.start.host];
+  const preset = START_NETWORKS.find(([name]) => name === welcomeNet) ?? (welcomeNet === own?.[0] ? own : null);
   // Another server may name its port: irc.example.org:6697.
   const [host, port] = preset ? [preset[1]] : el.welcomeHost.value.trim().split(':');
   const problem = !NICK_RE.test(nick)
