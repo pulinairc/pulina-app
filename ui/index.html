@@ -9,6 +9,16 @@
   <script type="module" src="app.js"></script>
 </head>
 <body>
+  <div id="splash" class="splash" aria-hidden="true">
+    <svg class="splash-lamp" width="120" height="132" viewBox="0 0 120 132">
+      <defs><linearGradient id="splash-dome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a8ecd0"/><stop offset="1" stop-color="#3fb487"/></linearGradient></defs>
+      <path d="M60 0 V56" stroke="#dfe3ea" stroke-width="3"/>
+      <rect x="51" y="52" width="18" height="18" rx="4" fill="#3fb487"/>
+      <path d="M0 131 A60 60 0 0 1 120 131 Z" fill="url(#splash-dome)"/>
+      <ellipse class="splash-bulb" cx="60" cy="131" rx="26" ry="8" fill="#fff4dc"/>
+    </svg>
+  </div>
+  <div id="splash-light" class="splash-light" aria-hidden="true"></div>
   <header id="top" data-tauri-drag-region="deep">
     <button id="title" type="button" aria-haspopup="dialog" aria-controls="switcher">
       <span id="chan-icon" class="chan-icon" data-tip="Channel picture">#</span>
