@@ -1,5 +1,6 @@
-### [Unreleased]
+### 1.13.7: 2026-11-12
 
+* Fix macOS About missing the build date and commit
 * Fix wss:// lobby-server links never connecting
 * Fix private YouTube videos showing a big grey box
 * Fix a person's lines staying split after the New line

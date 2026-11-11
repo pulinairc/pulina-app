@@ -709,7 +709,7 @@ const QUIT_MENU_ID: &str = "quit";
 /// macOS: the standard menu bar, with Help > About Lobby opening the About section in Settings.
 #[cfg(target_os = "macos")]
 fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
-    use tauri::menu::{HELP_SUBMENU_ID, Menu, MenuItem, PredefinedMenuItem};
+    use tauri::menu::{AboutMetadata, HELP_SUBMENU_ID, Menu, MenuItem, PredefinedMenuItem};
     let menu = Menu::default(app)?;
     let name = &app.package_info().name;
     if let Some(help) = menu.get(HELP_SUBMENU_ID).and_then(|m| m.as_submenu().cloned()) {
@@ -717,6 +717,16 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     }
     // The app's own menu: About, then Settings… as on every Mac app.
     if let Some(own) = menu.items()?.first().and_then(|m| m.as_submenu().cloned()) {
+        // The standard About shows "Version 1.13.6 (1.13.6)"; this one names the build's date and commit.
+        if let Some(about) = own.items()?.into_iter().next() {
+            own.remove(&about)?;
+        }
+        let build = AboutMetadata {
+            short_version: Some(env!("CARGO_PKG_VERSION").into()),
+            version: Some(format!("{}, {}", env!("LOBBY_COMMIT_DATE"), env!("LOBBY_COMMIT"))),
+            ..Default::default()
+        };
+        own.prepend(&PredefinedMenuItem::about(app, Some(&format!("About {name}")), Some(build))?)?;
         own.insert(&MenuItem::with_id(app, SETTINGS_MENU_ID, "Settings…", true, Some("CmdOrCtrl+,"))?, 2)?;
         own.insert(&PredefinedMenuItem::separator(app)?, 3)?;
         // The standard Quit ends the app before it can say goodbye on IRC; this one sends the quit message first.
