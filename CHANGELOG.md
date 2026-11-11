@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.12.1: 2026-11-11
 
 * Change sign-in choices to two buttons side by side
 * Change shell sign-in to need no password
