@@ -95,7 +95,3 @@ The macOS build is not signed. After moving Pulina to Applications, run `xattr -
 The same as Lobby: see [Installation](https://github.com/rollecode/lobby#installation) in Lobby's README, with this repository in place of Lobby's.
 
 </details>
-
-## License
-
-MIT, as Lobby.
