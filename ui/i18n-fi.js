@@ -316,6 +316,8 @@ export const FI = {
   'Networks on lobby-server': 'lobby-serverin verkot',
   'Add a network': 'Lisää verkko',
   Nick: 'Nimimerkki',
+  '{count} chatting now': '{count} juttelee nyt',
+  'Talked last': 'Viimeksi juttelivat',
   Networks: 'Verkot',
   'For an IRC server or an irssiproxy port, one network each. Without lobby-server, history only covers the time Lobby is open.':
     'Lisää jokainen IRC-palvelin tai irssiproxy-portti omaksi verkokseen. Ilman lobby-serveriä keskusteluja tallentuu vain silloin, kun Lobby on auki.',

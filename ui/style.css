@@ -4597,7 +4597,7 @@ dialog.welcome::backdrop {
   flex-direction: column;
   justify-content: flex-end;
   gap: 14px;
-  padding: 24px 28px 380px;
+  padding: 24px 28px 300px;
   overflow: hidden;
   filter: blur(2.5px);
   opacity: 0.55;
@@ -4621,13 +4621,111 @@ dialog.welcome::backdrop {
   position: relative;
   width: 100%;
   min-height: 0;
-  max-width: 520px;
-  padding: 28px 24px calc(env(safe-area-inset-bottom) + 32px);
-  border: 1px solid var(--line);
-  border-bottom: 0;
-  border-radius: 28px 28px 0 0;
+  max-width: none;
+  margin-left: 0;
+  /* Lined up with the messages above it, no card: the talk fades into the welcome. */
+  padding: 96px 28px calc(env(safe-area-inset-bottom) + 40px);
+  gap: 18px;
+  background: linear-gradient(transparent, var(--bg) 34%);
+}
+:root[data-only] #welcome-quick h1 {
+  font-size: 26px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+}
+:root[data-only] #welcome-quick .welcome-lead,
+:root[data-only] #welcome-quick .field-label,
+:root[data-only] #welcome-quick .hint:not(.error),
+:root[data-only] #welcome-join {
+  display: none;
+}
+.welcome-talking {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -10px 0 0;
+  color: var(--dim);
+  font-size: 15px;
+}
+.welcome-talking[hidden] {
+  display: none;
+}
+.talking-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.welcome-talking .pill-faces {
+  margin-left: 2px;
+}
+/* The nick and Liity as one field; elsewhere the box steps aside and the input stands alone. */
+.nick-box {
+  display: contents;
+}
+.nick-face,
+.nick-go {
+  display: none;
+}
+:root[data-only] .nick-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 320px;
+  max-width: 100%;
+  height: 56px;
+  box-sizing: border-box;
+  padding: 0 6px 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
   background: var(--panel);
-  box-shadow: 0 -24px 60px rgb(0 0 0 / 45%);
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+:root[data-only] .nick-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+:root[data-only] .nick-box .field {
+  flex: 1;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  font-size: 17px;
+  font-weight: 600;
+  outline: none;
+}
+:root[data-only] .nick-face {
+  --avatar: 26px;
+  display: flex;
+}
+:root[data-only] .nick-face:empty {
+  display: none;
+}
+:root[data-only] .nick-go {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 650;
+  cursor: pointer;
+}
+:root[data-only] .nick-go:disabled {
+  background: var(--line);
+  color: var(--faint);
+  cursor: default;
 }
 :root[data-only] #chan-net,
 :root[data-only] .any-net {

@@ -2,6 +2,7 @@
 
 * Fix the update check saying up to date without update files
 * Change the start light to widen over the chat, beam to the bottom
+* Change the fork join screen to one nick field with who is talking
 
 ### 1.9.1: 2026-11-11
 

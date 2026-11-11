@@ -457,9 +457,14 @@
         <h1>Say hi to IRC</h1>
         <p class="welcome-lead">Three things and you are in.</p>
       </div>
+      <p id="welcome-talking" class="welcome-talking" hidden></p>
       <div class="welcome-field">
         <label class="field-label" for="welcome-nick">Your nick</label>
-        <input id="welcome-nick" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="30">
+        <div class="nick-box">
+          <span id="welcome-nick-face" class="nick-face" aria-hidden="true"></span>
+          <input id="welcome-nick" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" maxlength="30" placeholder="Nick">
+          <button id="welcome-nick-go" class="nick-go" type="submit" disabled>Join <span aria-hidden="true">→</span></button>
+        </div>
         <span class="hint">What others see. Letters, digits and - _ work.</span>
       </div>
       <div class="welcome-field any-net">
