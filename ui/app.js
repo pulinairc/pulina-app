@@ -1695,7 +1695,16 @@ function renderLog() {
   stopGlide();
   dropLive();
   el.col.replaceChildren();
-  view = { lastLine: null, group: null, events: null, command: null, lastByNick: new Map(), separator: null, separatorAfter: null };
+  view = {
+    lastLine: null,
+    group: null,
+    events: null,
+    command: null,
+    lastByNick: new Map(),
+    byId: new Map(),
+    separator: null,
+    separatorAfter: null,
+  };
   const b = state.buffers.get(state.current);
   if (!b) {
     return updateJumps();
@@ -1873,9 +1882,9 @@ function appendLine(l) {
   const prev = view.lastLine;
   let fresh = null;
 
-  // "nick: 😂" becomes a reaction under that nick's last message.
+  // "nick: 😂" becomes a reaction: under the message you picked, else under that nick's last one.
   const reaction = l.kind === 'msg' ? parseReaction(l.text) : null;
-  const reacted = reaction && view.lastByNick.get(reaction.nick.toLowerCase());
+  const reacted = reaction && (reactedTo(l, reaction) || view.lastByNick.get(reaction.nick.toLowerCase()));
   if (reacted) {
     addReaction(reacted, reaction.emoji, l.nick, l.own);
     return null;
@@ -2151,6 +2160,9 @@ function row(l) {
     attachPreview(firstUrl, r);
   }
   view.lastByNick.set(l.nick.toLowerCase(), { line: l, row: r });
+  if (l.id) {
+    view.byId.set(l.id, { line: l, row: r });
+  }
   return r;
 }
 
@@ -2393,12 +2405,52 @@ function countReaction(emoji) {
   saveSetting(REACTION_SETTING, JSON.stringify(counts));
 }
 
+// IRC only carries "nick: 😂", so the message you picked is remembered here: first until your
+// own line comes back, then by its id, kept as a setting so other devices and restarts agree.
+const REACTION_LINKS_SETTING = 'reactionLinks';
+const REACTION_LINKS_MAX = 500;
+const pendingReactions = new Map();
+
+const reactionKey = (net, buffer, nick, emoji) => `${net}\n${buffer.toLowerCase()}\n${nick.toLowerCase()}\n${emoji}`;
+
+function reactionLinks() {
+  try {
+    return JSON.parse(state.settings[REACTION_LINKS_SETTING] || '{}');
+  } catch {
+    return {};
+  }
+}
+
+/** The message one of your own reaction lines was aimed at, when it is in view. */
+function reactedTo(l, reaction) {
+  if (!isMine(l)) {
+    return null;
+  }
+  const key = reactionKey(l.net, l.buffer, reaction.nick, reaction.emoji);
+  const pending = pendingReactions.get(key);
+  if (pending && l.id) {
+    pendingReactions.delete(key);
+    const links = reactionLinks();
+    links[l.id] = pending;
+    const ids = Object.keys(links);
+    for (const old of ids.slice(0, Math.max(0, ids.length - REACTION_LINKS_MAX))) {
+      delete links[old];
+    }
+    saveSetting(REACTION_LINKS_SETTING, JSON.stringify(links));
+  }
+  const target = pending || (l.id && reactionLinks()[l.id]);
+  return (target && view.byId.get(target)) || null;
+}
+
 async function react(line, emoji) {
   const b = state.buffers.get(state.current);
   if (!b) {
     return;
   }
   countReaction(emoji);
+  if (line.id) {
+    pendingReactions.set(reactionKey(b.net, b.name, line.nick, emoji), line.id);
+  }
   try {
     await invoke('send', { net: b.net, buffer: b.name, text: `${line.nick}: ${emoji}` });
   } catch (e) {
@@ -6358,7 +6410,16 @@ function prependLines(lines, separatorAfter = null) {
   const kept = view;
   const firstDay = col.firstElementChild?.classList.contains('day') ? col.firstElementChild : null;
   el.col = h('div');
-  view = { lastLine: null, group: null, events: null, command: null, lastByNick: new Map(), separator: null, separatorAfter };
+  view = {
+    lastLine: null,
+    group: null,
+    events: null,
+    command: null,
+    lastByNick: new Map(),
+    byId: new Map(),
+    separator: null,
+    separatorAfter,
+  };
   for (const l of lines) {
     appendLine(l);
   }
