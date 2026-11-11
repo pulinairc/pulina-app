@@ -249,7 +249,7 @@ impl Session {
                     let chan = Chan { name: name.clone(), ..Default::default() };
                     let out = self.info(&chan, true);
                     self.chans.insert(key, chan);
-                    return vec![out, Out::Mask(msg.mask().to_string())];
+                    return vec![out, Out::Mask(msg.mask().to_string()), Out::Line(self.line(&name, "join", msg, "", now))];
                 }
                 let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
                 chan.members.insert(nick.to_lowercase(), nick.clone());
@@ -363,6 +363,11 @@ impl Session {
                 let text = msg.params.iter().skip(1).cloned().collect::<Vec<_>>().join(" ");
                 let gone = Whois { net: self.net.clone(), nick: msg.param(1).to_string(), ..Default::default() };
                 vec![Out::Whois(gone), Out::Line(self.line("", "info", msg, &text, now))]
+            }
+            // A message the channel refused (not joined, moderated, banned) belongs in that channel, not the server window.
+            "404" => {
+                let text = msg.params.iter().skip(2).cloned().collect::<Vec<_>>().join(" ");
+                vec![Out::Line(self.line(msg.param(1), "info", msg, &text, now))]
             }
             // Answers to commands (WHOIS, errors like "no such nick") as readable text.
             cmd if is_reply_numeric(cmd) => {
@@ -526,6 +531,16 @@ mod tests {
 
         let out = feed(&mut s, ":jaska!j@h QUIT :bye");
         assert_eq!(lines(&out), vec![("#a".into(), "quit".into(), "jaska".into())]);
+    }
+
+    #[test]
+    fn own_join_shows_and_a_refused_message_lands_in_its_channel() {
+        let mut s = Session::new("net", "rolle");
+        let out = feed(&mut s, ":rolle!r@h JOIN #a");
+        assert_eq!(lines(&out), vec![("#a".into(), "join".into(), "rolle".into())]);
+
+        let out = feed(&mut s, ":srv 404 rolle #b :Cannot send to channel");
+        assert_eq!(lines(&out), vec![("#b".into(), "info".into(), "srv".into())]);
     }
 
     #[test]

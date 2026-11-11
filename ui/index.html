@@ -6,6 +6,7 @@
   <title>Lobby</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="brand.css">
+  <script src="boot.js"></script>
   <script type="module" src="app.js"></script>
 </head>
 <body>
@@ -84,6 +85,7 @@
       <span id="jump-latest-label">Latest</span>
     </button>
   </div>
+  <div id="joining" class="joining" role="status" hidden><span class="joining-spin" aria-hidden="true"></span><span id="joining-text"></span></div>
   <form id="composer">
     <div id="slash" role="listbox" aria-label="Commands" hidden></div>
     <div id="replying" hidden>
