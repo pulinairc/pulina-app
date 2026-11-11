@@ -4396,3 +4396,65 @@ dialog.welcome::backdrop {
 #checklist-hide {
   align-self: flex-start;
 }
+
+/* Cold start: a lamp switches on and the chat opens through its light. app.js moves the
+   hole in this cover from the bulb to the cone to the whole window, then removes it. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg);
+}
+.splash.opening {
+  pointer-events: none;
+}
+/* The light itself, over the chat it opens: the lamp's pink, fading downwards. */
+.splash-light {
+  position: fixed;
+  inset: 0;
+  z-index: 1001;
+  pointer-events: none;
+  background: linear-gradient(rgb(176 104 143 / 55%), rgb(176 104 143 / 0%) 75%);
+  clip-path: polygon(50% 0, 50% 0, 50% 0, 50% 0);
+}
+.splash-lamp {
+  position: absolute;
+  left: 50%;
+  top: calc(34% - 132px);
+  margin-left: -60px;
+  overflow: visible;
+  transition:
+    opacity 0.35s ease 0.25s,
+    transform 0.6s cubic-bezier(0.65, 0, 0.35, 1) 0.2s;
+}
+.splash.opening .splash-lamp {
+  opacity: 0;
+  transform: translateY(-40px);
+}
+.splash-bulb {
+  opacity: 0.15;
+}
+.splash.lit .splash-bulb {
+  animation: splash-flicker 0.3s linear forwards;
+}
+@keyframes splash-flicker {
+  0% {
+    opacity: 0.15;
+  }
+  20% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0.3;
+  }
+  70%,
+  100% {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .splash,
+  .splash-lamp {
+    transition: opacity 0.2s ease;
+  }
+}

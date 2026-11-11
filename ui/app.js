@@ -122,6 +122,8 @@ const el = {
   status: $('status'),
   statusText: $('status-text'),
   statusAction: $('status-action'),
+  splash: $('splash'),
+  splashLight: $('splash-light'),
   welcome: $('welcome'),
   welcomeWays: $('welcome-ways'),
   welcomeQuick: $('welcome-quick'),
@@ -594,6 +596,7 @@ function onLine(l) {
   const visible = state.current === b.key;
   if (visible && !b.window) {
     queueLive(l);
+    splashReady();
   }
   if (b.window && CHAT_KINDS.has(l.kind) && !l.own) {
     b.windowAfter = (b.windowAfter || 0) + 1;
@@ -1475,6 +1478,94 @@ function renderLog() {
   if (!b.window) {
     addRecap(b);
   }
+  if (b.lines.length) {
+    splashReady();
+  }
+}
+
+// Cold start: the lamp switches on, then the chat opens through its light, once there is a chat to show.
+const SPLASH_MIN_MS = 700;
+const SPLASH_MAX_MS = 3000;
+const SPLASH_CONE_MS = 300;
+const SPLASH_OPEN_MS = 650;
+const CONE_TOP_HALF_PX = 24;
+const CONE_SPREAD = 0.41;
+const splashStart = performance.now();
+let splashDone = false;
+requestAnimationFrame(() => el.splash.classList.add('lit'));
+setTimeout(splashReady, SPLASH_MAX_MS);
+
+function splashReady() {
+  if (splashDone) {
+    return;
+  }
+  splashDone = true;
+  setTimeout(openSplash, Math.max(0, SPLASH_MIN_MS - (performance.now() - splashStart)));
+}
+
+const px = (points) => points.map(([x, y]) => `${x}px ${y}px`).join(', ');
+
+/** The cover with a hole in it, cut by the four points. */
+function splashHole(points) {
+  const w = innerWidth;
+  const hgt = innerHeight;
+  const hole = px([...points, points[0]]);
+  return `polygon(evenodd, 0 0, ${w}px 0, ${w}px ${hgt}px, 0 ${hgt}px, 0 0, ${hole})`;
+}
+
+function openSplash() {
+  const cover = el.splash;
+  const light = el.splashLight;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    cover.style.opacity = '0';
+    setTimeout(() => {
+      cover.remove();
+      light.remove();
+    }, 250);
+    return;
+  }
+  const bulb = cover.querySelector('.splash-bulb').getBoundingClientRect();
+  const x = bulb.left + bulb.width / 2;
+  const y = bulb.top + bulb.height / 2;
+  const foot = Math.min(innerHeight * 0.85, y + 330);
+  const half = (foot - y) * CONE_SPREAD;
+  const far = 60;
+  // The hole in the cover and the light over it take the same shape at each step.
+  const shape = (points) => {
+    cover.style.clipPath = splashHole(points);
+    light.style.clipPath = `polygon(${px(points)})`;
+  };
+  shape([
+    [x, y],
+    [x, y],
+    [x, y],
+    [x, y],
+  ]);
+  cover.getBoundingClientRect();
+  cover.classList.add('opening');
+  cover.style.transition = light.style.transition = `clip-path ${SPLASH_CONE_MS}ms ease-out`;
+  shape([
+    [x - CONE_TOP_HALF_PX, y],
+    [x + CONE_TOP_HALF_PX, y],
+    [x + half, foot],
+    [x - half, foot],
+  ]);
+  setTimeout(() => {
+    const open = `${SPLASH_OPEN_MS}ms cubic-bezier(0.65, 0, 0.35, 1)`;
+    cover.style.transition = `clip-path ${open}`;
+    light.style.transition = `clip-path ${open}, opacity ${open}`;
+    light.style.opacity = '0';
+    shape([
+      [-far, -far],
+      [innerWidth + far, -far],
+      [innerWidth + far, innerHeight + far],
+      [-far, innerHeight + far],
+    ]);
+    setTimeout(() => {
+      cover.remove();
+      light.remove();
+    }, SPLASH_OPEN_MS + 50);
+  }, SPLASH_CONE_MS + 80);
 }
 
 /** The line at the top of the chat when it is scrolled up, so coming back opens there. */
@@ -4084,6 +4175,7 @@ let welcomeWay = 'irc';
 let welcomeNet = BRAND.start?.network ?? START_NETWORKS[0][0];
 
 function openWelcome() {
+  splashReady();
   showWelcomeStep('ways');
   el.welcome.showModal();
 }
@@ -4308,6 +4400,7 @@ function renderConnectionStatus() {
 }
 
 async function openConnection() {
+  splashReady();
   const c = await invoke('get_connection');
   el.connSsh.value = c.ssh;
   el.connSshPort.value = c.ssh_port ?? '';
