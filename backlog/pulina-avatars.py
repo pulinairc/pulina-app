@@ -6,7 +6,8 @@ POST /avatar          the picture's bytes (PNG, JPEG, WebP or GIF, at most MAX_B
 GET  /a/<id>          the picture
 
 The id is the start of the picture's SHA-256, so the same picture gets the same address.
-Runs behind nginx, which limits how often one address may upload. Stdlib only.
+Runs behind nginx, which limits how often one address may upload. All pictures together stay
+under MAX_TOTAL; to take one down, delete its file from the state directory. Stdlib only.
 """
 
 import hashlib
@@ -20,6 +21,7 @@ HOST = '127.0.0.1'
 PORT = int(os.environ.get('AVATAR_PORT', '8732'))
 PUBLIC = 'https://chat.pulina.fi/a/'
 MAX_BYTES = 300 * 1024
+MAX_TOTAL = int(os.environ.get('AVATAR_MAX_TOTAL', str(500 * 1024 * 1024)))
 ID_LEN = 16
 ID_RE = re.compile(r'^/a/([0-9a-f]{%d})$' % ID_LEN)
 CACHE_SECONDS = 365 * 24 * 3600
@@ -64,6 +66,8 @@ class Handler(BaseHTTPRequestHandler):
         pic = hashlib.sha256(data).hexdigest()[:ID_LEN]
         path = os.path.join(STORE, pic)
         if not os.path.exists(path):
+            if sum(e.stat().st_size for e in os.scandir(STORE)) + size > MAX_TOTAL:
+                return self.fail(507, 'no room for pictures')
             with open(path + '.tmp', 'wb') as f:
                 f.write(data)
             os.replace(path + '.tmp', path)
@@ -79,7 +83,7 @@ class Handler(BaseHTTPRequestHandler):
         except FileNotFoundError:
             return self.fail(404, 'not found')
         self.reply(200, data, kind_of(data) or 'application/octet-stream',
-                   [('Cache-Control', 'public, max-age=%d, immutable' % CACHE_SECONDS)])
+                   [('Cache-Control', 'public, max-age=%d, immutable' % CACHE_SECONDS), ('X-Content-Type-Options', 'nosniff')])
 
     def log_message(self, *args):
         pass
