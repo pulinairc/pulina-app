@@ -461,6 +461,43 @@
       <button id="welcome-join" class="welcome-go" type="submit">Join</button>
       <button id="welcome-back" class="link-btn welcome-back any-net" type="button">Back</button>
     </form>
+    <div id="welcome-rules" class="welcome-step welcome-more" hidden>
+      <div class="welcome-top welcome-top-left">
+        <h1 id="rules-title">Rules</h1>
+        <p id="rules-intro" class="welcome-lead"></p>
+      </div>
+      <ol id="rules-list" class="rules-list"></ol>
+      <button id="rules-accept" class="welcome-go" type="button">I accept the rules</button>
+      <a id="rules-link" class="rules-link" target="_blank" rel="noopener">Read all the rules</a>
+    </div>
+    <form id="welcome-notify" class="welcome-step welcome-more" hidden>
+      <div class="welcome-top welcome-top-left">
+        <h1>Know when someone talks to you</h1>
+        <p class="welcome-lead">You get a notification when someone mentions your nick or sends you a private message.</p>
+      </div>
+      <div class="welcome-field">
+        <label class="field-label" for="welcome-words">Other words to hear about</label>
+        <input id="welcome-words" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. movie, sauna">
+        <span class="hint">Your nick is always included. You can change these later in Settings.</span>
+      </div>
+      <span class="welcome-fill"></span>
+      <button id="notify-allow" class="welcome-go" type="submit">Allow notifications</button>
+      <button id="notify-later" class="link-btn welcome-back" type="button">Not now</button>
+    </form>
+    <form id="welcome-photo" class="welcome-step welcome-more" hidden>
+      <div class="welcome-top welcome-top-left">
+        <h1>Choose a profile picture</h1>
+        <p id="welcome-photo-lead" class="welcome-lead"></p>
+      </div>
+      <label class="photo-pick">
+        <input id="welcome-photo-file" type="file" accept="image/*" hidden>
+        <span id="welcome-photo-face" class="photo-face"></span>
+        <span class="photo-pick-text"><b id="welcome-photo-nick"></b><span>Choose a picture</span></span>
+      </label>
+      <span class="welcome-fill"></span>
+      <button id="photo-join" class="welcome-go" type="submit">Join</button>
+      <button id="photo-skip" class="link-btn welcome-back" type="button">Skip and join</button>
+    </form>
   </dialog>
 
   <dialog id="connection" tabindex="-1" aria-labelledby="connection-title">
