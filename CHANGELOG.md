@@ -1,5 +1,7 @@
 ### [Unreleased]
 
+* Fix the welcome running off the iPhone screen
+* Change onboarding to a size smaller on phones
 * Add a brand setting for a fork's own file host
 
 ### 1.13.5: 2026-11-11

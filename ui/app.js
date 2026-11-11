@@ -6603,6 +6603,7 @@ function applyTextSize(percent) {
   if (root.classList.contains('ios')) {
     pageScale = (p / 100) * IOS_TEXT_BASE;
     root.style.zoom = String(pageScale);
+    viewSize();
     return;
   }
   // The macOS header keeps its size so it stays level with the window buttons.
@@ -6612,6 +6613,18 @@ function applyTextSize(percent) {
     .setZoom(p / 100)
     .catch(() => {});
 }
+
+/** The window in the zoomed page's pixels: 100vw and 100vh ignore the zoom and overflow on iPhone. */
+function viewSize() {
+  const root = document.documentElement;
+  root.style.setProperty('--view-w', `${window.innerWidth / pageScale}px`);
+  root.style.setProperty('--view-h', `${window.innerHeight / pageScale}px`);
+}
+window.addEventListener('resize', () => {
+  if (pageScale !== 1) {
+    viewSize();
+  }
+});
 
 el.textSize.addEventListener('input', () => applyTextSize(el.textSize.value));
 el.textSizeNumber.addEventListener('change', () => applyTextSize(el.textSizeNumber.value));
