@@ -4481,14 +4481,35 @@ dialog.welcome::backdrop {
 }
 
 /* Cold start: a lamp switches on, its light grows and the cover fades into the chat. */
+/* The lamp sits at 50% across with its bulb at 34% down; its beam runs from there to the floor. */
 .splash {
   position: fixed;
   inset: 0;
   z-index: 1000;
   background: var(--bg);
+  /* While the app loads, the chat shows only inside the beam: a beam-shaped hole in the cover. */
+  clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 50% 34%, 50% 34%, 50% 34%, 50% 34%, 50% 34%);
+  animation: splash-hole 0.4s ease-out 0.35s forwards;
 }
 .splash.opening {
   pointer-events: none;
+}
+@keyframes splash-hole {
+  to {
+    clip-path: polygon(
+      evenodd,
+      0 0,
+      100% 0,
+      100% 100%,
+      0 100%,
+      0 0,
+      calc(50% - 24px) 34%,
+      calc(50% + 24px) 34%,
+      calc(50% + 135px) min(85%, calc(34% + 330px)),
+      calc(50% - 135px) min(85%, calc(34% + 330px)),
+      calc(50% - 24px) 34%
+    );
+  }
 }
 /* The light itself, over the chat it opens: the lamp's pink, fading downwards. */
 .splash-light {
@@ -4496,26 +4517,20 @@ dialog.welcome::backdrop {
   inset: 0;
   z-index: 1001;
   pointer-events: none;
-  background: linear-gradient(rgb(176 104 143 / 55%), rgb(176 104 143 / 0%) 75%);
-  /* From the bulb (the lamp sits at 50% across, its bulb at 34% down) to the floor. */
-  clip-path: polygon(
-    calc(50% - 24px) 34%,
-    calc(50% + 24px) 34%,
-    calc(50% + 135px) min(85%, calc(34% + 330px)),
-    calc(50% - 135px) min(85%, calc(34% + 330px))
-  );
-  transform-origin: 50% 34%;
+  background: linear-gradient(rgb(176 104 143 / 45%), rgb(176 104 143 / 0%) 75%);
+  clip-path: polygon(50% 34%, 50% 34%, 50% 34%, 50% 34%);
   opacity: 0;
   animation: splash-beam 0.4s ease-out 0.35s forwards;
 }
 @keyframes splash-beam {
-  from {
-    opacity: 0;
-    transform: scale(0.3, 0);
-  }
   to {
     opacity: 1;
-    transform: none;
+    clip-path: polygon(
+      calc(50% - 24px) 34%,
+      calc(50% + 24px) 34%,
+      calc(50% + 135px) min(85%, calc(34% + 330px)),
+      calc(50% - 135px) min(85%, calc(34% + 330px))
+    );
   }
 }
 /* Its own layer above the cover and the light, so their moving edges never cut through it. */

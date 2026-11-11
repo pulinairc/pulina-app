@@ -14,6 +14,7 @@
 * Fix reactions landing on the nick's latest message
 * Add Dropbox video and audio playback
 * Fix the start lamp staying dark and the beam flashing
+* Change the start light to show the chat inside the beam
 
 ### 1.8.2: 2026-11-11
 
