@@ -4698,6 +4698,8 @@ function openQuickStart() {
 // once an admin approves. The app keeps only a waiting key, never the password.
 const ACCOUNT_WAITING_KEY = 'lobby.accountWaiting';
 const ACCOUNT_CHECK_MS = 2 * 60 * 1000;
+// QuakeNet cuts the ident to 10 characters; the nick keeps the whole name.
+const IDENT_MAX = 10;
 const ACCOUNT_ERRORS = {
   taken: 'That account is already taken.',
   bad_name: 'An account can have letters, digits, - and _.',
@@ -4755,7 +4757,9 @@ $('accounts-signin').addEventListener('click', () => {
 });
 $('apply-account').addEventListener('input', () => {
   const name = $('apply-account').value.trim().toLowerCase();
-  $('apply-mask').textContent = name ? t('Others see you like this: {mask}', { mask: `${name}!${name}@${BRAND.accounts.host}` }) : '';
+  $('apply-mask').textContent = name
+    ? t('Others see you like this: {mask}', { mask: `${name}!${name.slice(0, IDENT_MAX)}@${BRAND.accounts.host}` })
+    : '';
 });
 
 function accountError(box, answer) {
