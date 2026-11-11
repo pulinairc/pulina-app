@@ -3,6 +3,7 @@
 * Add Finnish, picked in Settings
 * Add block, report and word filters
 * Add a one-channel mode for forks
+* Fix the welcome skipped on a second start
 
 ### 1.7.1: 2026-11-11
 

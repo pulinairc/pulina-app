@@ -132,9 +132,17 @@ pub fn load() -> Result<Config, String> {
     }
 
     let text = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-    let config: Config = toml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+    parse(&text).map_err(|e| format!("{}: {e}", path.display()))
+}
+
+/// The untouched first-run template is nothing set up, so the welcome shows again.
+fn parse(text: &str) -> Result<Config, String> {
+    if text == TEMPLATE {
+        return Err("Nothing set up yet".into());
+    }
+    let config: Config = toml::from_str(text).map_err(|e| e.to_string())?;
     if config.server.is_none() && config.networks.is_empty() {
-        return Err(format!("No server or networks in {}", path.display()));
+        return Err("No server or networks".into());
     }
     Ok(config)
 }
@@ -153,5 +161,11 @@ mod tests {
         let link = config.server.unwrap();
         assert_eq!(link.token(), "t");
         assert_eq!(link.remote_port(), DEFAULT_SERVER_PORT);
+    }
+
+    #[test]
+    fn untouched_template_is_not_a_setup() {
+        assert!(parse(TEMPLATE).is_err());
+        assert!(parse("nick = \"me\"\n[[network]]\nname = \"N\"\nhost = \"irc.example.net\"\nport = 6667").is_ok());
     }
 }
