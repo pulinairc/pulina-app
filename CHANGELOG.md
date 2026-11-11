@@ -1,4 +1,4 @@
-### [Unreleased]
+### 1.13.6: 2026-11-11
 
 * Fix the welcome running off the iPhone screen
 * Change onboarding to a size smaller on phones
