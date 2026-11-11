@@ -4416,6 +4416,9 @@ function openWelcome() {
   // Finnish puts the name in its own case: Tervetuloa Lobbyyn.
   const app = currentLang() === 'fi' ? (BRAND.fiInto ?? BRAND.name) : BRAND.name;
   $('welcome-title').textContent = t('Welcome to {app}', { app });
+  if (BRAND.startNote) {
+    el.welcome.querySelector('[data-way="irc"] span').textContent = t(BRAND.startNote);
+  }
   showWelcomeStep('ways');
   el.welcome.showModal();
 }
