@@ -274,6 +274,10 @@ export const FI = {
   'People using {app} or Lobby see it next to your messages. Other IRC programs show just your nick. Without a picture you get an animal.':
     'Kuva näkyy viestiesi vieressä niille, jotka käyttävät {app}- tai Lobby-sovellusta. Muissa IRC-ohjelmissa näkyy pelkkä nimimerkki. Ilman kuvaa saat eläinhahmon.',
   'Choose a picture': 'Valitse kuva',
+  'Another animal': 'Arvo uusi eläin',
+  'Use an animal instead': 'Käytä eläintä kuvan sijaan',
+  'Tap the animal for another one': 'Napauta eläintä, niin saat uuden',
+  'Tap the picture to go back to an animal': 'Napauta kuvaa, niin saat eläimen takaisin',
   'Skip and join': 'Ohita ja liity',
   'The #pulina history is kept in the background.': '#pulina-kanavan keskusteluhistoria jää taustalle talteen.',
   'I run lobby-server': 'Minulla on oma lobby-server',

@@ -374,6 +374,7 @@
           <label for="person-name" class="sr">Name</label>
           <input id="person-name" class="field" autocomplete="off" placeholder="Name">
           <div class="photo-links">
+            <button id="person-animal" class="link-btn" type="button" hidden>Another animal</button>
             <button id="person-photo-remove" class="link-btn" type="button">Remove photo</button>
           </div>
         </div>
@@ -508,11 +509,15 @@
         <h1>Choose a profile picture</h1>
         <p id="welcome-photo-lead" class="welcome-lead"></p>
       </div>
-      <label class="photo-pick">
+      <div class="photo-pick">
         <input id="welcome-photo-file" type="file" accept="image/*" hidden>
-        <span id="welcome-photo-face" class="photo-face"></span>
-        <span class="photo-pick-text"><b id="welcome-photo-nick"></b><span>Choose a picture</span></span>
-      </label>
+        <button id="welcome-photo-face" class="photo-face" type="button"></button>
+        <span class="photo-pick-text">
+          <b id="welcome-photo-nick"></b>
+          <label for="welcome-photo-file" class="photo-file">Choose a picture</label>
+          <span id="welcome-photo-hint" class="photo-hint"></span>
+        </span>
+      </div>
       <span class="welcome-fill"></span>
       <button id="photo-join" class="welcome-go" type="submit">Join</button>
       <button id="photo-skip" class="link-btn welcome-back" type="button">Skip and join</button>

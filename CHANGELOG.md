@@ -9,6 +9,7 @@
 * Add default channel pictures for forks
 * Add drifting IRC signs behind the welcome
 * Fix the start light detached from the lamp on iPhone
+* Add picking your own animal by tapping it
 
 ### 1.8.2: 2026-11-11
 
