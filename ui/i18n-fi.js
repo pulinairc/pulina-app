@@ -374,7 +374,7 @@ export const FI = {
 
   // Updates
   '{name} is ready. Restart to start using it.': '{name} on valmiina. Käynnistä uudelleen, niin se otetaan käyttöön.',
-  'Restart now': 'Käynnistä uudelleen',
+  Dismiss: 'Piilota',
   Restart: 'Käynnistä uudelleen',
   'Installing {name}…': 'Asennetaan {name}…',
   '{name} is out.': '{name} on julkaistu.',
