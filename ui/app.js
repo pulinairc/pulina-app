@@ -782,24 +782,21 @@ function photoInto(node, src) {
   return node;
 }
 
-// The Dock badge counts unread highlights: messages that name you, and private messages.
+// The app icon counts what the @ pill counts, highlights not yet checked off, plus unread private messages.
 let shownBadge = -1;
 
-function highlightCount() {
-  let n = 0;
+function badgeCount() {
+  let n = inboxParts().fresh.length;
   for (const b of state.buffers.values()) {
-    if (!b.mention) {
-      continue;
+    if (isPrivate(b) && !isHidden(b)) {
+      n += b.unread;
     }
-    const seen = readMap[b.key] ?? Infinity;
-    const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own);
-    n += isPrivate(b) ? fresh.length : fresh.filter((l) => mentions(l.text, myWords(l.net))).length;
   }
   return n;
 }
 
 function updateBadge() {
-  const n = highlightCount();
+  const n = badgeCount();
   if (n === shownBadge) {
     return;
   }
@@ -5427,6 +5424,7 @@ function inboxParts() {
 }
 
 function renderInbox() {
+  updateBadge();
   const { fresh, archived } = inboxParts();
   el.inboxPill.hidden = fresh.length === 0;
   el.inboxPill.textContent = `@${fresh.length}`;

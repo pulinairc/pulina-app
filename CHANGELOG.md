@@ -8,6 +8,7 @@
 * Fix the channel list raising the iPhone keyboard
 * Fix the iPhone keyboard hiding the newest message
 * Add the unread badge on Linux docks
+* Fix the app icon badge missing highlights
 
 ### 1.6.0: 2026-11-10
 
