@@ -768,7 +768,8 @@ function refilter() {
   renderInbox();
   renderHeader();
   schedulePeople();
-  if (!el.shelf.hidden) {
+  recaps.clear();
+  if (shelf.open) {
     renderShelf();
   }
   if (el.settings.open) {
@@ -856,7 +857,9 @@ function attentionCount(b) {
     return 0;
   }
   const seen = readMap[b.key] ?? Infinity;
-  return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l) && mentions(l.text, myWords(l.net))).length || 1;
+  return (
+    b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l) && mentions(l.text, myWords(l.net))).length || 1
+  );
 }
 
 const BELL =
@@ -1326,6 +1329,10 @@ function renderSettings() {
   el.notifyNicksField.value = commaList(state.settings[NOTIFY_NICKS_SETTING]);
   el.notifyWordsField.value = commaList(state.settings[NOTIFY_WORDS_SETTING]);
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
+  el.maskToggle.checked = state.settings[MASK_SETTING] === 'on';
+  el.filterField.value = commaList(state.settings[FILTER_WORDS_SETTING]);
+  renderBlocked();
+  renderAboutReport();
   renderLangChoices();
   renderIconChoices();
   renderShortcuts();
@@ -1344,6 +1351,27 @@ function renderSettings() {
   });
   el.connections.replaceChildren(...(rows.length ? rows : [h('p', 'hint', t('No networks configured.'))]));
   el.configPath.textContent = state.configPath;
+}
+
+function renderBlocked() {
+  const rows = [...keySet(BLOCKED_SETTING)].sort().map((nick) => {
+    const row = h('div', 'conn');
+    const undo = h('button', 'link-btn', t('Unblock'));
+    undo.type = 'button';
+    undo.setAttribute('aria-label', t('Unblock {nick}', { nick }));
+    undo.addEventListener('click', () => unblock(nick));
+    row.append(h('span', '', nick), undo);
+    return row;
+  });
+  el.blockedList.replaceChildren(...(rows.length ? rows : [h('p', 'hint', t('Nobody is blocked.'))]));
+}
+
+/** Settings > About: "Report a problem: address", the address a mail link. */
+function renderAboutReport() {
+  const [before, after = ''] = t('Report a problem: {email}').split('{email}');
+  const link = h('a', null, BRAND.reportEmail);
+  link.href = `mailto:${BRAND.reportEmail}`;
+  el.aboutReport.replaceChildren(before, link, after);
 }
 
 /** A network's state as the core reports it, in words. */
@@ -2304,6 +2332,35 @@ function startReply(line) {
   el.input.setSelectionRange(el.input.value.length, el.input.value.length);
 }
 
+function isMine(line) {
+  return line.own || line.nick === state.me[line.net];
+}
+
+// Reporting: the user's mail app opens with the message, addressed to BRAND.reportEmail.
+let reporting = null;
+
+function openReport(line) {
+  reporting = line;
+  const name = h('span', 'quote-nick', line.nick);
+  name.style.color = identity(line.nick, line.mask).color;
+  el.reportQuote.replaceChildren(name, h('span', 'quote-text', shownText(stripFormatting(line.text))));
+  el.reportNote.value = '';
+  el.reportBlock.checked = true;
+  el.reportBlockLabel.textContent = t('Block {nick} too', { nick: line.nick });
+  el.reportTo.textContent = t('Send opens your mail app with the report to {email}.', { email: BRAND.reportEmail });
+  el.report.showModal();
+}
+
+el.reportCancel.addEventListener('click', () => el.report.close());
+el.reportSend.addEventListener('click', () => {
+  const line = reporting;
+  el.report.close();
+  openUrl(reportMail(BRAND.reportEmail, line, el.reportNote.value)).catch((e) => renderStatus(String(e)));
+  if (el.reportBlock.checked) {
+    block(line.nick);
+  }
+});
+
 function stopReply() {
   replying = null;
   el.replying.hidden = true;
@@ -2320,6 +2377,9 @@ const ICONS = {
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
   moreH:
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+  flag: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>',
+  block:
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>',
   copy: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M15 9V5.5A2.5 2.5 0 0 0 12.5 3h-7A2.5 2.5 0 0 0 3 5.5v7A2.5 2.5 0 0 0 5.5 15H9"/></svg>',
   dock: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/><path class="pane" d="M15 4h3a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-3z" fill="currentColor" stroke="none"/></svg>',
   close:
@@ -2425,6 +2485,13 @@ function moreMenu() {
     item(t('Copy text'), (line) => navigator.clipboard?.writeText(stripFormatting(line.text))),
     item(t('Edit person'), (line) => openPerson(line.nick, line.mask)),
   );
+  const shown = hoveredLine();
+  if (shown && !isMine(shown)) {
+    menu.append(
+      item(t('Report message'), openReport),
+      item(t('Block {nick}', { nick: shown.nick }), (line) => block(line.nick)),
+    );
+  }
   return menu;
 }
 
@@ -2547,6 +2614,10 @@ function openSheet(row) {
   // Text cannot be selected on touch, so the sheet copies it.
   tool(t('Copy'), ICONS.copy, () => navigator.clipboard?.writeText(stripFormatting(line.text)));
   tool(t('More emojis'), ICONS.moreH, () => openPicker(row, (e) => react(line, e)));
+  if (!isMine(line)) {
+    tool(t('Report message'), ICONS.flag, () => openReport(line));
+    tool(t('Block {nick}', { nick: line.nick }), ICONS.block, () => block(line.nick));
+  }
   dim.addEventListener('click', closeSheet);
   sheet.addEventListener('pointerdown', (e) => e.stopPropagation());
   sheet.addEventListener('touchmove', (e) => e.target === dim && e.preventDefault(), { passive: false });
@@ -2844,7 +2915,8 @@ function personRow(b, p, now) {
     personTip(row, b.net, p.nick);
     row.dataset.noSpoke = '1';
   }
-  const quiet = quietFor(p.ts, now);
+  const quiet = isBlocked(p.nick) ? t('Blocked') : quietFor(p.ts, now);
+  row.classList.toggle('blocked', isBlocked(p.nick));
   if (quiet) {
     row.append(h('span', 'nl-ago', quiet));
   }
@@ -2887,6 +2959,16 @@ function sendModes(b, act, word) {
   nicklist.picked.clear();
   closePeopleMenu();
   renderNicklist();
+}
+
+function toggleBlock(nick) {
+  closePeopleMenu();
+  nicklist.picked.clear();
+  if (isBlocked(nick)) {
+    unblock(nick);
+  } else {
+    block(nick);
+  }
 }
 
 function message(b, nick) {
@@ -2935,10 +3017,14 @@ function pickedBar(b) {
     actions.append(btn);
   }
   if (picked.length === 1) {
-    for (const [label, run] of [
+    const choices = [
       [t('Message'), () => message(b, picked[0])],
       [t('Edit'), () => editListed(b, picked[0])],
-    ]) {
+    ];
+    if (picked[0] !== state.me[b.net]) {
+      choices.push([isBlocked(picked[0]) ? t('Unblock') : t('Block'), () => toggleBlock(picked[0])]);
+    }
+    for (const [label, run] of choices) {
       const btn = h('button', 'nl-act plain', label);
       btn.type = 'button';
       btn.addEventListener('click', run);
@@ -2979,6 +3065,9 @@ function peopleMenu(nick, x, y) {
   if (targets.length === 1) {
     item(t('Message'), () => message(b, nick));
     item(t('Edit person'), () => editListed(b, nick));
+    if (nick !== state.me[b.net]) {
+      item(isBlocked(nick) ? t('Unblock {nick}', { nick }) : t('Block {nick}', { nick }), () => toggleBlock(nick));
+    }
   }
   if (nicklist.picked.size) {
     item(t('Clear picks'), () => {
@@ -4820,6 +4909,11 @@ async function start() {
     }
     if (e.payload.key === HIGHLIGHTS_SETTING) {
       renderInbox();
+    }
+    if ([BLOCKED_SETTING, FILTER_WORDS_SETTING, MASK_SETTING].includes(e.payload.key)) {
+      el.filterField.value = commaList(state.settings[FILTER_WORDS_SETTING]);
+      el.maskToggle.checked = state.settings[MASK_SETTING] === 'on';
+      refilter();
     }
     if (e.payload.key === HIGHLIGHT_WORDS_SETTING) {
       el.highlightField.value = commaList(e.payload.value);
@@ -6855,6 +6949,16 @@ for (const [field, setting] of [
     renderHeader();
   });
 }
+
+el.maskToggle.addEventListener('change', () => {
+  saveSetting(MASK_SETTING, el.maskToggle.checked ? 'on' : 'off');
+  refilter();
+});
+el.filterField.addEventListener('change', () => {
+  el.filterField.value = commaList(el.filterField.value);
+  saveSetting(FILTER_WORDS_SETTING, el.filterField.value);
+  refilter();
+});
 
 el.botsField.addEventListener('change', () => {
   el.botsField.value = commaList(el.botsField.value);

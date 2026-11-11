@@ -1,6 +1,7 @@
 ### [Unreleased]
 
 * Add Finnish, picked in Settings
+* Add block, report and word filters
 
 ### 1.7.1: 2026-11-11
 

@@ -400,7 +400,8 @@ a:focus-visible {
 }
 /* Your name in a line meant for you: a soft shine crosses it now and then. */
 .text.for-me .mention {
-  background: linear-gradient(110deg, var(--mention-bg) 35%, rgb(95 224 179 / 38%) 50%, var(--mention-bg) 65%) no-repeat;
+  background: linear-gradient(110deg, var(--mention-bg) 35%, color-mix(in srgb, var(--mention) 38%, transparent) 50%, var(--mention-bg) 65%)
+    no-repeat;
   background-size: 300% 100%;
   animation: glimmer 2.6s ease-in-out infinite;
 }
@@ -1138,6 +1139,34 @@ dialog:focus {
 #notify-guide .person-buttons {
   padding: 18px;
 }
+/* Report a message: the message, a note, block too, then Send. */
+.report-body {
+  padding: 4px 18px 18px;
+}
+.report-quote {
+  margin: 8px 0 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: default;
+}
+.report-quote:hover {
+  border-color: var(--line-strong);
+}
+#report-note {
+  resize: vertical;
+}
+.report-block {
+  margin-top: 16px;
+}
+#report-to {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.nl-row.blocked .nl-name {
+  text-decoration: line-through;
+  color: var(--faint);
+}
 #settings .switch-row + .switch-row {
   margin-top: 12px;
 }
@@ -1341,7 +1370,7 @@ dialog:focus {
   overflow: hidden;
   text-overflow: ellipsis;
   box-shadow:
-    0 0 0 3px rgb(14 14 16 / 80%),
+    0 0 0 3px color-mix(in srgb, var(--bg) 80%, transparent),
     0 10px 28px rgb(0 0 0 / 60%);
   pointer-events: none;
 }
@@ -1413,7 +1442,7 @@ dialog:focus {
    even where the system cannot blur what is behind. */
 .glass {
   border: 1px solid rgb(255 255 255 / 9%);
-  background: rgb(28 28 32 / 78%);
+  background: color-mix(in srgb, var(--raised) 78%, transparent);
   -webkit-backdrop-filter: blur(20px) saturate(170%);
   backdrop-filter: blur(20px) saturate(170%);
   box-shadow:
@@ -2309,7 +2338,7 @@ dialog:focus {
 /* Emoji picker */
 
 .picker {
-  background: rgb(22 22 26 / 94%);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
   position: fixed;
   z-index: 50;
   display: flex;
@@ -2841,7 +2870,7 @@ label.switch-row {
 
 .nicklist {
   --rail: 200px;
-  background: rgb(22 22 26 / 96%);
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
   position: fixed;
   right: 8px;
   z-index: 40;
@@ -2861,7 +2890,7 @@ label.switch-row {
   max-height: none;
   border-radius: 0;
   border-left: 1px solid var(--line);
-  background: #121214;
+  background: color-mix(in srgb, var(--bg) 50%, var(--panel));
 }
 body.docked #logwrap,
 body.docked #composer,
@@ -3019,7 +3048,7 @@ body.docked #status {
   }
   .nl-row:hover .nl-check {
     opacity: 1;
-    background: rgb(14 14 16 / 60%);
+    background: color-mix(in srgb, var(--bg) 60%, transparent);
     box-shadow: inset 0 0 0 1.5px var(--strong);
   }
   .nl-row.picked:hover .nl-check {
@@ -3137,7 +3166,7 @@ body.docked #status {
 }
 
 .sheet {
-  --sheet-bg: rgb(25 25 25);
+  --sheet-bg: color-mix(in srgb, var(--panel) 70%, var(--raised));
   position: fixed;
   inset: 0;
   z-index: 60;
@@ -3145,7 +3174,7 @@ body.docked #status {
 .sheet-dim {
   position: absolute;
   inset: 0;
-  background: rgb(25 25 25 / 72%);
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
   animation: sheet-fade 500ms ease both;
@@ -3300,7 +3329,7 @@ body.docked #status {
   inset: 0;
 }
 .inbox-panel.glass {
-  background: rgb(24 24 27 / 97%);
+  background: color-mix(in srgb, var(--panel) 97%, transparent);
 }
 .inbox-panel {
   position: absolute;

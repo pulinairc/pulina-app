@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { BRAND } from '../ui/brand.js';
 import {
+  maskWords,
+  OFFENSIVE_WORDS,
+  reportMail,
   mediaKind,
   inboxSplit,
   defaultShortcuts,
@@ -497,4 +500,30 @@ test('counts the room left in a message, in bytes, per line', () => {
     messageRoom('hi', 'a_very_long_nickname', '#a-channel-with-a-long-name-indeed'),
     510 - (1 + 20 + 1 + 10 + 1 + 63 + 9 + 34 + 2) - 2,
   );
+});
+
+test('offensive words show as dots, whole words only', () => {
+  assert.equal(maskWords('Fuck this, vittu!', OFFENSIVE_WORDS), '••• this, •••!');
+  assert.equal(maskWords('Scunthorpe and shitake', OFFENSIVE_WORDS), 'Scunthorpe and shitake');
+  assert.equal(maskWords('ihan PASKAA', OFFENSIVE_WORDS), 'ihan •••');
+  assert.equal(maskWords('hello', []), 'hello');
+});
+
+test('filter words match whole words in any letters', () => {
+  assert.ok(mentions('Big SPOILER ahead', ['spoiler']));
+  assert.ok(!mentions('spoilers ahead', ['spoiler']));
+  assert.ok(!mentions('anything', []));
+});
+
+test('a report opens mail with the message and the note', () => {
+  const line = { net: 'IRCnet', buffer: '#pulina', nick: 'kummitus', ts: new Date(2026, 10, 9, 8, 5).getTime(), text: '\x02hei\x02 & moi' };
+  const url = reportMail('lobby@example.org', line, '  spam ');
+  assert.ok(url.startsWith('mailto:lobby@example.org?subject='));
+  const q = new URLSearchParams(url.split('?')[1]);
+  assert.equal(q.get('subject'), 'Report: #pulina kummitus');
+  assert.equal(
+    q.get('body'),
+    ['Network: IRCnet', 'Channel: #pulina', 'Nick: kummitus', 'Sent: 9.11.2026 08:05', 'Message: hei & moi', 'Note: spam'].join('\n'),
+  );
+  assert.ok(!new URLSearchParams(reportMail('a@b.c', line).split('?')[1]).get('body').includes('Note'));
 });
