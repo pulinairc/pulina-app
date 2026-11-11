@@ -147,6 +147,8 @@ const el = {
   botsField: $('bots-field'),
   highlightField: $('highlight-field'),
   channelAlerts: $('channel-alerts'),
+  notifyNicksField: $('notify-nicks-field'),
+  notifyWordsField: $('notify-words-field'),
   shortcodeToggle: $('shortcode-toggle'),
   iconChoices: $('icon-choices'),
   textSize: $('text-size'),
@@ -590,7 +592,7 @@ function onLine(l) {
   if (mentioned) {
     b.mention = true;
   }
-  const wanted = mentioned || keySet(NOTIFY_ALL_SETTING).has(b.key);
+  const wanted = mentioned || keySet(NOTIFY_ALL_SETTING).has(b.key) || notifyMatch()(l);
   if (wanted && !isHidden(b) && !(visible && document.hasFocus())) {
     notify(b, l);
   }
@@ -640,6 +642,15 @@ const HIDDEN_SETTING = 'hidden';
 // Channels where every message, not only highlights, counts on the app icon or notifies.
 const BADGE_ALL_SETTING = 'badgeAll';
 const NOTIFY_ALL_SETTING = 'notifyAll';
+// People and words that notify and count on the app icon in every channel, without highlighting.
+const NOTIFY_NICKS_SETTING = 'notifyNicks';
+const NOTIFY_WORDS_SETTING = 'notifyWords';
+
+function notifyMatch() {
+  const nicks = new Set(wordList(state.settings[NOTIFY_NICKS_SETTING]));
+  const words = wordList(state.settings[NOTIFY_WORDS_SETTING]);
+  return (l) => nicks.has((l.nick || '').toLowerCase()) || mentions(l.text, words);
+}
 
 function keySet(setting) {
   try {
@@ -811,11 +822,19 @@ let shownBadge = -1;
 
 function badgeCount() {
   const every = keySet(BADGE_ALL_SETTING);
+  const chosen = notifyMatch();
   let n = inboxParts().fresh.filter((l) => !every.has(key(l.net, l.buffer))).length;
   for (const b of state.buffers.values()) {
-    if ((isPrivate(b) || every.has(b.key)) && !isHidden(b)) {
-      n += b.unread;
+    if (isHidden(b) || !b.unread) {
+      continue;
     }
+    if (isPrivate(b) || every.has(b.key)) {
+      n += b.unread;
+      continue;
+    }
+    // Chosen people and words not already counted as highlights.
+    const seen = readMap[b.key] ?? Infinity;
+    n += b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !mentions(l.text, myWords(l.net)) && chosen(l)).length;
   }
   return n;
 }
@@ -1167,6 +1186,8 @@ function renderSettings() {
   // Both lists read the same way, separated by commas, however they were typed.
   el.botsField.value = commaList(state.settings[BOTS_SETTING]);
   el.highlightField.value = commaList(state.settings[HIGHLIGHT_WORDS_SETTING]);
+  el.notifyNicksField.value = commaList(state.settings[NOTIFY_NICKS_SETTING]);
+  el.notifyWordsField.value = commaList(state.settings[NOTIFY_WORDS_SETTING]);
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
   renderIconChoices();
   renderShortcuts();
@@ -4194,7 +4215,13 @@ async function start() {
     if (e.payload.key === HIDDEN_SETTING) {
       renderInbox();
     }
-    if ([BADGE_ALL_SETTING, NOTIFY_ALL_SETTING].includes(e.payload.key)) {
+    if (e.payload.key === NOTIFY_NICKS_SETTING) {
+      el.notifyNicksField.value = commaList(e.payload.value);
+    }
+    if (e.payload.key === NOTIFY_WORDS_SETTING) {
+      el.notifyWordsField.value = commaList(e.payload.value);
+    }
+    if ([BADGE_ALL_SETTING, NOTIFY_ALL_SETTING, NOTIFY_NICKS_SETTING, NOTIFY_WORDS_SETTING].includes(e.payload.key)) {
       renderHeader();
       if (el.settings.open) {
         renderChannelAlerts();
@@ -6223,6 +6250,17 @@ el.highlightField.addEventListener('change', () => {
   renderLog();
   loadHighlightsSoon();
 });
+
+for (const [field, setting] of [
+  [el.notifyNicksField, NOTIFY_NICKS_SETTING],
+  [el.notifyWordsField, NOTIFY_WORDS_SETTING],
+]) {
+  field.addEventListener('change', () => {
+    field.value = commaList(field.value);
+    saveSetting(setting, field.value);
+    renderHeader();
+  });
+}
 
 el.botsField.addEventListener('change', () => {
   el.botsField.value = commaList(el.botsField.value);

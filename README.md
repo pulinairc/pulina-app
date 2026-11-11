@@ -52,6 +52,10 @@ Lines that name you, from all channels, in one list. Mark them done, filter them
 
 Your own words besides your nick. Only whole words count, so `kai` never lights up `kaikki`.
 
+### 📣 Notifications your way
+
+Per channel, every message or only highlights, for the app icon count and for notifications. Name people and words that always notify you without highlighting anything.
+
 ### 🗃️ Channel shelf
 
 The links and pictures posted in a channel, each a jump back into the conversation.

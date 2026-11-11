@@ -10,6 +10,7 @@
 * Add the unread badge on Linux docks
 * Fix the app icon badge missing highlights
 * Add per-channel every-message badge and notifications
+* Add notification people and words
 
 ### 1.6.0: 2026-11-10
 
