@@ -8,6 +8,7 @@
 // `startNote` replaces the history line under "Start chatting now" in the welcome.
 // `quitName` and `fiQuitName` name the app in the default quit message ("Used …", "Käytin …").
 // `channels` gives a channel its picture until someone picks another: { '#name': { photo } }.
+// `upload` is the fork's own file host in catbox.moe's place: { url, name, note }, `url` taking the file as the POST body.
 // `reportEmail` gets reported messages and Settings > About's "Report a problem".
 export const BRAND = {
   name: 'Lobby',

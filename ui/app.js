@@ -300,6 +300,21 @@ document.documentElement.toggleAttribute('data-only', ONLY);
 const SHEET = ONLY || Boolean(BRAND.start?.sheet);
 document.documentElement.toggleAttribute('data-sheet', SHEET);
 translatePage();
+nameSharedHost();
+
+/** A fork's own file host, in catbox.moe's place in Settings. */
+function nameSharedHost() {
+  if (!BRAND.upload) {
+    return;
+  }
+  const shared = document.querySelector('input[name="upload-via"][value="catbox"] + span');
+  shared.firstChild.nodeValue = BRAND.upload.name;
+  shared.querySelector('small').textContent = t(BRAND.upload.note);
+  document.querySelector('input[name="upload-via"][value="auto"] + span small').textContent = t(
+    'Your lobby-server first, then your own file host, then {name}',
+    { name: BRAND.upload.name },
+  );
+}
 
 /** The page's own text and labels in the chosen language, once at start. */
 function translatePage() {
@@ -7575,7 +7590,10 @@ function jsonSetting(key) {
   }
 }
 
-/** Where to try sending a file, in order. Automatic: lobby-server, your own file host, catbox.moe. */
+/** The free host anyone can use: the fork's own, else catbox.moe. */
+const SHARED_HOST = BRAND.upload ? { kind: 'filehost', url: BRAND.upload.url } : { kind: 'catbox' };
+
+/** Where to try sending a file, in order. Automatic: lobby-server, your own file host, the shared host. */
 async function uploadTargets() {
   const host = uploadHost();
   switch (uploadVia()) {
@@ -7588,7 +7606,7 @@ async function uploadTargets() {
     case 'sftp':
       return [{ kind: 'sftp', ...jsonSetting(UPLOAD_SFTP_SETTING) }];
     case 'catbox':
-      return [{ kind: 'catbox' }];
+      return [SHARED_HOST];
   }
   const targets = [];
   // Only a lobby-server that says it has a place for files: an older one would never answer.
@@ -7598,7 +7616,7 @@ async function uploadTargets() {
   if (host) {
     targets.push({ kind: 'filehost', url: host });
   }
-  targets.push({ kind: 'catbox' });
+  targets.push(SHARED_HOST);
   return targets;
 }
 
