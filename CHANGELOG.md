@@ -1,5 +1,6 @@
 ### [Unreleased]
 
+* Fix wss:// lobby-server links never connecting
 * Fix private YouTube videos showing a big grey box
 * Fix a person's lines staying split after the New line
 
