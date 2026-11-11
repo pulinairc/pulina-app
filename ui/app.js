@@ -259,6 +259,16 @@ const el = {
   langChoices: $('lang-choices'),
 };
 
+// A dialog opens with focus on itself, not on its first button: WebKit draws the keyboard ring on a
+// button focused without a key press. Tab still reaches every button, ring and all.
+const nativeShowModal = HTMLDialogElement.prototype.showModal;
+HTMLDialogElement.prototype.showModal = function showModal() {
+  nativeShowModal.call(this);
+  if (!document.activeElement?.matches('input, textarea, select')) {
+    this.focus();
+  }
+};
+
 startLang(BRAND.lang ?? 'en');
 translatePage();
 
