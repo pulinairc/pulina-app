@@ -2028,9 +2028,11 @@ function row(l) {
   if (addr && quoted && quoted.line !== l && l.ts - quoted.line.ts < REPLY_WINDOW_MS) {
     r.append(quoteNode(quoted));
     text = addr.rest;
-    // Taking "rolle:" off the front must not hide that the line was for you.
+    // Taking "nick:" off the front must not hide who the line was for, least of all you.
     if (me && addr.nick.toLowerCase() === me.toLowerCase()) {
       r.append(h('span', 'mention', me), ' ');
+    } else {
+      r.append(nickRef(l.net, { value: addr.nick, nick: addr.nick }), ' ');
     }
   }
   replyHints.delete(l.text);
