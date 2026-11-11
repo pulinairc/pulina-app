@@ -8067,21 +8067,8 @@ function recapCard(b, list) {
     personTip(name, b.net, who.nick);
     podium.append(spot);
   }
-  const more = h('button', 'recap-more', t('Today so far'));
-  more.type = 'button';
-  more.addEventListener('click', () => openToday());
-  card.append(podium, more);
+  card.append(podium);
   return card;
-}
-
-/** The people list, on its Today ranking. */
-function openToday() {
-  nicklist.tab = 'today';
-  if (nicklist.el) {
-    renderNicklist();
-  } else {
-    openNicklist();
-  }
 }
 
 // The people list's Today ranking: words said in the channel since midnight, fetched again when

@@ -4120,20 +4120,6 @@ body.docked #update-bar {
 .podium-step[data-place="2"] {
   background: color-mix(in srgb, var(--mention) 72%, var(--panel));
 }
-.recap-more {
-  margin-top: 10px;
-  padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--raised);
-  color: var(--text);
-  font: inherit;
-  font-size: 13px;
-}
-.recap-more:hover {
-  border-color: var(--line-strong);
-}
-
 /* People | Today at the top of the people list. */
 .nl-tabs {
   display: flex;

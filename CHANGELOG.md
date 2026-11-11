@@ -1,3 +1,7 @@
+### [Unreleased]
+
+* Remove "Today so far" from yesterday's podium
+
 ### 1.13.7: 2026-11-12
 
 * Fix macOS About missing the build date and commit
