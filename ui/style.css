@@ -1138,6 +1138,34 @@ dialog:focus {
 #notify-guide .person-buttons {
   padding: 18px;
 }
+/* Report a message: the message, a note, block too, then Send. */
+.report-body {
+  padding: 4px 18px 18px;
+}
+.report-quote {
+  margin: 8px 0 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: default;
+}
+.report-quote:hover {
+  border-color: var(--line-strong);
+}
+#report-note {
+  resize: vertical;
+}
+.report-block {
+  margin-top: 16px;
+}
+#report-to {
+  margin: 12px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.nl-row.blocked .nl-name {
+  text-decoration: line-through;
+  color: var(--faint);
+}
 #settings .switch-row + .switch-row {
   margin-top: 12px;
 }

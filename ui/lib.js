@@ -173,6 +173,85 @@ export function mentions(text, words) {
   return Boolean(re) && re.test(text);
 }
 
+// Masked by Settings > Chat > Hide offensive words. Whole words only, so Finnish needs its common forms listed.
+export const OFFENSIVE_WORDS = [
+  'asshole',
+  'assholes',
+  'bastard',
+  'bitch',
+  'bitches',
+  'bullshit',
+  'chink',
+  'cunt',
+  'cunts',
+  'dickhead',
+  'fag',
+  'faggot',
+  'faggots',
+  'fuck',
+  'fucked',
+  'fucker',
+  'fuckers',
+  'fucking',
+  'kike',
+  'motherfucker',
+  'nigga',
+  'nigger',
+  'niggers',
+  'retard',
+  'retarded',
+  'shit',
+  'shitty',
+  'slut',
+  'spic',
+  'tranny',
+  'twat',
+  'wanker',
+  'whore',
+  'helvetin',
+  'helvetti',
+  'hintti',
+  'hintit',
+  'huora',
+  'huoran',
+  'huorat',
+  'kusipää',
+  'kusipäät',
+  'kyrpä',
+  'kyrvän',
+  'lutka',
+  'lutkat',
+  'mulkku',
+  'mulkut',
+  'neekeri',
+  'neekerin',
+  'neekerit',
+  'paska',
+  'paskaa',
+  'paskan',
+  'paskat',
+  'perkele',
+  'pillu',
+  'pillun',
+  'runkkari',
+  'ryssä',
+  'ryssät',
+  'saatana',
+  'saatanan',
+  'vitun',
+  'vittu',
+  'vittua',
+  'vittuun',
+];
+
+const MASK = '•••';
+
+/** `text` with each whole-word match of `words` shown as •••. */
+export function maskWords(text, words) {
+  const re = wordPattern(words);
+  return re ? text.replace(re, MASK) : text;
+}
+
 /** Split text into plain, link and mention pieces. */
 export function tokenize(text, me) {
   const clean = stripFormatting(text);
@@ -925,4 +1004,23 @@ export function messageRoom(text, nick, target) {
   const room = Math.min(MESSAGE_BYTES, LINE_BYTES - around) - extra;
   const longest = Math.max(0, ...body.split('\n').map(bytes));
   return room - longest;
+}
+
+/** A mailto: link reporting `line` to `to`, with the user's note. */
+export function reportMail(to, line, note = '') {
+  const d = new Date(line.ts);
+  const two = (n) => String(n).padStart(2, '0');
+  const when = `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
+  const body = [
+    t('Network: {net}', { net: line.net }),
+    t('Channel: {channel}', { channel: line.buffer }),
+    t('Nick: {nick}', { nick: line.nick }),
+    t('Sent: {when}', { when }),
+    t('Message: {text}', { text: stripFormatting(line.text) }),
+  ];
+  if (note.trim()) {
+    body.push(t('Note: {note}', { note: note.trim() }));
+  }
+  const subject = t('Report: {channel} {nick}', { channel: line.buffer, nick: line.nick });
+  return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.join('\n'))}`;
 }

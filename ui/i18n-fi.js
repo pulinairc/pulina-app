@@ -509,4 +509,38 @@ export const FI = {
   'About as much as usual by this time.': 'Suunnilleen saman verran kuin tavallisesti tähän aikaan.',
   '{n}% more than usual by this time.': '{n} % enemmän kuin tavallisesti tähän aikaan.',
   '{n}% less than usual by this time.': '{n} % vähemmän kuin tavallisesti tähän aikaan.',
+
+  // Blocking, reporting and filtering
+  Filtering: 'Suodatus',
+  'Hide offensive words': 'Piilota loukkaavat sanat',
+  'Common swear words and slurs show as •••. What you send is not changed.':
+    'Yleiset kirosanat ja herjaukset näkyvät muodossa •••. Omia viestejäsi ei muuteta.',
+  'Filter words': 'Suodatettavat sanat',
+  'spoiler, crypto': 'juonipaljastus, krypto',
+  'Messages with any of these words are hidden. Only whole words count.':
+    'Viestit, joissa on jokin näistä sanoista, piilotetaan. Vain kokonaiset sanat lasketaan.',
+  'Blocked people': 'Estetyt ihmiset',
+  'You do not see what blocked people say, their reactions or when they come and go. Block someone from a message or the people list.':
+    'Et näe, mitä estetyt ihmiset sanovat, heidän reaktioitaan etkä sitä, milloin he tulevat ja lähtevät. Voit estää jonkun viestin valikosta tai ihmisten listasta.',
+  'Nobody is blocked.': 'Ketään ei ole estetty.',
+  Block: 'Estä',
+  Unblock: 'Poista esto',
+  Blocked: 'Estetty',
+  'Block {nick}': 'Estä {nick}',
+  'Unblock {nick}': 'Poista käyttäjän {nick} esto',
+  'Block {nick} too': 'Estä myös {nick}',
+  'Report message': 'Ilmoita viestistä',
+  'Note, if you like': 'Lisätietoja, jos haluat',
+  'What is wrong with it': 'Mitä vikaa viestissä on',
+  Cancel: 'Peruuta',
+  'Send opens your mail app with the report to {email}.':
+    'Lähetä-painike avaa sähköpostisovelluksesi, ja ilmoitus menee osoitteeseen {email}.',
+  'Report a problem: {email}': 'Ilmoita ongelmasta: {email}',
+  'Report: {channel} {nick}': 'Ilmoitus: {channel} {nick}',
+  'Network: {net}': 'Verkko: {net}',
+  'Channel: {channel}': 'Kanava: {channel}',
+  'Nick: {nick}': 'Nimimerkki: {nick}',
+  'Sent: {when}': 'Lähetetty: {when}',
+  'Message: {text}': 'Viesti: {text}',
+  'Note: {note}': 'Lisätiedot: {note}',
 };

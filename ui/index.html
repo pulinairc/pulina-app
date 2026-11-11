@@ -254,6 +254,22 @@
       <p class="hint">Switched on, every message in that channel counts on the app icon or notifies you. Switched off, only highlights and the people and words set here do.</p>
     </section>
     <section data-tab="chat">
+      <h3>Filtering</h3>
+      <label class="switch-row" for="mask-toggle">
+        <span>Hide offensive words</span>
+        <input id="mask-toggle" class="switch" type="checkbox" role="switch">
+      </label>
+      <p class="hint">Common swear words and slurs show as •••. What you send is not changed.</p>
+      <label class="field-label" for="filter-field">Filter words</label>
+      <input id="filter-field" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="spoiler, crypto">
+      <p class="hint">Messages with any of these words are hidden. Only whole words count.</p>
+    </section>
+    <section data-tab="chat">
+      <h3>Blocked people</h3>
+      <div id="blocked-list"></div>
+      <p class="hint">You do not see what blocked people say, their reactions or when they come and go. Block someone from a message or the people list.</p>
+    </section>
+    <section data-tab="chat">
       <h3><label for="bots-field">Bots</label></h3>
       <input id="bots-field" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="seenbot, infobot">
       <p class="hint">What these nicks say right after a command like <span class="mono">!seen</span> is shown inside it, as its answer.</p>
@@ -324,6 +340,7 @@
     <section id="about-section" data-tab="about">
       <h3>About</h3>
       <p class="about"><a id="about-version" href="https://github.com/rollecode/lobby">Lobby</a></p>
+      <p id="about-report" class="hint"></p>
       <p class="hint">Made by <a href="https://github.com/rollecode">Rolle Roni Mikael Laukkarinen</a>, <a href="https://github.com/rollecode/lobby/blob/main/LICENSE">MIT licence</a>.</p>
       <p class="hint">Built with <a href="https://www.rust-lang.org">Rust</a>, <a href="https://tauri.app">Tauri</a>, <a href="https://tokio.rs">Tokio</a> and <a href="https://www.sqlite.org">SQLite</a>, emoji data from <a href="https://github.com/missive/emoji-mart">emoji-mart</a>. For people who keep <a href="https://irssi.org">irssi</a> running.</p>
     </section>
@@ -376,6 +393,25 @@
         <button id="person-save" class="primary-btn" type="submit">Save</button>
       </div>
     </form>
+  </dialog>
+  <dialog id="report" tabindex="-1" aria-labelledby="report-title">
+    <div class="sheet-head">
+      <h2 id="report-title">Report message</h2>
+    </div>
+    <div class="report-body">
+      <div id="report-quote" class="quote report-quote"></div>
+      <label class="field-label" for="report-note">Note, if you like</label>
+      <textarea id="report-note" class="field" rows="3" placeholder="What is wrong with it"></textarea>
+      <label class="switch-row report-block" for="report-block">
+        <span id="report-block-label"></span>
+        <input id="report-block" class="switch" type="checkbox" role="switch">
+      </label>
+      <p id="report-to" class="hint"></p>
+      <div class="person-buttons">
+        <button id="report-cancel" class="link-btn" type="button">Cancel</button>
+        <button id="report-send" class="primary-btn" type="button">Send</button>
+      </div>
+    </div>
   </dialog>
   <dialog id="notify-guide" tabindex="-1" aria-labelledby="notify-guide-title">
     <div class="sheet-head">

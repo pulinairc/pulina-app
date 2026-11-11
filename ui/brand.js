@@ -1,10 +1,12 @@
 // What a fork such as the Pulina app changes: its name, where it links, its icons. Its look is brand.css.
 // `lang` is the UI language until one is picked in Settings: 'en' or 'fi', English when left out.
+// `reportEmail` gets reported messages and Settings > About's "Report a problem".
 export const BRAND = {
   name: 'Lobby',
   // The name for "Tervetuloa …" in Finnish.
   fiInto: 'Lobbyyn',
   site: 'https://github.com/rollecode/lobby',
+  reportEmail: 'rolle.laukkarinen@gmail.com',
   // The first is the bundle's own icon, as src-tauri/icons/default.txt names it.
   icons: [
     ['pendant-lamp', 'Pendant lamp'],
