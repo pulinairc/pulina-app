@@ -4,7 +4,7 @@ export const BRAND = {
   quitName: 'pulina-app',
   fiQuitName: 'pulina-appia',
   // The #pulina logo as the channel's picture; anyone can pick another.
-  channels: { '#pulina': { photo: 'icons/pulina-channel.png' } },
+  channels: { '#pulina': { photo: 'channels/pulina.png' } },
   // The name for "Tervetuloa …" in Finnish.
   fiInto: 'Pulinaan',
   site: 'https://github.com/pulinairc/pulina-app',
