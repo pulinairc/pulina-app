@@ -4242,6 +4242,9 @@ let welcomeNet = BRAND.start?.network ?? START_NETWORKS[0][0];
 
 function openWelcome() {
   splashReady();
+  // Finnish puts the name in its own case: Tervetuloa Lobbyyn.
+  const app = currentLang() === 'fi' ? (BRAND.fiInto ?? BRAND.name) : BRAND.name;
+  $('welcome-title').textContent = t('Welcome to {app}', { app });
   showWelcomeStep('ways');
   el.welcome.showModal();
 }
