@@ -536,6 +536,10 @@ function buffer(net, name) {
   state.buffers.set(k, b);
   loadHistory(b);
   renderHeader();
+  if (k === openWhenJoined) {
+    openWhenJoined = null;
+    select(k);
+  }
   if (!state.current && state.started) {
     scheduleFirstPick();
   }
@@ -1003,7 +1007,10 @@ function renderHeader() {
   const others = [...state.buffers.values()].filter((x) => x.key !== state.current && wantsAttention(x));
   const total = others.reduce((n, x) => n + attentionCount(x), 0);
   el.unread.hidden = total === 0;
-  el.unread.textContent = t('{n} unread', { n: total });
+  // Phones show the number alone, so the channel name keeps its room.
+  const label = t('{n} unread', { n: total });
+  el.unread.setAttribute('aria-label', label);
+  el.unread.replaceChildren(String(total), h('span', 'unread-word', label.replace(String(total), '')));
   el.unread.classList.toggle(
     'mention',
     others.some((x) => x.mention),
@@ -4418,7 +4425,7 @@ function openWelcome() {
   splashReady();
   // Finnish puts the name in its own case: Tervetuloa Lobbyyn.
   const app = currentLang() === 'fi' ? (BRAND.fiInto ?? BRAND.name) : BRAND.name;
-  $('welcome-title').textContent = t('Welcome to {app}', { app });
+  $('welcome-title').textContent = BRAND.welcome ? t(BRAND.welcome) : t('Welcome to {app}', { app });
   if (BRAND.startNote) {
     el.welcome.querySelector('[data-way="irc"] span').textContent = t(BRAND.startNote);
   }
@@ -4525,6 +4532,8 @@ el.welcomeQuick.addEventListener('submit', async (e) => {
   }
 });
 
+let openWhenJoined = null;
+
 /** The channels picked in the welcome, joined once the network first answers. */
 function joinAfterSetup(net) {
   let plan = null;
@@ -4541,7 +4550,9 @@ function joinAfterSetup(net) {
   } catch {
     /* joined once anyway */
   }
+  askToNotify();
   if (plan.channels.length) {
+    openWhenJoined = key(net, plan.channels[0]);
     invoke('send', { net, buffer: '', text: `/join ${plan.channels.join(',')}` }).catch((err) => renderStatus(String(err)));
   }
 }
@@ -4867,13 +4878,12 @@ async function start() {
   await listen('buffer', (e) => onBuffer(e.payload));
   await listen('me', (e) => {
     state.me[e.payload.net] = e.payload.nick;
+    // The server takes JOIN only once it has welcomed the nick.
+    joinAfterSetup(e.payload.net);
     loadHighlightsSoon();
   });
   await listen('conn', (e) => {
     state.conn[e.payload.net] = e.payload.state;
-    if (e.payload.state === 'connected') {
-      joinAfterSetup(e.payload.net);
-    }
     renderStatus();
     renderChecklist();
   });
@@ -4974,7 +4984,8 @@ function pickFirst() {
   } catch {
     /* storage may be unavailable */
   }
-  const first = ordered().find((b) => isChannel(b.name));
+  // Before any channel, the server's own window rather than an empty one.
+  const first = ordered().find((b) => isChannel(b.name)) ?? ordered()[0];
   if (saved && state.buffers.has(saved)) {
     select(saved);
   } else if (first) {
@@ -6667,6 +6678,23 @@ async function notifyPermission() {
   return IS_MAC ? invoke('notify_permission').catch(() => null) : null;
 }
 
+/** Right after the welcome: the system's Allow prompt, while someone is there to answer it. */
+async function askToNotify() {
+  if (!notifyOn()) {
+    return;
+  }
+  if (IS_MAC) {
+    if ((await notifyPermission())?.state === 'ask') {
+      await invoke('allow_notifications').catch(() => {});
+    }
+    return;
+  }
+  notifier
+    ?.isPermissionGranted()
+    .then((granted) => granted || notifier.requestPermission())
+    .catch(() => {});
+}
+
 async function fixNotifications() {
   const p = await notifyPermission();
   if (p?.state === 'ask') {
@@ -6701,7 +6729,8 @@ async function offerNotifyGuide() {
     /* ask again next time */
   }
   const fix = notifyAdvice(await notifyPermission());
-  if (!fix) {
+  // A first start asks once the welcome is done, with the system's own prompt.
+  if (!fix || el.welcome.open) {
     return;
   }
   el.notifyGuideText.textContent = appNamed(fix.text);

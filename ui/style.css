@@ -1330,6 +1330,9 @@ dialog:focus {
   :root {
     --avatar: 18px;
   }
+  .unread-word {
+    display: none;
+  }
   #log {
     padding: 10px 12px;
   }
@@ -4505,6 +4508,10 @@ dialog.welcome::backdrop {
   }
 }
 
+/* Only a nick to ask: the form sits lower, clear of the window buttons. */
+:root[data-only] #welcome-quick {
+  padding-top: calc(env(safe-area-inset-top) + 120px);
+}
 :root[data-only] .any-net {
   display: none !important;
 }

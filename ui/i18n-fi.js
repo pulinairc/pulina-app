@@ -252,6 +252,7 @@ export const FI = {
   'Start chatting now': 'Aloita heti',
   'Pick a network and a nick. History covers the time Lobby is open.':
     'Valitse verkko ja nimimerkki. Keskusteluja tallentuu vain silloin, kun Lobby on auki.',
+  'Welcome to IRC chat': 'Tervetuloa irkkaamaan',
   'The #pulina history is kept in the background.': '#pulina-kanavan keskusteluhistoria jää taustalle talteen.',
   'I run lobby-server': 'Minulla on oma lobby-server',
   'Lobby signs in over SSH. Your whole history, nothing opened to the internet.':
