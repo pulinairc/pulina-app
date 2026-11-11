@@ -735,6 +735,8 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // With two TLS backends compiled in rustls will not choose, and a wss:// lobby-server link panics.
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     let builder = tauri::Builder::default().plugin(tauri_plugin_opener::init()).plugin(tauri_plugin_notification::init());
     #[cfg(mobile)]
     let builder = builder.plugin(tauri_plugin_haptics::init());
