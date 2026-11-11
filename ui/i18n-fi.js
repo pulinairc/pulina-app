@@ -327,6 +327,7 @@ export const FI = {
   '{app} connects to IRC servers or irssiproxy itself. History only covers the time {app} is open.':
     '{app} yhdistää suoraan IRC-palvelimiin tai irssiproxyyn. Keskusteluja tallentuu vain silloin, kun {app} on auki.',
   'Not connected': 'Ei yhteyttä',
+  'The newest release has no update files yet': 'Uusimmassa julkaisussa ei ole vielä päivitystiedostoja',
   'Not connected: {reason}': 'Ei yhteyttä: {reason}',
   'Connected to lobby-server': 'Yhdistetty lobby-serveriin',
   Connected: 'Yhdistetty',

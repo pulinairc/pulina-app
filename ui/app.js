@@ -1747,13 +1747,14 @@ function renderLog() {
   }
 }
 
-// Cold start: the lamp is lit and its beam drawn by CSS from the first frame, so a slow start
-// never shows it dark. Once there is a chat, it shows through the beam, then lamp and beam go together.
-const SPLASH_MIN_MS = 900;
+// Cold start: the lamp is lit and its beam drawn by CSS from the first frame, so a slow start never
+// shows it dark. While loading the chat shows only inside the beam; once ready the light widens over it all.
+const SPLASH_MIN_MS = 1300;
 const SPLASH_MAX_MS = 3000;
-const SPLASH_OPEN_MS = 300;
-const SPLASH_HOLD_MS = 150;
-const SPLASH_OUT_MS = 300;
+const SPLASH_OPEN_MS = 650;
+const SPLASH_OUT_MS = 450;
+// The beam's hole grown to the whole window: same points as in the CSS, so it moves smoothly.
+const SPLASH_ALL_OPEN = 'polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 0 0, 100% 0, 100% 100%, 0 100%, 0 0)';
 const splashStart = performance.now();
 let splashDone = false;
 setTimeout(splashReady, SPLASH_MAX_MS);
@@ -1766,7 +1767,15 @@ function splashReady() {
   setTimeout(openSplash, Math.max(0, SPLASH_MIN_MS - (performance.now() - splashStart)));
 }
 
-// Only opacity moves, so the animation runs smoothly while the app is busy starting.
+/** A CSS animation holds what it set, so its end state is copied inline before plain transitions take over. */
+function settle(node) {
+  const now = getComputedStyle(node);
+  node.style.clipPath = now.clipPath;
+  node.style.opacity = now.opacity;
+  node.style.animation = 'none';
+  node.getBoundingClientRect();
+}
+
 function openSplash() {
   const cover = el.splash;
   const light = el.splashLight;
@@ -1777,27 +1786,22 @@ function openSplash() {
     lamp.remove();
   };
   // Whatever a slow frame does, nothing of the splash outlives this.
-  setTimeout(done, SPLASH_OPEN_MS + SPLASH_HOLD_MS + SPLASH_OUT_MS + 400);
+  setTimeout(done, SPLASH_OPEN_MS + 400);
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
     cover.style.opacity = lamp.style.opacity = light.style.opacity = '0';
     setTimeout(done, 250);
     return;
   }
+  settle(cover);
+  settle(light);
   cover.classList.add('opening');
-  cover.style.transition = `opacity ${SPLASH_OPEN_MS}ms ease-out`;
-  cover.style.opacity = '0';
-  setTimeout(() => {
-    // The beam's own animation holds its shape and opacity, so it hands over to plain styles first.
-    light.style.clipPath = getComputedStyle(light).clipPath;
-    light.style.animation = 'none';
-    light.style.opacity = '1';
-    light.getBoundingClientRect();
-    for (const node of [lamp, light]) {
-      node.style.transition = `opacity ${SPLASH_OUT_MS}ms ease-in`;
-      node.style.opacity = '0';
-    }
-    setTimeout(done, SPLASH_OUT_MS + 50);
-  }, SPLASH_OPEN_MS + SPLASH_HOLD_MS);
+  cover.style.transition = `clip-path ${SPLASH_OPEN_MS}ms cubic-bezier(.65,0,.35,1)`;
+  cover.style.clipPath = SPLASH_ALL_OPEN;
+  for (const node of [lamp, light]) {
+    node.style.transition = `opacity ${SPLASH_OUT_MS}ms ease-in`;
+    node.style.opacity = '0';
+  }
+  setTimeout(done, SPLASH_OPEN_MS + 50);
 }
 
 /** The line at the top of the chat when it is scrolled up, so coming back opens there. */
