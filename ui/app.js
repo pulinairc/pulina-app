@@ -1739,10 +1739,14 @@ function openSplash() {
     setTimeout(done, 250);
     return;
   }
+  // Lamp pinned in px and the cone measured against its own layer, so neither a resizing viewport nor an offset layer splits them.
+  const at = lamp.getBoundingClientRect();
+  Object.assign(lamp.style, { top: `${at.top}px`, left: `${at.left}px`, marginLeft: '0' });
   const bulb = lamp.querySelector('.splash-bulb').getBoundingClientRect();
-  const x = bulb.left + bulb.width / 2;
-  const y = bulb.top + bulb.height / 2;
-  const foot = Math.min(innerHeight * 0.85, y + 330);
+  const box = light.getBoundingClientRect();
+  const x = bulb.left + bulb.width / 2 - box.left;
+  const y = bulb.top + bulb.height / 2 - box.top;
+  const foot = Math.min(box.height * 0.85, y + 330);
   const half = (foot - y) * CONE_SPREAD;
   light.style.clipPath = `polygon(${px([
     [x - CONE_TOP_HALF_PX, y],

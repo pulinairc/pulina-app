@@ -8,6 +8,7 @@
 * Add a quit message, sent on closing and shown for others
 * Add default channel pictures for forks
 * Add drifting IRC signs behind the welcome
+* Fix the start light detached from the lamp on iPhone
 
 ### 1.8.2: 2026-11-11
 
