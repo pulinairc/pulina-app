@@ -9,7 +9,8 @@
 // `quitName` and `fiQuitName` name the app in the default quit message ("Used …", "Käytin …").
 // `channels` gives a channel its picture until someone picks another: { '#name': { photo } }.
 // `upload` is the fork's own file host in catbox.moe's place: { url, name, note }, `url` taking the file as the POST body.
-// `reportEmail` gets reported messages and Settings > About's "Report a problem".
+// `reportEmail` gets Settings > About's "Report a problem", and reported messages when `reportMessages` is on:
+// only a fork with its own admins has someone to report to.
 export const BRAND = {
   name: 'Lobby',
   quitName: 'Lobby',

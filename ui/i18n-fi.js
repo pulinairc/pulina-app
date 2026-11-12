@@ -608,7 +608,7 @@ export const FI = {
   '{n}% more than usual by this time.': '{n} % enemmän kuin tavallisesti tähän aikaan.',
   '{n}% less than usual by this time.': '{n} % vähemmän kuin tavallisesti tähän aikaan.',
 
-  // Blocking, reporting and filtering
+  // Ignoring, reporting and filtering
   Filtering: 'Suodatus',
   'Hide offensive words': 'Piilota loukkaavat sanat',
   'Common swear words and slurs show as •••. What you send is not changed.':
@@ -617,16 +617,21 @@ export const FI = {
   'spoiler, crypto': 'juonipaljastus, krypto',
   'Messages with any of these words are hidden. Only whole words count.':
     'Viestit, joissa on jokin näistä sanoista, piilotetaan. Vain kokonaiset sanat lasketaan.',
-  'Blocked people': 'Estetyt ihmiset',
-  'You do not see what blocked people say, their reactions or when they come and go. Block someone from a message or the people list.':
-    'Et näe estettyjen ihmisten viestejä, reaktioita etkä tuloja ja lähtöjä. Voit estää jonkun viestin valikosta tai ihmislistasta.',
-  'Nobody is blocked.': 'Ketään ei ole estetty.',
-  Block: 'Estä',
-  Unblock: 'Poista esto',
-  Blocked: 'Estetty',
-  'Block {nick}': 'Estä {nick}',
-  'Unblock {nick}': 'Poista käyttäjän {nick} esto',
-  'Block {nick} too': 'Estä myös {nick}',
+  'Ignored people': 'Ignoroidut',
+  'You do not see what ignored people say, their reactions or when they come and go. Ignore someone from a message, the people list or with /ignore nick.':
+    'Et näe ignoroitujen viestejä, reaktioita etkä tuloja ja lähtöjä. Voit ignoroida jonkun viestin valikosta, ihmislistasta tai komennolla /ignore nimimerkki.',
+  'Nobody is ignored.': 'Ketään ei ole ignoroitu.',
+  Ignore: 'Ignoroi',
+  Unignore: 'Poista ignorointi',
+  Ignored: 'Ignoroitu',
+  'Ignore {nick}': 'Ignoroi {nick}',
+  'Unignore {nick}': 'Poista nimimerkin {nick} ignorointi',
+  'Ignore {nick} too': 'Ignoroi myös {nick}',
+  'Ignored: {nicks}': 'Ignoroidut: {nicks}',
+  '{nick} ignored': '{nick} ignoroitu',
+  '{nick} no longer ignored': '{nick} ei ole enää ignoroitu',
+  'Hide what someone says': 'Piilota jonkun viestit',
+  'Show someone again': 'Näytä jonkun viestit taas',
   'Report message': 'Ilmoita viestistä',
   'Note, if you like': 'Lisätietoja (valinnainen)',
   'What is wrong with it': 'Kerro, mikä viestissä on vialla',
