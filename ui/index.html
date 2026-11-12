@@ -244,6 +244,15 @@
         <span>Suggest emoji after a colon</span>
         <input id="shortcode-toggle" class="switch" type="checkbox" role="switch">
       </label>
+      <h3>Nicks</h3>
+      <label class="switch-row" for="nick-at-toggle">
+        <span>Suggest nicks after @</span>
+        <input id="nick-at-toggle" class="switch" type="checkbox" role="switch">
+      </label>
+      <label class="switch-row" for="nick-word-toggle">
+        <span>Suggest nicks as you type</span>
+        <input id="nick-word-toggle" class="switch" type="checkbox" role="switch">
+      </label>
     </section>
     <section data-tab="notifications">
       <h3><label for="highlight-field">Highlight words</label></h3>
@@ -602,7 +611,7 @@
       </div>
       <div id="shell-proof" class="shell-proof" hidden>
         <p class="hint">Log in to your shell and run this within 10 minutes:</p>
-        <code id="shell-command" class="shell-command"></code>
+        <div class="shell-row"><code id="shell-command" class="shell-command"></code><button id="shell-copy" class="shell-copy" type="button">Copy</button></div>
         <p id="shell-waiting" class="hint">Waiting for your shell…</p>
       </div>
       <p id="shell-error" class="hint error" hidden></p>

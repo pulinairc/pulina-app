@@ -5213,7 +5213,25 @@ dialog.welcome::backdrop {
 .shell-proof[hidden] {
   display: none;
 }
+.shell-row {
+  display: flex;
+  gap: 8px;
+}
+.shell-copy {
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
 .shell-command {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: 12px 14px;
   border: 1px solid var(--line-strong);
   border-radius: 12px;

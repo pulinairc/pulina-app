@@ -100,7 +100,6 @@ pub struct Hub {
 /// The channels each network was in, kept so a restart or a reconnect joins them again.
 const REJOIN_PREFIX: &str = "rejoin.";
 const REALNAME: &str = "Lobby";
-/// The setting that holds your own shared picture's link.
 
 fn remember(list: &mut Vec<String>, channel: &str, joined: bool) {
     let known = list.iter().any(|c| c.eq_ignore_ascii_case(channel));

@@ -702,6 +702,8 @@ export const FI = {
   'The app connects through your own irssi, so you see the same chat with your own nick. No password needed: your shell confirms it is you.':
     'Sovellus yhdistää oman irssisi kautta, joten näet saman keskustelun omalla nimimerkilläsi. Salasanaa ei tarvita: shellisi vahvistaa, että se olet sinä.',
   'Shell account': 'Shell-tunnus',
+  'Suggest nicks after @': 'Ehdota nimimerkkejä @-merkin jälkeen',
+  'Suggest nicks as you type': 'Ehdota nimimerkkejä kirjoittaessa',
   'Log in to your shell and run this within 10 minutes:': 'Kirjaudu shelliin ja aja tämä 10 minuutin sisällä:',
   'Waiting for your shell…': 'Odotetaan shelliltäsi…',
   'No shell account with that name is set up for the app. Ask the admins.':

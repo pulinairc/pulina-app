@@ -1,3 +1,9 @@
+### 1.17.0: 2026-11-12
+
+* Add a copy button to the shell sign-in command
+* Add settings for when nick suggestions open
+* Fix default window taller than the screen
+
 ### 1.16.0: 2026-11-12
 
 * Remove picture links from the IRC real name
