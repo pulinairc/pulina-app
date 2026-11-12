@@ -767,6 +767,32 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
+/// The default size stays unless it is larger than the screen (1440p at 200 % is only 720 points tall).
+#[cfg(desktop)]
+fn fit_to_screen(window: &tauri::WebviewWindow) -> tauri::Result<()> {
+    let Some(monitor) = window.current_monitor()? else { return Ok(()) };
+    let area = monitor.work_area();
+    let outer = window.outer_size()?;
+    if window.is_maximized()? || (outer.width <= area.size.width && outer.height <= area.size.height) {
+        return Ok(());
+    }
+
+    let inner = window.inner_size()?;
+    let frame = (outer.width.saturating_sub(inner.width), outer.height.saturating_sub(inner.height));
+    let width = inner.width.min(area.size.width.saturating_sub(frame.0));
+    let height = inner.height.min(area.size.height.saturating_sub(frame.1));
+    window.set_size(tauri::PhysicalSize::new(width, height))?;
+
+    // Wayland does not let apps place windows; elsewhere keep it inside the work area.
+    if let Ok(at) = window.outer_position() {
+        let right = area.position.x + area.size.width.saturating_sub(width + frame.0) as i32;
+        let bottom = area.position.y + area.size.height.saturating_sub(height + frame.1) as i32;
+        let at = tauri::PhysicalPosition::new(at.x.clamp(area.position.x, right), at.y.clamp(area.position.y, bottom));
+        window.set_position(at)?;
+    }
+    Ok(())
+}
+
 pub fn run() {
     // With two TLS backends compiled in rustls will not choose, and a wss:// lobby-server link panics.
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
@@ -800,6 +826,10 @@ pub fn run() {
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_menu(mac_menu(app.handle())?)?;
+            #[cfg(desktop)]
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = fit_to_screen(&window);
+            }
 
             config::use_name(&app.package_info().name);
             let data = app.path().app_data_dir()?;

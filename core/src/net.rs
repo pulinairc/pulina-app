@@ -178,14 +178,7 @@ impl Session {
         let mut members: Vec<String> = chan.members.values().cloned().collect();
         members.sort_by_key(|m| m.to_lowercase());
         let modes = chan.modes.iter().filter_map(|(key, held)| Some((chan.members.get(key)?.clone(), held.clone()))).collect();
-        Out::Buffer(BufferInfo {
-            net: self.net.clone(),
-            name: chan.name.clone(),
-            topic: chan.topic.clone(),
-            members,
-            joined,
-            modes,
-        })
+        Out::Buffer(BufferInfo { net: self.net.clone(), name: chan.name.clone(), topic: chan.topic.clone(), members, joined, modes })
     }
 
     /// ISUPPORT: the name prefixes, which modes take a parameter, and how many fit one line.
@@ -426,7 +419,6 @@ impl Session {
         }
     }
 
-
     fn on_whois(&mut self, msg: &Msg) -> Vec<Out> {
         let nick = msg.param(1);
         let key = nick.to_lowercase();
@@ -622,7 +614,6 @@ mod tests {
         let out = feed(&mut s, ":srv 404 rolle #b :Cannot send to channel");
         assert_eq!(lines(&out), vec![("#b".into(), "info".into(), "srv".into())]);
     }
-
 
     #[test]
     fn routes_private_messages_and_actions() {

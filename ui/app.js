@@ -75,6 +75,8 @@ const QUICK_REACTION_COUNT = 3;
 const REACTION_SETTING = 'reactions';
 // Emoji helpers in the message box, on unless turned off.
 const EMOTICON_SETTING = 'emoticons';
+// Tab completes nicks either way; these only choose when the list opens by itself.
+const NICK_MENU_SETTINGS = { at: 'nick_menu_at', word: 'nick_menu_word' };
 const BOTS_SETTING = 'bots';
 const HIGHLIGHT_WORDS_SETTING = 'highlightWords';
 /** A bot's answer joins the command it follows only this soon after it. */
@@ -1510,6 +1512,8 @@ function renderSettings() {
   el.notifyToggle.checked = notifyOn();
   renderNotifyState();
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
+  $('nick-at-toggle').checked = settingOn(NICK_MENU_SETTINGS.at);
+  $('nick-word-toggle').checked = settingOn(NICK_MENU_SETTINGS.word);
   for (const r of el.replyStyle.querySelectorAll('input')) {
     r.checked = r.value === replyStyle();
   }
@@ -4036,7 +4040,7 @@ function pickNick(list, nick, start, end) {
 function nickEntries(caret) {
   const b = state.buffers.get(state.current);
   const q = b && b.name !== '' ? nickQuery(el.input.value.slice(0, caret)) : null;
-  if (!q) {
+  if (!q || !settingOn(q.at ? NICK_MENU_SETTINGS.at : NICK_MENU_SETTINGS.word)) {
     return [];
   }
   const all = nickMatches(q.word, nickCandidates(b), (n) => -spokeIn(b.net)(n), Number.POSITIVE_INFINITY);
@@ -5113,6 +5117,15 @@ function stopShellWait() {
   $('shell-go').hidden = false;
 }
 
+$('shell-copy').addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText($('shell-command').textContent);
+    $('shell-copy').textContent = t('Copied');
+  } catch {
+    getSelection().selectAllChildren($('shell-command'));
+  }
+});
+
 $('welcome-shell').addEventListener('submit', async (e) => {
   e.preventDefault();
   const error = $('shell-error');
@@ -5126,6 +5139,7 @@ $('welcome-shell').addEventListener('submit', async (e) => {
     return accountError(error, answer);
   }
   $('shell-command').textContent = `pulina-verify ${answer.code}`;
+  $('shell-copy').textContent = t('Copy');
   $('shell-proof').hidden = false;
   $('shell-go').hidden = true;
   shellPoll = setInterval(async () => {
@@ -7831,6 +7845,12 @@ el.notifyToggle.addEventListener('change', () => {
 });
 
 el.emoticonToggle.addEventListener('change', () => saveSetting(EMOTICON_SETTING, el.emoticonToggle.checked ? 'on' : 'off'));
+for (const [id, key] of [
+  ['nick-at-toggle', NICK_MENU_SETTINGS.at],
+  ['nick-word-toggle', NICK_MENU_SETTINGS.word],
+]) {
+  $(id).addEventListener('change', (e) => saveSetting(key, e.target.checked ? 'on' : 'off'));
+}
 el.replyStyle.addEventListener('change', (e) => {
   saveSetting(REPLY_STYLE_SETTING, e.target.value);
   renderLog();
