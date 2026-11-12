@@ -1,3 +1,10 @@
+### 1.15.0: 2026-11-12
+
+* Add a stand-in nick when the nick is taken
+* Ask for another nick after joining with a taken one
+* Offer sign-in when the nick is an account
+* Add account links to the welcome's first view
+
 ### 1.14.0: 2026-11-12
 
 * Add a reply style setting: bubble, nick or both
