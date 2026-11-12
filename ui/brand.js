@@ -8,6 +8,9 @@ export const BRAND = {
   // The name for "Tervetuloa …" in Finnish.
   fiInto: 'Pulinaan',
   site: 'https://github.com/pulinairc/pulina-app',
+  // Reported messages go to the channel's admins.
+  reportEmail: 'rolle@dude.fi',
+  reportMessages: true,
   // Finnish until another language is picked in Settings.
   lang: 'fi',
   // Only #pulina: the welcome asks the nick and nothing else. The network shows as Pulina.
