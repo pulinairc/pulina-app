@@ -80,6 +80,10 @@ With a Last.fm username and API key, bars by the emoji button show what you play
 
 A count of what is left of the IRC line. Over it turns red, and nothing is sent until you shorten the message.
 
+### 🛡️ Op tools
+
+As an op, kick with a reason or ban by host from the people list or a message. Settings > Channel holds the topic, the channel modes and the ban list, and on QuakeNet the Q bans that last.
+
 ### 🙈 Hidden channels
 
 Hide announcement channels from the list and the channel keys. A search still finds them.

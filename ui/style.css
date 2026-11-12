@@ -5393,3 +5393,69 @@ dialog.welcome::backdrop {
 :root:not([data-sheet]) .sheet-only {
   display: none;
 }
+
+/* Settings > Channel: tools for ops. */
+.chan-arg {
+  margin-top: 14px;
+}
+.chan-arg-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.chan-arg-row .field {
+  flex: 1;
+  min-width: 0;
+}
+#chan-flags .switch-row + .switch-row {
+  margin-top: 10px;
+}
+.chan-entry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+}
+.chan-entry:first-child {
+  border-top: 0;
+}
+.chan-entry-what {
+  min-width: 0;
+}
+.chan-entry-mask {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 13px;
+}
+.chan-entry-by {
+  display: block;
+  color: var(--faint);
+  font-size: 12px;
+}
+#chan-bans + .chan-arg-row {
+  margin-top: 10px;
+}
+#chan-bans-refresh {
+  margin-top: 10px;
+}
+.chan-q-buttons {
+  justify-content: flex-start;
+  gap: 16px;
+  margin-top: 12px;
+}
+#kick-mask {
+  margin: 10px 0 0;
+  overflow-wrap: anywhere;
+}
+
+/* The chat making room for the people list after it was dragged in. */
+body.rail-settle #logwrap,
+body.rail-settle #composer,
+body.rail-settle #status,
+body.rail-settle #update-bar {
+  transition: margin-right 0.18s ease-out;
+}

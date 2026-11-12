@@ -174,10 +174,63 @@
       <button class="inbox-tab" type="button" role="tab" data-tab="music">Music</button>
       <button class="inbox-tab" type="button" role="tab" data-tab="files">Files</button>
       <button class="inbox-tab" type="button" role="tab" data-tab="people">People</button>
+      <button id="chan-tab" class="inbox-tab" type="button" role="tab" data-tab="channel" hidden>Channel</button>
       <button class="inbox-tab" type="button" role="tab" data-tab="connections">Connections</button>
       <button class="inbox-tab" type="button" role="tab" data-tab="about">About</button>
     </div>
     <div class="settings-body">
+    <section data-tab="channel">
+      <h3 id="chan-title"></h3>
+      <p id="chan-role" class="hint"></p>
+      <label class="field-label" for="chan-topic">Topic</label>
+      <textarea id="chan-topic" class="field" rows="2"></textarea>
+      <div class="person-buttons">
+        <button id="chan-topic-save" class="link-btn" type="button">Change topic</button>
+      </div>
+    </section>
+    <section data-tab="channel">
+      <h3>Modes</h3>
+      <div id="chan-flags"></div>
+      <div class="chan-arg">
+        <label class="field-label" for="chan-key">Password to join</label>
+        <div class="chan-arg-row">
+          <input id="chan-key" class="field" type="text" autocomplete="off" spellcheck="false">
+          <button id="chan-key-set" class="link-btn" type="button">Set</button>
+          <button id="chan-key-clear" class="link-btn" type="button">Remove</button>
+        </div>
+      </div>
+      <div class="chan-arg">
+        <label class="field-label" for="chan-limit">Most people at once</label>
+        <div class="chan-arg-row">
+          <input id="chan-limit" class="field" type="number" min="1" step="1">
+          <button id="chan-limit-set" class="link-btn" type="button">Set</button>
+          <button id="chan-limit-clear" class="link-btn" type="button">Remove</button>
+        </div>
+      </div>
+    </section>
+    <section data-tab="channel">
+      <h3>Bans</h3>
+      <div id="chan-bans"></div>
+      <div class="chan-arg-row">
+        <input id="chan-ban-mask" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="nick or *!*@host">
+        <button id="chan-ban-add" class="link-btn" type="button">Ban</button>
+      </div>
+      <button id="chan-bans-refresh" class="link-btn" type="button">Refresh the list</button>
+    </section>
+    <section id="chan-lists" data-tab="channel"></section>
+    <section id="chan-q" data-tab="channel" hidden>
+      <h3>Q</h3>
+      <p class="hint">QuakeNet's Q keeps bans and ops for registered channels, even when nobody is here.</p>
+      <div class="chan-arg-row">
+        <input id="chan-q-mask" class="field" type="text" autocomplete="off" spellcheck="false" placeholder="*!*@host">
+        <input id="chan-q-reason" class="field" type="text" placeholder="Reason">
+        <button id="chan-q-permban" class="link-btn" type="button">Ban for good</button>
+      </div>
+      <div class="person-buttons chan-q-buttons">
+        <button id="chan-q-banlist" class="link-btn" type="button">Q's ban list</button>
+        <button id="chan-q-op" class="link-btn" type="button">Op me</button>
+      </div>
+    </section>
     <section data-tab="notifications">
       <h3>Notifications</h3>
       <label class="switch-row" for="notify-toggle">
@@ -470,6 +523,24 @@
         <button id="report-send" class="primary-btn" type="button">Send</button>
       </div>
     </div>
+  </dialog>
+  <dialog id="kick" tabindex="-1" aria-labelledby="kick-title">
+    <div class="sheet-head">
+      <h2 id="kick-title"></h2>
+    </div>
+    <form id="kick-form" class="report-body">
+      <label class="field-label" for="kick-reason">Reason</label>
+      <input id="kick-reason" class="field" type="text" autocomplete="off" placeholder="Shown to everyone">
+      <label class="switch-row report-block" for="kick-ban">
+        <span id="kick-ban-label"></span>
+        <input id="kick-ban" class="switch" type="checkbox" role="switch">
+      </label>
+      <p id="kick-mask" class="hint"></p>
+      <div class="person-buttons">
+        <button id="kick-cancel" class="link-btn" type="button">Cancel</button>
+        <button id="kick-send" class="primary-btn" type="submit">Kick</button>
+      </div>
+    </form>
   </dialog>
   <dialog id="nick-taken" tabindex="-1" aria-labelledby="nick-taken-title">
     <div class="sheet-head">

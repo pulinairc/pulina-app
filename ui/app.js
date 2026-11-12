@@ -881,7 +881,13 @@ function onBuffer(info) {
   b.joined = info.joined;
   b.members = new Set(info.members);
   b.modes = new Map(Object.entries(info.modes || {}));
+  b.chanModes = info.chan_modes || {};
+  b.lists = info.lists || {};
+  b.modeKinds = info.mode_kinds || '';
   renderHeader();
+  if (el.settings.open && settingsTab === 'channel') {
+    renderChannelTools();
+  }
 }
 
 /** Channels in list order, without hidden ones: what the keys step through and number. */
@@ -1589,6 +1595,8 @@ function renderSettings() {
   renderUploadSettings();
   renderChannelAlerts();
   renderUpdateSettings();
+  listsAsked = '';
+  renderChannelTools();
   el.lastfmUser.value = state.settings[LASTFM_USER_SETTING] || '';
   el.lastfmKey.value = state.settings[LASTFM_KEY_SETTING] || '';
   el.npFormat.value = state.settings[NP_FORMAT_SETTING] || '';
@@ -2842,6 +2850,7 @@ const ICONS = {
   person:
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>',
   flag: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>',
+  kick: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 8l-4 4 4 4"/><path d="M5 12h10"/></svg>',
   ignore:
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
   dock: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/><path class="pane" d="M15 4h3a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-3z" fill="currentColor" stroke="none"/></svg>',
@@ -2962,6 +2971,10 @@ function lineChoices(line) {
     }
     choices.push([t('Mute {name}', { name: line.nick }), (l) => setNickMuted(l.nick, true), EYE_OFF]);
     choices.push([t('Ignore {nick}', { nick: line.nick }), (l) => ignore(l.nick), ICONS.ignore]);
+    const b = buffer(line.net, line.buffer);
+    if (isChannel(line.buffer) && b.modes && myPowers(b).kick) {
+      choices.push([t('Kick {nick}…', { nick: line.nick }), (l) => openKick(b, l.nick, false), ICONS.kick]);
+    }
   }
   return choices;
 }
@@ -3421,7 +3434,8 @@ function personRow(b, p, now) {
 /** What I may do here: give op needs op, give voice needs half-op or more. */
 function myPowers(b) {
   const mine = b.modes.get(state.me[b.net]) || '';
-  return { op: CAN_OP.test(mine), voice: CAN_VOICE.test(mine) };
+  // Half-ops kick and ban too on the networks that have them.
+  return { op: CAN_OP.test(mine), voice: CAN_VOICE.test(mine), kick: CAN_VOICE.test(mine) };
 }
 
 const MODE_LABELS = { voice: ['Give voice', 'Take voice'], op: ['Give op', 'Take op'] };
@@ -3552,6 +3566,10 @@ function peopleMenu(nick, x, y, row) {
       const muted = isMutedNick(nick);
       item(muted ? t('Unmute {name}', { name: nick }) : t('Mute {name}', { name: nick }), () => setNickMuted(nick, !muted));
       item(isIgnored(nick) ? t('Unignore {nick}', { nick }) : t('Ignore {nick}', { nick }), () => toggleIgnore(nick));
+      if (can.kick) {
+        item(t('Kick {nick}…', { nick }), () => openKick(b, nick, false));
+        item(t('Ban {nick}…', { nick }), () => openKick(b, nick, true));
+      }
     }
   }
   if (nicklist.picked.size) {
@@ -3578,6 +3596,274 @@ function closePeopleMenu() {
   nicklist.menu = null;
 }
 
+// Op tools: kick with a reason, bans, and the channel's modes in Settings > Channel. Plain IRC
+// commands, so they work on any network; QuakeNet's Q gets its own few buttons.
+
+/** Bans by host, which a nick change does not get around; by nick only when no host is known. */
+function banMaskFor(net, nick) {
+  const mask = knownAbout(net, nick).mask || '';
+  const w = whois.get(key(net, nick))?.w;
+  const host = mask.split('@')[1] || w?.host || '';
+  return host ? `*!*@${host}` : `${nick}!*@*`;
+}
+
+function onQuakeNet(net) {
+  return /quakenet/i.test(net);
+}
+
+let kicking = null;
+
+function openKick(b, nick, ban) {
+  closePeopleMenu();
+  closeNicklist();
+  nicklist.picked.clear();
+  kicking = { b, nick };
+  $('kick-title').textContent = t('Kick {nick}', { nick });
+  $('kick-reason').value = '';
+  $('kick-ban').checked = ban;
+  $('kick-ban-label').textContent = t('Ban too, so they cannot come back');
+  renderKickMask();
+  $('kick').showModal();
+  $('kick-reason').focus();
+}
+
+function renderKickMask() {
+  const { b, nick } = kicking;
+  const p = $('kick-mask');
+  p.hidden = !$('kick-ban').checked;
+  p.textContent = t('Ban mask: {mask}', { mask: banMaskFor(b.net, nick) });
+  $('kick-send').textContent = $('kick-ban').checked ? t('Kick and ban') : t('Kick');
+}
+
+$('kick-ban').addEventListener('change', renderKickMask);
+$('kick-cancel').addEventListener('click', () => $('kick').close());
+$('kick-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const { b, nick } = kicking;
+  const reason = $('kick-reason').value.trim();
+  $('kick').close();
+  // The ban goes first, so a quick rejoin does not slip in between.
+  const lines = $('kick-ban').checked ? [`/ban ${banMaskFor(b.net, nick)}`] : [];
+  lines.push(`/kick ${nick} ${reason}`.trim());
+  sendAll(b, lines);
+});
+
+async function sendAll(b, lines) {
+  try {
+    for (const text of lines) {
+      await invoke('send', { net: b.net, buffer: b.name, text });
+    }
+  } catch (e) {
+    renderStatus(String(e));
+  }
+}
+
+// What the common channel modes do. Others show as their letter.
+const FLAG_MODES = {
+  n: 'No messages from outside the channel',
+  t: 'Only ops change the topic',
+  m: 'Moderated: only ops and voiced people speak',
+  i: 'Invite only',
+  s: 'Secret: hidden from channel lists',
+  p: 'Private',
+  r: 'Only people logged in to services join',
+  M: 'Only people logged in to services speak',
+  c: 'No colours',
+  C: 'No CTCPs',
+  N: 'No nick changes',
+  T: 'No notices to the channel',
+  D: 'Joins hidden until people speak',
+  u: 'Quit and part messages hidden',
+};
+
+/** CHANMODES split into its four groups: lists, always-argument, set-argument and plain flags. */
+function modeGroups(b) {
+  const [lists = 'beI', always = 'k', onSet = 'l', flags = 'imnpst'] = (b.modeKinds || 'beI,k,l,imnpst').split(',');
+  return { lists, always, onSet, flags };
+}
+
+let listsAsked = '';
+
+function renderChannelTools() {
+  const b = channelShown();
+  const can = b?.modes ? myPowers(b) : {};
+  $('chan-tab').hidden = !can.kick;
+  if (!can.kick) {
+    if (settingsTab === 'channel') {
+      showSettingsTab('general');
+    }
+    return;
+  }
+  const modes = b.chanModes || {};
+  const groups = modeGroups(b);
+  $('chan-title').textContent = b.name;
+  $('chan-role').textContent = can.op ? t('You are an operator here.') : t('You are a half-op here.');
+  if (document.activeElement !== $('chan-topic')) {
+    $('chan-topic').value = b.topic || '';
+  }
+
+  const letters = [...groups.flags].filter((m) => FLAG_MODES[m] || m in modes);
+  $('chan-flags').replaceChildren(
+    ...letters.map((m) => {
+      const row = h('label', 'switch-row');
+      const box = h('input', 'switch');
+      box.type = 'checkbox';
+      box.setAttribute('role', 'switch');
+      box.checked = m in modes;
+      box.disabled = !can.op;
+      box.addEventListener('change', () => sendAll(b, [`/mode ${box.checked ? '+' : '-'}${m}`]));
+      row.append(h('span', '', `${FLAG_MODES[m] ? t(FLAG_MODES[m]) : t('Mode {mode}', { mode: m })} (+${m})`), box);
+      return row;
+    }),
+  );
+  for (const [m, id] of [
+    ['k', 'chan-key'],
+    ['l', 'chan-limit'],
+  ]) {
+    const known = groups.always.includes(m) || groups.onSet.includes(m);
+    $(id).closest('.chan-arg').hidden = !known;
+    if (document.activeElement !== $(id)) {
+      $(id).value = modes[m] ?? '';
+    }
+    $(`${id}-clear`).hidden = !(m in modes);
+  }
+
+  renderBanList(b, 'b', $('chan-bans'));
+  const extra = { e: 'Ban exceptions', I: 'Invite exceptions' };
+  const section = $('chan-lists');
+  section.replaceChildren();
+  for (const m of [...groups.lists].filter((x) => extra[x])) {
+    const list = h('div');
+    renderBanList(b, m, list);
+    section.append(h('h3', '', t(extra[m])), list);
+  }
+  section.hidden = !section.childElementCount;
+  $('chan-q').hidden = !onQuakeNet(b.net);
+
+  // Lists come from the server once per opening; the MODE lines keep them current after that.
+  const asked = `${b.key}`;
+  if (listsAsked !== asked) {
+    listsAsked = asked;
+    askLists(b);
+  }
+}
+
+function askLists(b) {
+  const groups = modeGroups(b);
+  sendAll(
+    b,
+    [...groups.lists].filter((m) => 'beI'.includes(m)).map((m) => `/mode +${m}`),
+  );
+}
+
+function renderBanList(b, mode, into) {
+  const entries = b.lists?.[mode];
+  if (!entries) {
+    into.replaceChildren(h('p', 'hint', t('Asking the server…')));
+    return;
+  }
+  if (!entries.length) {
+    into.replaceChildren(h('p', 'hint', t('None.')));
+    return;
+  }
+  into.replaceChildren(
+    ...entries.map((e) => {
+      const row = h('div', 'chan-entry');
+      const what = h('div', 'chan-entry-what');
+      what.append(h('span', 'chan-entry-mask', e.mask));
+      if (e.by) {
+        const when = e.at ? ` · ${ago(e.at * 1000)}` : '';
+        what.append(h('span', 'chan-entry-by', t('by {nick}', { nick: e.by }) + when));
+      }
+      const remove = h('button', 'link-btn', t('Remove'));
+      remove.type = 'button';
+      remove.addEventListener('click', () => sendAll(b, [`/mode -${mode} ${e.mask}`]));
+      row.append(what, remove);
+      return row;
+    }),
+  );
+}
+
+function withChannel(run) {
+  return () => {
+    const b = channelShown();
+    if (b) {
+      run(b);
+    }
+  };
+}
+
+$('chan-topic-save').addEventListener(
+  'click',
+  withChannel((b) => sendAll(b, [`/topic ${$('chan-topic').value.replace(/\s+/g, ' ').trim()}`])),
+);
+$('chan-key-set').addEventListener(
+  'click',
+  withChannel((b) => {
+    const key = $('chan-key').value.trim().replace(/\s+/g, '');
+    if (key) {
+      // A new key replaces the old one only after the old one is taken off.
+      const off = 'k' in (b.chanModes || {}) ? [`/mode -k ${b.chanModes.k || '*'}`] : [];
+      sendAll(b, [...off, `/mode +k ${key}`]);
+    }
+  }),
+);
+$('chan-key-clear').addEventListener(
+  'click',
+  withChannel((b) => sendAll(b, [`/mode -k ${b.chanModes?.k || '*'}`])),
+);
+$('chan-limit-set').addEventListener(
+  'click',
+  withChannel((b) => {
+    const n = Number.parseInt($('chan-limit').value, 10);
+    if (n > 0) {
+      sendAll(b, [`/mode +l ${n}`]);
+    }
+  }),
+);
+$('chan-limit-clear').addEventListener(
+  'click',
+  withChannel((b) => sendAll(b, ['/mode -l'])),
+);
+$('chan-ban-add').addEventListener(
+  'click',
+  withChannel((b) => {
+    const typed = $('chan-ban-mask').value.trim();
+    if (!typed) {
+      return;
+    }
+    // A nick that is here is banned by its host; anything else as typed.
+    const here = [...b.members].find((m) => m.toLowerCase() === typed.toLowerCase());
+    sendAll(b, [`/ban ${here ? banMaskFor(b.net, here) : typed}`]);
+    $('chan-ban-mask').value = '';
+  }),
+);
+$('chan-bans-refresh').addEventListener(
+  'click',
+  withChannel((b) => askLists(b)),
+);
+$('chan-q-permban').addEventListener(
+  'click',
+  withChannel((b) => {
+    const mask = $('chan-q-mask').value.trim();
+    if (!mask) {
+      return;
+    }
+    const reason = $('chan-q-reason').value.trim();
+    sendAll(b, [`/msg Q permban ${b.name} ${mask} ${reason}`.trim()]);
+    $('chan-q-mask').value = '';
+    $('chan-q-reason').value = '';
+  }),
+);
+$('chan-q-banlist').addEventListener(
+  'click',
+  withChannel((b) => sendAll(b, [`/msg Q banlist ${b.name}`])),
+);
+$('chan-q-op').addEventListener(
+  'click',
+  withChannel((b) => sendAll(b, [`/msg Q op ${b.name}`])),
+);
+
 el.pill.addEventListener('click', () => {
   const dock = dockPrefs();
   if (dock.side) {
@@ -3593,15 +3879,18 @@ el.pill.addEventListener('pointerdown', (e) => e.stopPropagation());
 
 // Phones: a swipe in from the right edge opens the people list.
 const EDGE_ZONE_PX = 24;
-const EDGE_SWIPE_PX = 40;
 const EDGE_SLOP_PX = 10;
+// Let go past this share of the list's width, or flick, and it stays open.
+const EDGE_OPEN_SHARE = 0.4;
+const EDGE_FLICK_PX_MS = 0.5;
+const EDGE_SETTLE_MS = 180;
 let edgeSwipe = null;
 document.addEventListener(
   'touchstart',
   (e) => {
     const t = e.touches[0];
     const fromEdge = e.touches.length === 1 && t.clientX > innerWidth - EDGE_ZONE_PX;
-    edgeSwipe = fromEdge && !HOVER.matches && !el.pill.hidden && !nicklist.el ? { x: t.clientX, y: t.clientY } : null;
+    edgeSwipe = fromEdge && !HOVER.matches && !el.pill.hidden && !nicklist.el ? { x: t.clientX, y: t.clientY, at: e.timeStamp } : null;
   },
   { passive: true },
 );
@@ -3613,17 +3902,72 @@ document.addEventListener(
     }
     const dx = edgeSwipe.x - e.touches[0].clientX;
     const dy = Math.abs(e.touches[0].clientY - edgeSwipe.y);
-    if (dy > Math.max(dx, EDGE_SLOP_PX)) {
+    if (!edgeSwipe.list && dy > Math.max(dx, EDGE_SLOP_PX)) {
       edgeSwipe = null;
       return;
     }
-    if (dx > EDGE_SWIPE_PX) {
-      edgeSwipe = null;
-      el.pill.click();
+    if (!edgeSwipe.list && dx > EDGE_SLOP_PX) {
+      startEdgeDrag();
+    }
+    if (edgeSwipe.list) {
+      edgeSwipe.dx = dx;
+      edgeSwipe.speed = (dx - (edgeSwipe.last ?? dx)) / Math.max(1, e.timeStamp - (edgeSwipe.lastAt ?? e.timeStamp));
+      edgeSwipe.last = dx;
+      edgeSwipe.lastAt = e.timeStamp;
+      edgeSwipe.list.style.transform = `translateX(${Math.max(0, edgeSwipe.width - dx)}px)`;
     }
   },
   { passive: true },
 );
+document.addEventListener('touchend', endEdgeDrag, { passive: true });
+document.addEventListener('touchcancel', endEdgeDrag, { passive: true });
+
+// The list opens under the finger: off screen to the right, then moved along as the finger goes.
+// The chat keeps its width until the list has settled, so nothing else moves while dragging.
+function startEdgeDrag() {
+  el.pill.click();
+  const list = nicklist.el;
+  if (!list) {
+    edgeSwipe = null;
+    return;
+  }
+  edgeSwipe.docked = document.body.classList.contains('docked');
+  document.body.classList.remove('docked');
+  edgeSwipe.width = list.offsetWidth;
+  list.style.transition = 'none';
+  list.style.transform = `translateX(${edgeSwipe.width}px)`;
+  edgeSwipe.list = list;
+}
+
+function endEdgeDrag() {
+  const swipe = edgeSwipe;
+  edgeSwipe = null;
+  if (!swipe?.list) {
+    return;
+  }
+  const { list, width, docked } = swipe;
+  const open = (swipe.dx ?? 0) > width * EDGE_OPEN_SHARE || (swipe.speed ?? 0) > EDGE_FLICK_PX_MS;
+  list.style.transition = `transform ${EDGE_SETTLE_MS}ms ease-out`;
+  list.style.transform = `translateX(${open ? 0 : width}px)`;
+  setTimeout(() => {
+    if (nicklist.el !== list) {
+      return;
+    }
+    list.style.transition = '';
+    list.style.transform = '';
+    if (!open) {
+      if (docked) {
+        saveDock({ side: true, shown: false });
+      }
+      hideNicklist();
+      return;
+    }
+    if (docked) {
+      document.body.classList.add('rail-settle', 'docked');
+      setTimeout(() => document.body.classList.remove('rail-settle'), EDGE_SETTLE_MS * 2);
+    }
+  }, EDGE_SETTLE_MS);
+}
 
 document.addEventListener('pointerdown', () => {
   if (nicklist.menu) {

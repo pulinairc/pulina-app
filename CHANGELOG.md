@@ -1,3 +1,8 @@
+### 1.20.0: 2026-11-12
+
+* Add op tools: kick, bans and channel modes
+* Change the edge swipe to follow the finger on iPhone
+
 ### 1.19.0: 2026-11-12
 
 * Add Mute for people, lifted when they highlight you
