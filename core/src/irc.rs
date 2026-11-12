@@ -143,6 +143,12 @@ pub fn outgoing(buffer: &str, input: &str, modes_per_line: usize, prefix: &str) 
 
     let (name, rest) = command.split_once(' ').unwrap_or((command, ""));
     let rest = rest.trim();
+    // "+bbb a b c" lines, as many as the server takes in one.
+    let batch = |sign: char, mode: char, args: Vec<String>| -> Vec<(String, Option<Echo>)> {
+        args.chunks(modes_per_line.max(1))
+            .map(|part| (format!("MODE {buffer} {sign}{} {}", mode.to_string().repeat(part.len()), part.join(" ")), None))
+            .collect()
+    };
     let raw = match name.to_lowercase().as_str() {
         "me" => {
             let room = text_room(prefix, buffer).saturating_sub(ACTION_WRAP_BYTES);
@@ -173,25 +179,43 @@ pub fn outgoing(buffer: &str, input: &str, modes_per_line: usize, prefix: &str) 
             let (nick, reason) = rest.split_once(' ').unwrap_or((rest, ""));
             format!("KICK {buffer} {nick} :{reason}")
         }
-        "op" | "deop" | "voice" | "devoice" => {
-            let mode = match name.to_lowercase().as_str() {
-                "op" => "+o",
-                "deop" => "-o",
-                "voice" => "+v",
-                _ => "-v",
+        "op" | "deop" | "halfop" | "dehalfop" | "voice" | "devoice" => {
+            let word = name.to_lowercase();
+            let (sign, word) = match word.strip_prefix("de") {
+                Some(rest) => ('-', rest.to_string()),
+                None => ('+', word),
             };
-            let nicks: Vec<&str> = rest.split_whitespace().collect();
+            let mode = match word.as_str() {
+                "op" => 'o',
+                "halfop" => 'h',
+                _ => 'v',
+            };
             // As many as the server takes in one line, like irssi's +vvvv: never one line per nick.
-            return Ok(nicks
-                .chunks(modes_per_line.max(1))
-                .map(|part| (format!("MODE {buffer} {}{} {}", &mode[..1], mode[1..].repeat(part.len()), part.join(" ")), None))
-                .collect());
+            return Ok(batch(sign, mode, rest.split_whitespace().map(String::from).collect()));
         }
+        "ban" | "unban" => {
+            let sign = if name.eq_ignore_ascii_case("ban") { '+' } else { '-' };
+            return Ok(batch(sign, 'b', rest.split_whitespace().map(ban_mask).collect()));
+        }
+        "kickban" | "kb" => {
+            let (nick, reason) = rest.split_once(' ').unwrap_or((rest, ""));
+            let mut lines = batch('+', 'b', vec![ban_mask(nick)]);
+            lines.push((format!("KICK {buffer} {nick} :{reason}"), None));
+            return Ok(lines);
+        }
+        "bans" | "banlist" => format!("MODE {buffer} +b"),
+        // "/mode +m" is for the open channel, "/mode #other +m" or "/mode nick +i" as typed.
+        "mode" if rest.is_empty() || rest.starts_with(['+', '-']) => format!("MODE {buffer} {rest}").trim_end().to_string(),
         "quit" | "exit" => return Err("Quit is disabled, it would disconnect irssi from the network".into()),
         "raw" | "quote" => rest.to_string(),
         _ => format!("{} {rest}", name.to_uppercase()).trim_end().to_string(),
     };
     Ok(vec![(raw, None)])
+}
+
+/// A bare nick as a ban mask ("nick!*@*"), anything with ! or @ as it is.
+pub fn ban_mask(target: &str) -> String {
+    if target.contains(['!', '@']) { target.to_string() } else { format!("{target}!*@*") }
 }
 
 /// Bytes from the server as text: UTF-8, falling back to Latin-1 for old clients.
@@ -253,6 +277,20 @@ mod tests {
 
     fn typed(buffer: &str, input: &str) -> Result<Vec<(String, Option<Echo>)>, String> {
         outgoing(buffer, input, crate::net::DEFAULT_MODES_PER_LINE, "rolle")
+    }
+
+    #[test]
+    fn builds_op_commands() {
+        let raw = |input: &str| typed("#a", input).unwrap().into_iter().map(|(l, _)| l).collect::<Vec<_>>();
+        assert_eq!(raw("/ban troll *!*@spam.example"), vec!["MODE #a +bb troll!*@* *!*@spam.example"]);
+        assert_eq!(raw("/unban troll!*@*"), vec!["MODE #a -b troll!*@*"]);
+        assert_eq!(raw("/kb troll go away"), vec!["MODE #a +b troll!*@*", "KICK #a troll :go away"]);
+        assert_eq!(raw("/bans"), vec!["MODE #a +b"]);
+        assert_eq!(raw("/mode +mi"), vec!["MODE #a +mi"]);
+        assert_eq!(raw("/mode"), vec!["MODE #a"]);
+        assert_eq!(raw("/mode rolle +x"), vec!["MODE rolle +x"]);
+        assert_eq!(raw("/halfop a b"), vec!["MODE #a +hh a b"]);
+        assert_eq!(raw("/devoice a b c d"), vec!["MODE #a -vvv a b c", "MODE #a -v d"]);
     }
 
     #[test]

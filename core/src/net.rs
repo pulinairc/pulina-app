@@ -14,6 +14,21 @@ const DEFAULT_SET_PARAM_MODES: &str = "l";
 pub const DEFAULT_MODES_PER_LINE: usize = 3;
 /// "MODES" with no number means no limit; one line still has to fit 512 bytes.
 const UNLIMITED_MODES_PER_LINE: usize = 12;
+/// Channel modes that are lists (bans, ban exceptions, invite exceptions) until ISUPPORT says.
+const DEFAULT_LIST_MODES: &str = "beI";
+const DEFAULT_CHANMODES: &str = "beI,k,l,imnpst";
+/// List replies and the letter each belongs to: (entry, end of list, mode).
+const LIST_NUMERICS: [(&str, &str, char); 3] = [("367", "368", 'b'), ("348", "349", 'e'), ("346", "347", 'I')];
+
+/// One entry of a ban, exception or invite list.
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+pub struct ListEntry {
+    pub mask: String,
+    #[serde(default)]
+    pub by: String,
+    #[serde(default)]
+    pub at: i64,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BufferInfo {
@@ -25,6 +40,15 @@ pub struct BufferInfo {
     /// Name prefixes by nick, highest first ("@", "@+", "+"); nicks without any are left out.
     #[serde(default)]
     pub modes: BTreeMap<String, String>,
+    /// Channel modes other than name prefixes and lists: letter to argument ("k" to the key, "m" to "").
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub chan_modes: BTreeMap<String, String>,
+    /// Ban, exception and invite lists by mode letter, once asked for.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub lists: BTreeMap<String, Vec<ListEntry>>,
+    /// ISUPPORT CHANMODES as the server gave it: lists, always-argument, set-argument and flag modes.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub mode_kinds: String,
 }
 
 /// What WHOIS told about a nick, sent as one piece once the server says it is done.
@@ -70,6 +94,9 @@ struct Chan {
     /// Name prefixes by lower-case nick, only for nicks that have one.
     modes: HashMap<String, String>,
     pending_names: Vec<(String, String)>,
+    chan_modes: BTreeMap<char, String>,
+    lists: BTreeMap<char, Vec<ListEntry>>,
+    pending_lists: BTreeMap<char, Vec<ListEntry>>,
 }
 
 /// What ISUPPORT (005) says about the server's channel modes.
@@ -77,11 +104,19 @@ struct Support {
     prefix: Vec<(char, char)>,
     param_modes: String,
     set_param_modes: String,
+    list_modes: String,
+    chanmodes: String,
 }
 
 impl Default for Support {
     fn default() -> Self {
-        Self { prefix: DEFAULT_PREFIX.to_vec(), param_modes: DEFAULT_PARAM_MODES.into(), set_param_modes: DEFAULT_SET_PARAM_MODES.into() }
+        Self {
+            prefix: DEFAULT_PREFIX.to_vec(),
+            param_modes: DEFAULT_PARAM_MODES.into(),
+            set_param_modes: DEFAULT_SET_PARAM_MODES.into(),
+            list_modes: DEFAULT_LIST_MODES.into(),
+            chanmodes: DEFAULT_CHANMODES.into(),
+        }
     }
 }
 
@@ -178,7 +213,17 @@ impl Session {
         let mut members: Vec<String> = chan.members.values().cloned().collect();
         members.sort_by_key(|m| m.to_lowercase());
         let modes = chan.modes.iter().filter_map(|(key, held)| Some((chan.members.get(key)?.clone(), held.clone()))).collect();
-        Out::Buffer(BufferInfo { net: self.net.clone(), name: chan.name.clone(), topic: chan.topic.clone(), members, joined, modes })
+        Out::Buffer(BufferInfo {
+            net: self.net.clone(),
+            name: chan.name.clone(),
+            topic: chan.topic.clone(),
+            members,
+            joined,
+            modes,
+            chan_modes: chan.chan_modes.iter().map(|(m, arg)| (m.to_string(), arg.clone())).collect(),
+            lists: chan.lists.iter().map(|(m, list)| (m.to_string(), list.clone())).collect(),
+            mode_kinds: self.support.chanmodes.clone(),
+        })
     }
 
     /// ISUPPORT: the name prefixes, which modes take a parameter, and how many fit one line.
@@ -198,6 +243,8 @@ impl Session {
                     if kinds.len() >= 3 {
                         self.support.param_modes = format!("{}{}", kinds[0], kinds[1]);
                         self.support.set_param_modes = kinds[2].to_string();
+                        self.support.list_modes = kinds[0].to_string();
+                        self.support.chanmodes = value.to_string();
                     }
                 }
                 "MODES" => out.push(Out::ModesPerLine(value.parse().unwrap_or(UNLIMITED_MODES_PER_LINE))),
@@ -207,8 +254,8 @@ impl Session {
         out
     }
 
-    /// Apply a channel MODE line to the name prefixes. True when any prefix changed.
-    fn apply_modes(&mut self, key: &str, params: &[String]) -> bool {
+    /// Apply a channel MODE line to the name prefixes, lists and channel modes. True when any changed.
+    fn apply_modes(&mut self, key: &str, params: &[String], by: &str, now: i64) -> bool {
         let Some(chan) = self.chans.get_mut(key) else { return false };
         let Some((changes, args)) = params.split_first() else { return false };
         let mut args = args.iter();
@@ -228,8 +275,29 @@ impl Session {
                             chan.modes.insert(nick, next);
                         }
                         changed = true;
+                    } else if self.support.list_modes.contains(mode) {
+                        let Some(mask) = args.next() else { continue };
+                        let list = chan.lists.entry(mode).or_default();
+                        list.retain(|e| !e.mask.eq_ignore_ascii_case(mask));
+                        if adding {
+                            list.push(ListEntry { mask: mask.clone(), by: by.to_string(), at: now });
+                        }
+                        changed = true;
                     } else if self.support.param_modes.contains(mode) || (adding && self.support.set_param_modes.contains(mode)) {
-                        args.next();
+                        let arg = args.next().cloned().unwrap_or_default();
+                        if adding {
+                            chan.chan_modes.insert(mode, arg);
+                        } else {
+                            chan.chan_modes.remove(&mode);
+                        }
+                        changed = true;
+                    } else {
+                        if adding {
+                            chan.chan_modes.insert(mode, String::new());
+                        } else {
+                            chan.chan_modes.remove(&mode);
+                        }
+                        changed = true;
                     }
                 }
             }
@@ -272,7 +340,7 @@ impl Session {
                 let Some(chan) = self.chans.get(&key) else { return vec![] };
                 let name = chan.name.clone();
                 let mut out = vec![Out::Line(self.line(&name, "mode", msg, &msg.params[1..].join(" "), now))];
-                if self.apply_modes(&key, &msg.params[1..]) {
+                if self.apply_modes(&key, &msg.params[1..], &nick, now) {
                     out.push(self.info(&self.chans[&key], true));
                 }
                 out
@@ -392,7 +460,24 @@ impl Session {
                 let names = std::mem::take(&mut chan.pending_names);
                 chan.modes = names.iter().filter(|(held, _)| !held.is_empty()).map(|(held, n)| (n.to_lowercase(), held.clone())).collect();
                 chan.members = names.into_iter().map(|(_, n)| (n.to_lowercase(), n)).collect();
+                // The channel's modes too, which NAMES does not tell.
+                let ask = Out::Send(format!("MODE {}", chan.name));
+                vec![ask, self.info(&self.chans[&key], true)]
+            }
+            // The channel's own modes, asked for after joining.
+            "324" if self.chans.contains_key(&msg.param(1).to_lowercase()) => {
+                let key = msg.param(1).to_lowercase();
+                if let Some(chan) = self.chans.get_mut(&key) {
+                    chan.chan_modes.clear();
+                }
+                self.apply_modes(&key, &msg.params[2..], "", now);
                 vec![self.info(&self.chans[&key], true)]
+            }
+            "329" if self.chans.contains_key(&msg.param(1).to_lowercase()) => vec![],
+            cmd if self.chans.contains_key(&msg.param(1).to_lowercase())
+                && LIST_NUMERICS.iter().any(|(e, end, _)| cmd == *e || cmd == *end) =>
+            {
+                self.on_list(msg)
             }
             "ERROR" => vec![Out::Line(self.line("", "status", msg, msg.param(0), now))],
             // 301 also answers a message to someone away; only a WHOIS in progress takes it.
@@ -417,6 +502,24 @@ impl Session {
             }
             _ => vec![],
         }
+    }
+
+    /// 367 <me> <chan> <mask> [<by> <at>], ended by 368; the same for exceptions and invites.
+    fn on_list(&mut self, msg: &Msg) -> Vec<Out> {
+        let key = msg.param(1).to_lowercase();
+        let Some(&(entry, _, mode)) = LIST_NUMERICS.iter().find(|(e, end, _)| msg.command == *e || msg.command == *end) else {
+            return vec![];
+        };
+        let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
+        if msg.command == entry {
+            let at = msg.param(4).parse().unwrap_or(0);
+            let by = msg.param(3).split('!').next().unwrap_or("").to_string();
+            chan.pending_lists.entry(mode).or_default().push(ListEntry { mask: msg.param(2).to_string(), by, at });
+            return vec![];
+        }
+        let list = chan.pending_lists.remove(&mode).unwrap_or_default();
+        chan.lists.insert(mode, list);
+        vec![self.info(&self.chans[&key], true)]
     }
 
     fn on_whois(&mut self, msg: &Msg) -> Vec<Out> {
@@ -663,7 +766,7 @@ mod tests {
         // A ban's mask and a limit's number are not nicks.
         let out = feed(&mut s, ":rolle!r@h MODE #a +b *!*@mikko");
         assert_eq!(lines(&out), vec![("#a".into(), "mode".into(), "rolle".into())]);
-        assert_eq!(out.len(), 1);
+        assert_eq!(modes(&out), pairs(&[("kaisla", "@+"), ("mikko", "@"), ("rolle", "@")]));
         let out = feed(&mut s, ":rolle!r@h MODE #a +lv 10 mikko");
         assert_eq!(modes(&out), pairs(&[("kaisla", "@+"), ("mikko", "@+"), ("rolle", "@")]));
 
@@ -689,6 +792,46 @@ mod tests {
         let Some(Out::Buffer(info)) = out.last() else { panic!("no buffer") };
         assert!(info.members.contains(&"%odd".to_string()));
         assert_eq!(feed(&mut s, ":srv 005 rolle MODES :are supported"), vec![Out::ModesPerLine(UNLIMITED_MODES_PER_LINE)]);
+    }
+
+    fn info_of(outs: &[Out]) -> BufferInfo {
+        let Some(Out::Buffer(info)) = outs.last() else { panic!("no buffer") };
+        info.clone()
+    }
+
+    #[test]
+    fn keeps_channel_modes_and_ban_list() {
+        let mut s = Session::new("net", "rolle");
+        feed(&mut s, ":srv 005 rolle PREFIX=(ov)@+ CHANMODES=b,k,l,imnpstrDducCNMT :are supported");
+        feed(&mut s, ":rolle!r@h JOIN #a");
+        feed(&mut s, ":srv 353 rolle = #a :@rolle jaska");
+        let out = feed(&mut s, ":srv 366 rolle #a :End");
+        assert_eq!(out[0], Out::Send("MODE #a".into()));
+
+        let info = info_of(&feed(&mut s, ":srv 324 rolle #a +ntlk 30 salainen"));
+        let modes: Vec<(&str, &str)> = info.chan_modes.iter().map(|(m, a)| (m.as_str(), a.as_str())).collect();
+        assert_eq!(modes, vec![("k", "salainen"), ("l", "30"), ("n", ""), ("t", "")]);
+        assert_eq!(info.mode_kinds, "b,k,l,imnpstrDducCNMT");
+
+        let info = info_of(&feed(&mut s, ":rolle!r@h MODE #a +m-k+o salainen jaska"));
+        assert!(info.chan_modes.contains_key("m") && !info.chan_modes.contains_key("k"));
+        assert_eq!(info.modes.get("jaska").map(String::as_str), Some("@"));
+        assert!(feed(&mut s, ":srv 329 rolle #a 1700000000").is_empty());
+
+        assert!(feed(&mut s, ":srv 367 rolle #a *!*@spam.example jaska!j@h 1700000000").is_empty());
+        assert!(feed(&mut s, ":srv 367 rolle #a troll!*@*").is_empty());
+        let info = info_of(&feed(&mut s, ":srv 368 rolle #a :End of Channel Ban List"));
+        let bans = &info.lists["b"];
+        assert_eq!(bans.len(), 2);
+        assert_eq!((bans[0].mask.as_str(), bans[0].by.as_str(), bans[0].at), ("*!*@spam.example", "jaska", 1700000000));
+
+        let info = info_of(&feed(&mut s, ":rolle!r@h MODE #a -b+b *!*@SPAM.example new!*@*"));
+        let masks: Vec<&str> = info.lists["b"].iter().map(|e| e.mask.as_str()).collect();
+        assert_eq!(masks, vec!["troll!*@*", "new!*@*"]);
+        assert_eq!(info.lists["b"][1].by, "rolle");
+
+        // A ban list for a channel I am not on is still shown as text.
+        assert_eq!(lines(&feed(&mut s, ":srv 368 rolle #other :End")), vec![("".into(), "info".into(), "srv".into())]);
     }
 
     #[test]
