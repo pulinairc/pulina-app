@@ -321,8 +321,9 @@ class Handler(BaseHTTPRequestHandler):
         if not NAME_RE.fullmatch(name):
             return self.json(200, {'kind': None})
         with db() as conn:
-            row = conn.execute("SELECT shell FROM accounts WHERE name = ? AND status IN ('approved', 'shell')", (name,)).fetchone()
-        self.json(200, {'kind': ('shell' if row['shell'] else 'account') if row else None})
+            row = conn.execute("SELECT 1 FROM accounts WHERE name = ? AND status IN ('approved', 'shell')", (name,)).fetchone()
+        # Never 'shell': that would tell anyone which names log in to the server over SSH.
+        self.json(200, {'kind': 'account' if row else None})
 
     def shell_start(self, data):
         """A shell user signs in a device: pulina-verify in their shell proves it is them. No password."""
