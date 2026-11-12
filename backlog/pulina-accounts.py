@@ -55,6 +55,14 @@ REMOVE = os.environ.get('ACCOUNT_REMOVE', '/usr/local/sbin/pulina-account-remove
 FIRST_PORT = 9201
 # The account name is the nick (15 on QuakeNet); the ident shows its first 10.
 NAME_RE = re.compile(r'^[a-z][a-z0-9_-]{1,14}$')
+PICTURE_RE = re.compile(re.escape(PUBLIC) + r'/a/[0-9a-f]{16}')
+MIN_TOKEN = 32
+NICK_RE = re.compile(r'[A-Za-z\[\]\\`_^{|}][A-Za-z0-9\[\]\\`_^{|}-]{0,14}')
+CHANNEL = '#pulina'
+# Who holds which nick changes slowly; every account's lobby-server is asked at most this often.
+NICKS_FRESH = 30
+NICK_TIMEOUT = 3
+MAX_FRAME = 64 * 1024 * 1024
 MIN_PASSWORD = 10
 MAX_PASSWORD = 256
 MAX_EMAIL = 254
@@ -105,7 +113,7 @@ def db():
         port INTEGER, token TEXT, created INTEGER NOT NULL, "check" TEXT)""")
     have = {r[1] for r in conn.execute('PRAGMA table_info(accounts)')}
     for column in ('email TEXT', 'reset TEXT', 'reset_until INTEGER', 'reset_sent INTEGER', 'shell INTEGER',
-                   'code TEXT', 'code_until INTEGER', 'code_ok INTEGER', 'pending_salt BLOB', 'pending_hash BLOB'):
+                   'code TEXT', 'code_until INTEGER', 'code_ok INTEGER', 'pending_salt BLOB', 'pending_hash BLOB', 'picture TEXT'):
         if column.split()[0] not in have:
             conn.execute(f'ALTER TABLE accounts ADD COLUMN {column}')
     return conn
@@ -127,6 +135,100 @@ def failed_recently(name):
 def note_failure(name):
     with FAILURES_LOCK:
         FAILURES.setdefault(name, []).append(time.time())
+
+
+PICTURES = {'at': 0.0, 'by_nick': {}}
+PICTURES_LOCK = threading.Lock()
+
+
+def pictures_by_nick():
+    """Only the account's own lobby-server can say which nick it holds, so nobody can wear someone's picture."""
+    with PICTURES_LOCK:
+        if time.time() - PICTURES['at'] < NICKS_FRESH:
+            return PICTURES['by_nick']
+        with db() as conn:
+            rows = conn.execute("SELECT port, token, picture FROM accounts WHERE status IN ('approved', 'shell') "
+                                "AND picture IS NOT NULL AND port IS NOT NULL AND token IS NOT NULL").fetchall()
+        by_nick = {}
+        # ponytail: one local lobby-server after another; ask them in parallel if pictures run into hundreds.
+        for row in rows:
+            nick = held_nick(row['port'], row['token'])
+            if nick:
+                by_nick[nick.lower()] = row['picture']
+        PICTURES.update(at=time.time(), by_nick=by_nick)
+        return by_nick
+
+
+def held_nick(port, token):
+    """The nick a local lobby-server holds where CHANNEL is joined, or None. A minimal WebSocket client."""
+    try:
+        with socket.create_connection(('127.0.0.1', int(port)), timeout=NICK_TIMEOUT) as sock:
+            key = b64encode(secrets.token_bytes(16)).decode()
+            sock.sendall((f'GET / HTTP/1.1\r\nHost: 127.0.0.1:{port}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n'
+                          f'Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n').encode())
+            stream = sock.makefile('rb')
+            if b' 101 ' not in stream.readline():
+                return None
+            while stream.readline() not in (b'\r\n', b''):
+                pass
+            sock.sendall(ws_frame(json.dumps({'type': 'hello', 'token': token}).encode()))
+            while True:
+                opcode, payload = ws_read(stream)
+                if opcode is None or opcode == 8:
+                    return None
+                if opcode != 1:
+                    continue
+                msg = json.loads(payload)
+                if msg.get('type') == 'welcome':
+                    return nick_in(msg.get('snapshot') or {})
+    except (OSError, ValueError):
+        return None
+
+
+def nick_in(snapshot):
+    joined = {c.get('net') for c in snapshot.get('channels', []) if c.get('joined') and str(c.get('name', '')).lower() == CHANNEL}
+    for net in snapshot.get('networks', []):
+        if net.get('name') in joined and net.get('state') == 'connected' and NICK_RE.fullmatch(str(net.get('nick', ''))):
+            return net['nick']
+    return None
+
+
+def ws_frame(payload):
+    """One masked text frame, as a client must send."""
+    mask = secrets.token_bytes(4)
+    size = len(payload)
+    head = bytes([0x81])
+    if size < 126:
+        head += bytes([0x80 | size])
+    elif size < 1 << 16:
+        head += bytes([0x80 | 126]) + struct.pack('>H', size)
+    else:
+        head += bytes([0x80 | 127]) + struct.pack('>Q', size)
+    return head + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+
+
+def ws_read(stream):
+    """One whole message: (opcode, payload), or (None, b'') when the link ends or is too big."""
+    opcode, payload = None, b''
+    while True:
+        head = stream.read(2)
+        if len(head) < 2:
+            return None, b''
+        size = head[1] & 0x7f
+        if size == 126:
+            size = struct.unpack('>H', stream.read(2))[0]
+        elif size == 127:
+            size = struct.unpack('>Q', stream.read(8))[0]
+        if len(payload) + size > MAX_FRAME:
+            return None, b''
+        mask = stream.read(4) if head[1] & 0x80 else b''
+        chunk = stream.read(size)
+        if mask:
+            chunk = bytes(b ^ mask[i % 4] for i, b in enumerate(chunk))
+        opcode = opcode if (head[0] & 0x0f) == 0 else head[0] & 0x0f
+        payload += chunk
+        if head[0] & 0x80:
+            return opcode, payload
 
 
 def pwned(password):
@@ -266,7 +368,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.json(400, {'error': 'bad request'})
         routes = {'/accounts/apply': self.apply, '/accounts/status': self.status, '/accounts/cancel': self.cancel,
                   '/accounts/forgot': self.forgot, '/accounts/notified': self.notified, '/accounts/admin/remove': self.remove,
-                  '/accounts/shell': self.shell_start, '/accounts/shell/check': self.shell_check, '/accounts/who': self.who}
+                  '/accounts/shell': self.shell_start, '/accounts/shell/check': self.shell_check, '/accounts/who': self.who,
+                  '/accounts/picture': self.picture, '/accounts/pictures': self.pictures}
         if url.path in routes:
             return routes[url.path](data)
         if url.path.startswith('/accounts/review/'):
@@ -324,6 +427,30 @@ class Handler(BaseHTTPRequestHandler):
             row = conn.execute("SELECT 1 FROM accounts WHERE name = ? AND status IN ('approved', 'shell')", (name,)).fetchone()
         # Never 'shell': that would tell anyone which names log in to the server over SSH.
         self.json(200, {'kind': 'account' if row else None})
+
+    def picture(self, data):
+        """An account sets or clears its own picture, proven by its lobby-server key."""
+        token = str(data.get('token', ''))
+        picture = str(data.get('picture', ''))
+        if picture and not PICTURE_RE.fullmatch(picture):
+            return self.json(400, {'error': 'bad_picture'})
+        if len(token) < MIN_TOKEN:
+            return self.json(401, {'error': 'wrong'})
+        with db() as conn:
+            rows = conn.execute("SELECT name, token FROM accounts WHERE status IN ('approved', 'shell') AND token IS NOT NULL").fetchall()
+            # Every key is compared in full, so the answer's timing tells nothing about any of them.
+            owner = None
+            for row in rows:
+                if hmac.compare_digest(row['token'].encode(), token.encode()):
+                    owner = row['name']
+            if not owner:
+                return self.json(401, {'error': 'wrong'})
+            conn.execute('UPDATE accounts SET picture = ? WHERE name = ?', (picture or None, owner))
+        self.json(200, {'status': 'ok'})
+
+    def pictures(self, data):
+        """Public: pictures by the nick each account's own connection holds on the channel right now."""
+        self.json(200, {'pictures': pictures_by_nick()})
 
     def shell_start(self, data):
         """A shell user signs in a device: pulina-verify in their shell proves it is them. No password."""
