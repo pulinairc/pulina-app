@@ -1,4 +1,6 @@
 mod config;
+#[cfg(target_os = "linux")]
+mod cursor;
 mod embed;
 #[cfg(target_os = "ios")]
 mod ios_volume;
@@ -831,6 +833,8 @@ pub fn run() {
         .plugin(tauri_plugin_updater::Builder::new().build());
     builder
         .setup(|app| {
+            #[cfg(target_os = "linux")]
+            cursor::follow_desktop();
             #[cfg(target_os = "macos")]
             app.set_menu(mac_menu(app.handle())?)?;
             #[cfg(desktop)]

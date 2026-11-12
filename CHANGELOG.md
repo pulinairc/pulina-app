@@ -1,3 +1,8 @@
+### 1.18.6: 2026-11-12
+
+* Fix the tiny pointer on KDE Wayland in the AppImage
+* Fix the tall Save button in Settings on iPhone
+
 ### 1.18.5: 2026-11-12
 
 * Fix Return not sending on iPhone
