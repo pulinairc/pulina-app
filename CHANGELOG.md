@@ -1,3 +1,7 @@
+### 1.18.7: 2026-11-12
+
+* Fix the start light widening below the lamp
+
 ### 1.18.6: 2026-11-12
 
 * Fix the tiny pointer on KDE Wayland in the AppImage
