@@ -39,6 +39,7 @@ import {
   parseReaction,
   parseAddress,
   quotedText,
+  replyTarget,
   commandMatches,
   personFor,
   glob,
@@ -552,4 +553,19 @@ test('Dropbox share links point at the file itself', () => {
   assert.equal(directLink('https://www.dropbox.com/s/abc/kuva.png'), 'https://www.dropbox.com/s/abc/kuva.png?raw=1');
   assert.equal(directLink('https://example.org/kuva.jpg?dl=0'), 'https://example.org/kuva.jpg?dl=0');
   assert.equal(mediaKind(share), 'image');
+});
+
+test('replyTarget picks the line said to the replier', () => {
+  const said = (to, ts) => ({ line: { ts }, to });
+  const toScaha = said('scaha', 1000);
+  const toNaaq = said('naaqquli', 2000);
+  // rolle answered Scaha, then talked to naaqquli: "rolle: juu" from Scaha answers the first.
+  assert.equal(replyTarget(toNaaq, toScaha, 3000, 60000), toScaha);
+  // Their latest line was for the replier or for everyone: that one.
+  assert.equal(replyTarget(said('scaha', 2000), toScaha, 3000, 60000).line.ts, 2000);
+  assert.equal(replyTarget(said(undefined, 2000), toScaha, 3000, 60000).line.ts, 2000);
+  // Nothing said to the replier, or too long ago: the latest line.
+  assert.equal(replyTarget(toNaaq, undefined, 3000, 60000), toNaaq);
+  assert.equal(replyTarget(toNaaq, toScaha, 100000, 60000), toNaaq);
+  assert.equal(replyTarget(undefined, undefined, 3000, 60000), undefined);
 });

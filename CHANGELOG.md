@@ -1,3 +1,7 @@
+### 1.18.1: 2026-11-12
+
+* Fix reply bubbles quoting a line meant for others
+
 ### 1.18.0: 2026-11-12
 
 * Add an update dialog: skip, remind later or install

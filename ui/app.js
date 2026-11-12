@@ -43,6 +43,7 @@ import {
   mentions,
   nickColor,
   parseAddress,
+  replyTarget,
   quotedText,
   personFor,
   parseReaction,
@@ -99,6 +100,8 @@ const CAMERA_ICON =
   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.
 const REPLY_WINDOW_MS = 30 * 60 * 1000;
+// A follow-up line without "nick:" still goes to the same person within this gap.
+const THREAD_GAP_MS = 5 * 60 * 1000;
 // How a reply shows: 'quote' bubble only, 'both' bubble and nick, 'nick' only.
 const REPLY_STYLE_SETTING = 'replyStyle';
 const REPLY_STYLES = ['quote', 'both', 'nick'];
@@ -1918,6 +1921,7 @@ function renderLog() {
     events: null,
     command: null,
     lastByNick: new Map(),
+    lastToward: new Map(),
     byId: new Map(),
     separator: null,
     separatorAfter: null,
@@ -2329,10 +2333,15 @@ function row(l) {
   // "nick: text" right after that nick spoke reads as a reply: show what it answers.
   let text = l.text;
   const addr = l.kind === 'msg' ? parseAddress(l.text) : null;
-  // My own replies remember the exact line; anyone else's is read as answering that nick's latest line.
+  // My own replies remember the exact line; anyone else's is guessed from what that nick said lately.
   const linkId = l.own && addr ? replyLinks()[linkKey(l.net, l.buffer, l.text)] : undefined;
   const hinted = (l.own && replyHints.get(l.text)) || (linkId && view.byId.get(linkId));
-  const quoted = hinted || (addr && !linkId ? view.lastByNick.get(addr.nick.toLowerCase()) : null);
+  const speaker = l.nick.toLowerCase();
+  const guess = () => {
+    const them = addr.nick.toLowerCase();
+    return replyTarget(view.lastByNick.get(them), view.lastToward.get(`${them}>${speaker}`), l.ts, REPLY_WINDOW_MS);
+  };
+  const quoted = hinted || (addr && !linkId ? guess() : null);
   const me = state.me[l.net];
   if (addr && quoted && quoted.line !== l && (hinted || l.ts - quoted.line.ts < REPLY_WINDOW_MS)) {
     const style = replyStyle();
@@ -2381,7 +2390,13 @@ function row(l) {
   if (firstUrl) {
     attachPreview(firstUrl, r);
   }
-  view.lastByNick.set(l.nick.toLowerCase(), { line: l, row: r });
+  // Who the line was for: its "nick:", or the one the same person's previous line was for.
+  const prev = view.lastByNick.get(speaker);
+  const to = addr ? addr.nick.toLowerCase() : prev?.line === view.lastLine && l.ts - prev.line.ts < THREAD_GAP_MS ? prev.to : undefined;
+  view.lastByNick.set(speaker, { line: l, row: r, to });
+  if (to) {
+    view.lastToward.set(`${speaker}>${to}`, { line: l, row: r, to });
+  }
   if (l.id) {
     view.byId.set(l.id, { line: l, row: r });
   }
@@ -7296,6 +7311,7 @@ function prependLines(lines, separatorAfter = null) {
     events: null,
     command: null,
     lastByNick: new Map(),
+    lastToward: new Map(),
     byId: new Map(),
     separator: null,
     separatorAfter,

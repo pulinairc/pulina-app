@@ -387,6 +387,17 @@ export function parseAddress(text) {
   return m ? { nick: m[1], rest: m[2] } : null;
 }
 
+/**
+ * Which of a person's lines a "nick: text" reply answers: their latest, unless that went to
+ * someone else and they said something to this replier within `windowMs`.
+ */
+export function replyTarget(last, toward, ts, windowMs) {
+  if (last?.to && toward && last.to !== toward.to && ts - toward.line.ts < windowMs) {
+    return toward;
+  }
+  return last;
+}
+
 /** A quoted line without its own "nick:" in front, so quotes show only what was said. */
 export function quotedText(text) {
   return parseAddress(text)?.rest ?? text;
