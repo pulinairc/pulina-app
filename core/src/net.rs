@@ -3,7 +3,7 @@
 use crate::irc::{self, Msg};
 use crate::store::Line;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap};
 
 /// Mode letters and their name prefixes, highest first, until the server says otherwise.
 const DEFAULT_PREFIX: [(char, char); 5] = [('q', '~'), ('a', '&'), ('o', '@'), ('h', '%'), ('v', '+')];
@@ -25,22 +25,6 @@ pub struct BufferInfo {
     /// Name prefixes by nick, highest first ("@", "@+", "+"); nicks without any are left out.
     #[serde(default)]
     pub modes: BTreeMap<String, String>,
-    /// Shared profile pictures by nick, from the picture link in their real name.
-    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub avatars: BTreeMap<String, String>,
-}
-
-/// Where Lobby and Pulina keep profile pictures; a real name holding such a link shares that picture.
-pub const AVATAR_BASE: &str = "https://chat.pulina.fi/a/";
-const AVATAR_ID_LEN: usize = 16;
-/// One WHO per joining nick at most this often, so a netsplit's rejoins cannot flood the server.
-const WHO_GAP_MS: i64 = 2000;
-
-/// The picture link in a real name, if it holds one of ours.
-pub fn avatar_in(realname: &str) -> Option<String> {
-    let start = realname.find(AVATAR_BASE)?;
-    let id: String = realname[start + AVATAR_BASE.len()..].chars().take_while(char::is_ascii_hexdigit).collect();
-    (id.len() == AVATAR_ID_LEN).then(|| format!("{AVATAR_BASE}{id}"))
 }
 
 /// What WHOIS told about a nick, sent as one piece once the server says it is done.
@@ -156,11 +140,6 @@ pub struct Session {
     chans: HashMap<String, Chan>,
     whois: HashMap<String, Whois>,
     support: Support,
-    /// Picture links by lower-case nick, and the WHOs asked for them that have not ended yet.
-    avatars: HashMap<String, String>,
-    who_pending: HashSet<String>,
-    who_seen: HashSet<String>,
-    last_who: i64,
 }
 
 fn same(a: &str, b: &str) -> bool {
@@ -178,10 +157,6 @@ impl Session {
             chans: HashMap::new(),
             whois: HashMap::new(),
             support: Support::default(),
-            avatars: HashMap::new(),
-            who_pending: HashSet::new(),
-            who_seen: HashSet::new(),
-            last_who: i64::MIN / 2,
         }
     }
 
@@ -203,7 +178,6 @@ impl Session {
         let mut members: Vec<String> = chan.members.values().cloned().collect();
         members.sort_by_key(|m| m.to_lowercase());
         let modes = chan.modes.iter().filter_map(|(key, held)| Some((chan.members.get(key)?.clone(), held.clone()))).collect();
-        let avatars = chan.members.iter().filter_map(|(key, nick)| Some((nick.clone(), self.avatars.get(key)?.clone()))).collect();
         Out::Buffer(BufferInfo {
             net: self.net.clone(),
             name: chan.name.clone(),
@@ -211,7 +185,6 @@ impl Session {
             members,
             joined,
             modes,
-            avatars,
         })
     }
 
@@ -323,9 +296,7 @@ impl Session {
                 let Some(chan) = self.chans.get_mut(&key) else { return vec![] };
                 chan.members.insert(nick.to_lowercase(), nick.clone());
                 let name = chan.name.clone();
-                let mut out = vec![Out::Line(self.line(&name, "join", msg, "", now))];
-                out.extend(self.ask_who(&nick, now));
-                out
+                vec![Out::Line(self.line(&name, "join", msg, "", now))]
             }
             "PART" => {
                 let key = msg.param(0).to_lowercase();
@@ -380,9 +351,6 @@ impl Session {
                     self.wanted = new.clone();
                     out.push(Out::Me(new.clone()));
                 }
-                if let Some(url) = self.avatars.remove(&nick.to_lowercase()) {
-                    self.avatars.insert(new.to_lowercase(), url);
-                }
                 for name in self.chans_with(&nick) {
                     if let Some(chan) = self.chans.get_mut(&name.to_lowercase()) {
                         chan.members.remove(&nick.to_lowercase());
@@ -431,22 +399,8 @@ impl Session {
                 let names = std::mem::take(&mut chan.pending_names);
                 chan.modes = names.iter().filter(|(held, _)| !held.is_empty()).map(|(held, n)| (n.to_lowercase(), held.clone())).collect();
                 chan.members = names.into_iter().map(|(_, n)| (n.to_lowercase(), n)).collect();
-                let name = chan.name.clone();
-                self.who_pending.insert(key.clone());
-                vec![Out::Send(format!("WHO {name}")), self.info(&self.chans[&key], true)]
+                vec![self.info(&self.chans[&key], true)]
             }
-            // WHO answers asked for the picture links in real names; a WHO typed by hand still shows.
-            "352" if !self.who_pending.is_empty() => {
-                let nick = msg.param(5).to_lowercase();
-                let realname = msg.params.last().and_then(|p| p.split_once(' ')).map_or("", |(_, r)| r);
-                self.who_seen.insert(nick.clone());
-                match avatar_in(realname) {
-                    Some(url) => self.avatars.insert(nick, url),
-                    None => self.avatars.remove(&nick),
-                };
-                vec![]
-            }
-            "315" if self.who_pending.remove(&msg.param(1).to_lowercase()) => self.chans.values().map(|c| self.info(c, true)).collect(),
             "ERROR" => vec![Out::Line(self.line("", "status", msg, msg.param(0), now))],
             // 301 also answers a message to someone away; only a WHOIS in progress takes it.
             cmd if WHOIS_NUMERICS.contains(&cmd) && (cmd != "301" || self.whois.contains_key(&msg.param(1).to_lowercase())) => {
@@ -472,16 +426,6 @@ impl Session {
         }
     }
 
-    /// A WHO for one joining nick, unless known already or one was asked a moment ago.
-    fn ask_who(&mut self, nick: &str, now: i64) -> Option<Out> {
-        let key = nick.to_lowercase();
-        if self.who_seen.contains(&key) || now - self.last_who < WHO_GAP_MS {
-            return None;
-        }
-        self.last_who = now;
-        self.who_pending.insert(key);
-        Some(Out::Send(format!("WHO {nick}")))
-    }
 
     fn on_whois(&mut self, msg: &Msg) -> Vec<Out> {
         let nick = msg.param(1);
@@ -679,32 +623,6 @@ mod tests {
         assert_eq!(lines(&out), vec![("#b".into(), "info".into(), "srv".into())]);
     }
 
-    #[test]
-    fn reads_picture_links_from_who_replies() {
-        let mut s = Session::new("net", "rolle");
-        feed(&mut s, ":rolle!r@h JOIN #a");
-        feed(&mut s, ":srv 353 rolle = #a :rolle kaisla jaska");
-        let out = feed(&mut s, ":srv 366 rolle #a :End");
-        assert!(out.iter().any(|o| matches!(o, Out::Send(l) if l == "WHO #a")));
-        assert!(feed(&mut s, ":srv 352 rolle #a ka h srv kaisla H :0 Kaisla https://chat.pulina.fi/a/0123456789abcdef").is_empty());
-        assert!(feed(&mut s, ":srv 352 rolle #a ja h srv jaska H :0 Lobby").is_empty());
-        let out = feed(&mut s, ":srv 315 rolle #a :End of /WHO list.");
-        let Some(Out::Buffer(info)) = out.first() else { panic!("no buffer info") };
-        assert_eq!(info.avatars.get("kaisla").map(String::as_str), Some("https://chat.pulina.fi/a/0123456789abcdef"));
-        assert!(!info.avatars.contains_key("jaska"));
-        // A WHO typed by hand still shows as text.
-        assert_eq!(lines(&feed(&mut s, ":srv 352 rolle #a ja h srv jaska H :0 Lobby")).len(), 1);
-    }
-
-    #[test]
-    fn finds_only_whole_picture_links() {
-        assert_eq!(
-            avatar_in("x https://chat.pulina.fi/a/0123456789abcdef y").as_deref(),
-            Some("https://chat.pulina.fi/a/0123456789abcdef")
-        );
-        assert_eq!(avatar_in("https://chat.pulina.fi/a/0123"), None);
-        assert_eq!(avatar_in("Lobby"), None);
-    }
 
     #[test]
     fn routes_private_messages_and_actions() {

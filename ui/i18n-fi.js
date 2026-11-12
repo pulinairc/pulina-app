@@ -374,7 +374,7 @@ export const FI = {
   'Your account {account} is approved. Connecting to the always-on connection…':
     'Tunnuksesi {account} on hyväksytty. Yhdistetään pysyvään yhteyteen…',
   'Your application was not approved. You can still join directly.': 'Hakemustasi ei hyväksytty. Voit edelleen liittyä suoraan.',
-  'Others see your picture after you next connect.': 'Muut näkevät kuvasi, kun seuraavan kerran yhdistät.',
+  'Others see your picture now.': 'Muut näkevät nyt kuvasi.',
   'Could not share your picture: {error}': 'Kuvan jakaminen ei onnistunut: {error}',
   'Joining {name}…': 'Liitytään kanavalle {name}…',
   '{count} chatting now': '{count} juttelee nyt',
