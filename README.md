@@ -138,6 +138,7 @@ Download the latest build from [Releases](https://github.com/rollecode/lobby/rel
 | System | File |
 |--------|------|
 | Debian, Ubuntu | `.deb`, install with `sudo apt install ./Lobby_*.deb` |
+| Arch, CachyOS, Manjaro | `.pkg.tar.zst`, install with `sudo pacman -U lobby-*.pkg.tar.zst` |
 | Other Linux | `.AppImage`, make it executable and run it |
 | macOS (Apple silicon) | `.dmg` |
 | Windows | `-setup.exe` |

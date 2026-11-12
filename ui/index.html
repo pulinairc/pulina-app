@@ -49,7 +49,6 @@
   </div>
   <div id="update-bar" class="update-bar" role="status" hidden>
     <span id="update-text"></span>
-    <button id="update-go" class="update-btn primary" type="button">Update</button>
     <button id="update-restart" class="update-btn primary" type="button">Restart</button>
     <button id="update-close" class="update-btn" type="button">Dismiss</button>
   </div>
@@ -253,6 +252,10 @@
         <span>Suggest nicks as you type</span>
         <input id="nick-word-toggle" class="switch" type="checkbox" role="switch">
       </label>
+      <label class="switch-row" for="hover-card-toggle">
+        <span>Show a person's card on hover</span>
+        <input id="hover-card-toggle" class="switch" type="checkbox" role="switch">
+      </label>
     </section>
     <section data-tab="notifications">
       <h3><label for="highlight-field">Highlight words</label></h3>
@@ -426,6 +429,24 @@
         <button id="person-save" class="primary-btn" type="submit">Save</button>
       </div>
     </form>
+  </dialog>
+  <dialog id="update-ask" tabindex="-1" aria-labelledby="update-ask-title">
+    <div class="sheet-head">
+      <h2 id="update-ask-title"></h2>
+    </div>
+    <div class="report-body">
+      <p id="update-ask-text" class="update-ask-text"></p>
+      <div id="update-notes" class="update-notes"></div>
+      <label id="update-ask-auto-row" class="switch-row update-ask-auto" for="update-ask-auto">
+        <span>Download and install updates automatically</span>
+        <input id="update-ask-auto" class="switch" type="checkbox" role="switch">
+      </label>
+      <div class="update-ask-buttons">
+        <button id="update-skip" class="link-btn" type="button">Skip this version</button>
+        <button id="update-later" class="link-btn" type="button">Remind me later</button>
+        <button id="update-install" class="primary-btn" type="button">Install update</button>
+      </div>
+    </div>
   </dialog>
   <dialog id="report" tabindex="-1" aria-labelledby="report-title">
     <div class="sheet-head">

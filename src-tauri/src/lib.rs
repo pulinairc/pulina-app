@@ -726,6 +726,8 @@ fn app_info() -> AppInfo {
 const ABOUT_MENU_ID: &str = "about";
 #[cfg(desktop)]
 const SETTINGS_MENU_ID: &str = "settings";
+#[cfg(desktop)]
+const UPDATES_MENU_ID: &str = "check-updates";
 #[cfg(target_os = "macos")]
 const QUIT_MENU_ID: &str = "quit";
 
@@ -750,8 +752,10 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
             ..Default::default()
         };
         own.prepend(&PredefinedMenuItem::about(app, Some(&format!("About {name}")), Some(build))?)?;
-        own.insert(&MenuItem::with_id(app, SETTINGS_MENU_ID, "Settings…", true, Some("CmdOrCtrl+,"))?, 2)?;
-        own.insert(&PredefinedMenuItem::separator(app)?, 3)?;
+        // Under About, as Mac apps place it.
+        own.insert(&MenuItem::with_id(app, UPDATES_MENU_ID, "Check for Updates…", true, None::<&str>)?, 1)?;
+        own.insert(&MenuItem::with_id(app, SETTINGS_MENU_ID, "Settings…", true, Some("CmdOrCtrl+,"))?, 3)?;
+        own.insert(&PredefinedMenuItem::separator(app)?, 4)?;
         // The standard Quit ends the app before it can say goodbye on IRC; this one sends the quit message first.
         let quit = own
             .items()?
@@ -766,7 +770,6 @@ fn mac_menu(app: &AppHandle) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
     Ok(menu)
 }
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 /// The default size stays unless it is larger than the screen (1440p at 200 % is only 720 points tall).
 #[cfg(desktop)]
 fn fit_to_screen(window: &tauri::WebviewWindow) -> tauri::Result<()> {
@@ -793,6 +796,7 @@ fn fit_to_screen(window: &tauri::WebviewWindow) -> tauri::Result<()> {
     Ok(())
 }
 
+#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // With two TLS backends compiled in rustls will not choose, and a wss:// lobby-server link panics.
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
@@ -808,6 +812,9 @@ pub fn run() {
             }
             if event.id().0 == SETTINGS_MENU_ID {
                 let _ = app.emit("show-settings", ());
+            }
+            if event.id().0 == UPDATES_MENU_ID {
+                let _ = app.emit("check-updates", ());
             }
             #[cfg(target_os = "macos")]
             if event.id().0 == QUIT_MENU_ID {
@@ -905,6 +912,10 @@ pub fn run() {
         .run(|app, event| {
             if let tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit = event {
                 say_goodbye(app);
+            }
+            #[cfg(desktop)]
+            if let tauri::RunEvent::Exit = event {
+                let _ = update::install_pending();
             }
             if let tauri::RunEvent::Resumed = event {
                 #[cfg(target_os = "ios")]

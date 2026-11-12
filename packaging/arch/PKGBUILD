@@ -1,0 +1,18 @@
+# Arch package made from the release .deb: the same binary, on the system's own WebKitGTK and GTK,
+# so the compositor draws the cursor and the GPU draws the page (the AppImage bundles older ones).
+# The release workflow sets APP, VERSION and URL and puts the .deb here as app.deb.
+pkgname=${APP:?}
+pkgver=${VERSION:?}
+pkgrel=1
+pkgdesc='A small, modern IRC client'
+arch=(x86_64)
+url=${URL:?}
+license=(MIT)
+depends=(webkit2gtk-4.1 gtk3)
+source=(app.deb)
+noextract=(app.deb)
+sha256sums=(SKIP)
+
+package() {
+  bsdtar -xOf app.deb 'data.tar*' | bsdtar -xf - -C "$pkgdir"
+}
