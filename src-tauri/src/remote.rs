@@ -9,7 +9,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 use tauri::{AppHandle, Emitter};
 use tokio::sync::{mpsc, oneshot};
 use tokio_tungstenite::tungstenite::Message;
@@ -108,14 +108,24 @@ impl Remote {
         let remote = Arc::clone(self);
         let task = tauri::async_runtime::spawn(async move {
             loop {
-                // The reason goes to the window too: before the first snapshot there are no networks to mark.
+                *lock(&remote.heard) = None;
+                let began = Instant::now();
                 let reason = remote.run(&app).await.err().unwrap_or_else(|| "connection closed".into());
                 eprintln!("lobby-server: {reason}");
-                let _ = app.emit("server", serde_json::json!({ "down": reason }));
                 *lock(&remote.out) = None;
                 for (_, tx) in lock(&remote.pending).drain() {
                     let _ = tx.send(Err(UNREACHABLE.into()));
                 }
+
+                // A link that worked for a while and then broke (wifi blip, phone back from the background)
+                // usually comes straight back: try once at once, without the warning.
+                let worked = lock(&remote.heard).is_some() && began.elapsed() > RECONNECT_DELAY;
+                if worked {
+                    continue;
+                }
+
+                // The reason goes to the window too: before the first snapshot there are no networks to mark.
+                let _ = app.emit("server", serde_json::json!({ "down": reason }));
                 let names: Vec<String> = remote.snapshot().networks.into_iter().map(|n| n.name).collect();
                 for net in names {
                     let _ = app.emit("conn", serde_json::json!({ "net": net, "state": UNREACHABLE }));

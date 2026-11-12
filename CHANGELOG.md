@@ -1,3 +1,7 @@
+### 1.13.9: 2026-11-12
+
+* Fix a 5-second connection warning after brief drops
+
 ### 1.13.8: 2026-11-12
 
 * Fix a fresh sign-in showing old lines as unread
