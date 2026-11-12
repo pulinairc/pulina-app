@@ -1,3 +1,8 @@
+### 1.18.5: 2026-11-12
+
+* Fix Return not sending on iPhone
+* Change the phone message menu to Signal style
+
 ### 1.18.4: 2026-11-12
 
 * Fix 1 px chat nudges as new messages arrive
