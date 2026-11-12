@@ -1,3 +1,8 @@
+### 1.16.0: 2026-11-12
+
+* Remove picture links from the IRC real name
+* Add account pictures for forks with accounts
+
 ### 1.15.2: 2026-11-12
 
 * Fix update checks that never ran on their own

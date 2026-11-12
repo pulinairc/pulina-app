@@ -434,24 +434,52 @@ function personColor(person, nick) {
   return person?.color || (person?.photo && photoColorOf(person.photo)) || nickColor(nick);
 }
 
-// Your own photo goes to the shared picture service; its link becomes your real name at the next connect.
-const AVATAR_SETTING = 'avatar';
-
+// A fork with accounts keeps each account's picture; the app signed in with one shares its own photo there.
 async function shareOwnPhoto(photo) {
-  if (!photo) {
-    saveSetting(AVATAR_SETTING, '');
+  if (!BRAND.accounts) {
     return;
   }
   try {
-    saveSetting(AVATAR_SETTING, await invoke('share_avatar', { photo }));
-    renderStatus(t('Others see your picture after you next connect.'));
+    const picture = photo ? await invoke('share_avatar', { photo }) : '';
+    const answer = await invoke('account_call', { action: 'picture', body: { picture } });
+    if (answer?.error === 'no_account') {
+      return;
+    }
+    if (answer?.error) {
+      throw answer.error;
+    }
+    renderStatus(t('Others see your picture now.'));
+    loadAccountPictures();
   } catch (err) {
     renderStatus(t('Could not share your picture: {error}', { error: err }));
   }
 }
 
-// Pictures people share through the link in their real name, by lower-case nick; your own photo of someone wins.
+// Account pictures by the nick each account's own connection holds right now; your own photo of someone wins.
 const sharedAvatars = new Map();
+const PICTURES_EVERY_MS = 60 * 1000;
+
+async function loadAccountPictures() {
+  const list = await invoke('account_call', { action: 'pictures', body: {} }).catch(() => null);
+  if (!list?.pictures) {
+    return;
+  }
+  const before = JSON.stringify([...sharedAvatars]);
+  sharedAvatars.clear();
+  for (const [nick, url] of Object.entries(list.pictures)) {
+    sharedAvatars.set(nick.toLowerCase(), url);
+  }
+  if (JSON.stringify([...sharedAvatars]) !== before) {
+    renderLog();
+    renderHeader();
+    renderNicklist();
+  }
+}
+
+if (BRAND.accounts) {
+  loadAccountPictures();
+  setInterval(loadAccountPictures, PICTURES_EVERY_MS);
+}
 
 function identity(nick, mask = '') {
   const person = personFor(state.people, nick, mask);
@@ -814,15 +842,6 @@ function headerSoon() {
 
 function onBuffer(info) {
   const b = buffer(info.net, info.name);
-  const before = sharedAvatars.size;
-  let changed = false;
-  for (const [nick, url] of Object.entries(info.avatars || {})) {
-    changed ||= sharedAvatars.get(nick.toLowerCase()) !== url;
-    sharedAvatars.set(nick.toLowerCase(), url);
-  }
-  if (changed || sharedAvatars.size !== before) {
-    renderLog();
-  }
   b.topic = info.topic;
   b.joined = info.joined;
   b.members = new Set(info.members);
@@ -5300,14 +5319,11 @@ el.welcomeQuick.addEventListener('submit', async (e) => {
 let onboarding = null;
 
 async function finishWelcome() {
-  // Shared before connecting, so the very first real name already carries it.
-  if (onboarding.plan.photo) {
-    await invoke('share_avatar', { photo: onboarding.plan.photo })
-      .then((url) => saveSetting(AVATAR_SETTING, url))
-      .catch(() => {});
-  }
   try {
     await invoke('save_connection', { connection: onboarding.connection });
+    if (onboarding.plan.photo) {
+      shareOwnPhoto(onboarding.plan.photo);
+    }
     storeFlag(JOIN_AFTER_KEY, JSON.stringify(onboarding.plan));
     storeFlag(CHAT_SHOWN_KEY, '1');
     location.reload();

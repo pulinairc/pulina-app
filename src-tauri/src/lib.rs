@@ -309,7 +309,7 @@ fn brand() -> Brand {
 }
 
 const PEEK_LINES: usize = 40;
-const ACCOUNT_ACTIONS: [&str; 7] = ["apply", "status", "cancel", "forgot", "shell", "shell/check", "who"];
+const ACCOUNT_ACTIONS: [&str; 9] = ["apply", "status", "cancel", "forgot", "shell", "shell/check", "who", "picture", "pictures"];
 
 /// One call to the fork's account service. The answer comes back as JSON, errors included.
 #[tauri::command]
@@ -318,9 +318,24 @@ async fn account_call(action: String, body: serde_json::Value) -> Result<serde_j
     if !ACCOUNT_ACTIONS.contains(&action.as_str()) {
         return Err("Unknown action".into());
     }
+    let mut body = body;
+    if action == "picture" {
+        // The account's own lobby-server key proves whose picture it is; it never goes anywhere else.
+        let Some(token) = account_token(&base) else { return Ok(serde_json::json!({ "error": "no_account" })) };
+        body["token"] = token.into();
+    }
     let client = lobby_core::http().build().map_err(|e| e.to_string())?;
     let res = client.post(format!("{base}/{action}")).json(&body).send().await.map_err(|e| e.to_string())?;
     res.json().await.map_err(|e| e.to_string())
+}
+
+/// The lobby-server key, only when the app is signed in to an account on the account service's own host.
+fn account_token(accounts: &str) -> Option<String> {
+    let host = accounts.strip_prefix("https://")?.split('/').next()?;
+    let link = config::read().server?;
+    let on_host = link.ssh.is_none() && link.url.as_deref()?.starts_with(&format!("wss://{host}/"));
+    let token = link.token();
+    (on_host && !token.is_empty()).then_some(token)
 }
 
 /// The newest lines of the fork's public log, for the welcome to show behind its form.
@@ -356,17 +371,17 @@ fn forward(app: AppHandle, hub: Arc<Hub>) {
 #[tauri::command]
 async fn share_avatar(photo: String) -> Result<String, String> {
     use base64::Engine;
+    let accounts = brand().accounts.ok_or("No accounts here")?;
+    let origin = accounts.strip_suffix("/accounts").ok_or("No picture service")?;
     let (_, data) = photo.split_once(";base64,").ok_or("Expected a picture")?;
     let bytes = base64::engine::general_purpose::STANDARD.decode(data).map_err(|e| e.to_string())?;
     let client = lobby_core::http().build().map_err(|e| e.to_string())?;
-    let res = client.post(AVATAR_UPLOAD).body(bytes).send().await.map_err(|e| e.to_string())?;
+    let res = client.post(format!("{origin}/avatar")).body(bytes).send().await.map_err(|e| e.to_string())?;
     let status = res.status();
     let answer: serde_json::Value = res.json().await.map_err(|e| e.to_string())?;
-    let url = answer["url"].as_str().filter(|_| status.is_success());
-    url.and_then(lobby_core::net::avatar_in).ok_or_else(|| answer["error"].as_str().unwrap_or("Upload failed").to_string())
+    let url = answer["url"].as_str().filter(|u| status.is_success() && u.starts_with(&format!("{origin}/a/")));
+    url.map(str::to_string).ok_or_else(|| answer["error"].as_str().unwrap_or("Upload failed").to_string())
 }
-
-const AVATAR_UPLOAD: &str = "https://chat.pulina.fi/avatar";
 
 /// Desktop notifications take an icon as a file, so a person's photo is written to the cache once.
 #[tauri::command]
