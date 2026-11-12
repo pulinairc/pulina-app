@@ -78,6 +78,7 @@ Download the latest build from [Releases](https://github.com/pulinairc/pulina-ap
 | System | File |
 |--------|------|
 | Debian, Ubuntu | `.deb`, install with `sudo apt install ./Pulina_*.deb` |
+| Arch, CachyOS, Manjaro | `.pkg.tar.zst`, install with `sudo pacman -U pulina-*.pkg.tar.zst` |
 | Other Linux | `.AppImage`, make it executable and run it |
 | macOS (Apple silicon) | `.dmg` |
 | Windows | `-setup.exe` |
