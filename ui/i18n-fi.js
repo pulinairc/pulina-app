@@ -349,7 +349,6 @@ export const FI = {
   'If it is yours, sign in with it.': 'Jos se on sinun, kirjaudu sillä.',
   'Pick another nick': 'Valitse toinen nimimerkki',
   '{nick} is a {host} account.': '{nick} on {host}-tunnus.',
-  '{nick} is a {host} shell account.': '{nick} on {host}-shellin käyttäjä.',
   'Sign in as {nick} →': 'Kirjaudu tunnuksella {nick} →',
   '{nick} is taken': '{nick} on varattu',
   'Someone already uses {nick}, so for now you are {now}. Pick a nick of your own.':
