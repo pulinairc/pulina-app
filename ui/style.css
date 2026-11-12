@@ -4646,7 +4646,7 @@ dialog.welcome::backdrop {
   align-self: flex-start;
 }
 
-/* Cold start: a lamp switches on, its light grows and the cover fades into the chat. */
+/* Cold start: a lamp switches on, its light pours down and the cover fades into the chat. */
 /* The lamp sits at 50% across with its bulb at 34% down; its beam runs from there to the bottom edge. */
 .splash {
   position: fixed;
@@ -4654,8 +4654,21 @@ dialog.welcome::backdrop {
   z-index: 1000;
   background: var(--bg);
   /* While the app loads, the chat shows only inside the beam: a beam-shaped hole in the cover. */
-  clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 50% 34%, 50% 34%, 50% 34%, 50% 34%, 50% 34%);
-  animation: splash-hole 0.4s ease-out 0.35s forwards;
+  /* Starts as the bulb's own width and only grows downwards, so the beam never widens at the top. */
+  clip-path: polygon(
+    evenodd,
+    0 0,
+    100% 0,
+    100% 100%,
+    0 100%,
+    0 0,
+    calc(50% - 24px) 34%,
+    calc(50% + 24px) 34%,
+    calc(50% + 24px) 34%,
+    calc(50% - 24px) 34%,
+    calc(50% - 24px) 34%
+  );
+  animation: splash-hole 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) 0.1s forwards;
 }
 .splash.opening {
   pointer-events: none;
@@ -4684,13 +4697,15 @@ dialog.welcome::backdrop {
   z-index: 1001;
   pointer-events: none;
   background: linear-gradient(rgb(176 104 143 / 45%), rgb(176 104 143 / 0%) 90%);
-  clip-path: polygon(50% 34%, 50% 34%, 50% 34%, 50% 34%);
+  clip-path: polygon(calc(50% - 24px) 34%, calc(50% + 24px) 34%, calc(50% + 24px) 34%, calc(50% - 24px) 34%);
   opacity: 0;
-  animation: splash-beam 0.4s ease-out 0.35s forwards;
+  /* It flickers with the bulb while it pours down from it. */
+  animation:
+    splash-beam 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) 0.1s forwards,
+    splash-flicker 0.3s linear 0.05s forwards;
 }
 @keyframes splash-beam {
   to {
-    opacity: 1;
     clip-path: polygon(calc(50% - 24px) 34%, calc(50% + 24px) 34%, calc(50% + max(135px, 40%)) 100%, calc(50% - max(135px, 40%)) 100%);
   }
 }
