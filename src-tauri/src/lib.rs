@@ -309,7 +309,7 @@ fn brand() -> Brand {
 }
 
 const PEEK_LINES: usize = 40;
-const ACCOUNT_ACTIONS: [&str; 6] = ["apply", "status", "cancel", "forgot", "shell", "shell/check"];
+const ACCOUNT_ACTIONS: [&str; 7] = ["apply", "status", "cancel", "forgot", "shell", "shell/check", "who"];
 
 /// One call to the fork's account service. The answer comes back as JSON, errors included.
 #[tauri::command]
@@ -540,6 +540,14 @@ struct Connection {
     /// What to add to `authorized_keys` on the SSH host. Filled in by Lobby, ignored on save.
     #[serde(default)]
     key_line: String,
+}
+
+/// The nick to sign on with next time, without reconnecting: the network already uses it.
+#[tauri::command]
+fn remember_nick(nick: String) -> Result<(), String> {
+    let mut c = config::read();
+    c.nick = nick.trim().to_string();
+    config::save(&c)
 }
 
 #[tauri::command]
@@ -836,6 +844,7 @@ pub fn run() {
             notify_permission,
             open_notify_settings,
             get_connection,
+            remember_nick,
             save_connection,
             server_networks,
             save_server_network,

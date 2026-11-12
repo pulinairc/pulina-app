@@ -438,6 +438,21 @@
       </div>
     </div>
   </dialog>
+  <dialog id="nick-taken" tabindex="-1" aria-labelledby="nick-taken-title">
+    <div class="sheet-head">
+      <h2 id="nick-taken-title"></h2>
+    </div>
+    <form id="nick-taken-form" class="report-body">
+      <p id="nick-taken-text" class="hint"></p>
+      <label class="field-label" for="nick-taken-field">New nick</label>
+      <input id="nick-taken-field" class="field" type="text" maxlength="15" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <p id="nick-taken-error" class="hint error" hidden></p>
+      <div class="person-buttons">
+        <button id="nick-taken-keep" class="link-btn" type="button"></button>
+        <button id="nick-taken-go" class="primary-btn" type="submit">Change nick</button>
+      </div>
+    </form>
+  </dialog>
   <dialog id="notify-guide" tabindex="-1" aria-labelledby="notify-guide-title">
     <div class="sheet-head">
       <h2 id="notify-guide-title">Notifications</h2>
@@ -499,7 +514,12 @@
         <input id="welcome-chans" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="#channel">
       </div>
       <p id="welcome-error" class="hint error" hidden></p>
-      <button id="welcome-account-link" class="link-btn account-link" type="button" hidden></button>
+      <div id="welcome-claimed" class="applied-card" hidden><span class="applied-mark" aria-hidden="true">!</span><span><b id="welcome-claimed-title"></b> <span>If it is yours, sign in with it.</span> <button id="welcome-claimed-signin" class="link-btn" type="button"></button> <button id="welcome-claimed-other" class="link-btn" type="button">Pick another nick</button></span></div>
+      <div id="welcome-account-links" class="welcome-account-links" hidden>
+        <button id="welcome-account-link" class="link-btn account-link" type="button"></button>
+        <span class="account-sep" aria-hidden="true">·</span>
+        <button id="welcome-have-account" class="link-btn account-link" type="button">I have an account →</button>
+      </div>
       <button id="welcome-other-ways" class="link-btn account-link" type="button" hidden>Other ways to connect →</button>
       <button id="welcome-join" class="welcome-go" type="submit">Join</button>
       <button id="welcome-back" class="link-btn welcome-back any-net" type="button">Back</button>
@@ -604,6 +624,7 @@
         <input id="signin-password" class="field" type="password" autocomplete="current-password">
         <button id="signin-forgot" class="link-btn signin-forgot" type="button">Forgot your password?</button>
       </div>
+      <button id="signin-shell" class="link-btn account-link" type="button" hidden>I have a shell account</button>
       <p id="signin-note" class="hint" hidden></p>
       <p id="signin-error" class="hint error" hidden></p>
       <span class="welcome-fill"></span>

@@ -375,7 +375,9 @@ impl Session {
                 let new = msg.param(0).to_string();
                 let mut out = Vec::new();
                 if is_me {
+                    // A nick picked after sign-on is the one wanted from now on.
                     self.me = new.clone();
+                    self.wanted = new.clone();
                     out.push(Out::Me(new.clone()));
                 }
                 if let Some(url) = self.avatars.remove(&nick.to_lowercase()) {
@@ -640,6 +642,10 @@ mod tests {
         assert_eq!(sent(&feed(&mut s, ":milla!m@other QUIT :bye")), vec!["NICK milla"]);
         feed(&mut s, ":milla2!m@h NICK milla");
         assert!(sent(&feed(&mut s, ":kaisla!k@h QUIT :bye")).is_empty());
+
+        feed(&mut s, ":milla!m@h NICK mimmi");
+        feed(&mut s, ":milla!x@y JOIN #pulina");
+        assert!(sent(&feed(&mut s, ":milla!x@y QUIT :bye")).is_empty());
     }
 
     #[test]
