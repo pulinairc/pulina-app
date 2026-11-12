@@ -1,3 +1,7 @@
+### 1.14.0: 2026-11-12
+
+* Add a reply style setting: bubble, nick or both
+
 ### 1.13.9: 2026-11-12
 
 * Fix a 5-second connection warning after brief drops
