@@ -162,7 +162,6 @@
     <div class="sheet-head">
       <h2 id="settings-title">Settings</h2>
       <span class="settings-actions">
-        <span id="settings-saved" class="saved" role="status" hidden>Saved</span>
         <button id="settings-save" class="primary-btn" type="button">Save</button>
         <button id="settings-close" type="button" aria-label="Close">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -214,8 +213,8 @@
         <span>Install updates automatically</span>
         <input id="update-auto" class="switch" type="checkbox" role="switch">
       </label>
-      <button id="update-check" class="link-btn" type="button">Check for updates</button>
-      <p id="update-result" class="hint" hidden></p>
+      <button id="update-check" class="wide-btn" type="button">Check for updates</button>
+      <p id="update-result" class="update-result" role="status" hidden></p>
     </section>
     <section id="shortcut-section" data-tab="general">
       <h3>Keyboard shortcuts</h3>
@@ -514,7 +513,7 @@
         <input id="welcome-chans" class="field" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="#channel">
       </div>
       <p id="welcome-error" class="hint error" hidden></p>
-      <div id="welcome-claimed" class="applied-card" hidden><span class="applied-mark" aria-hidden="true">!</span><span><b id="welcome-claimed-title"></b> <span>If it is yours, sign in with it.</span> <button id="welcome-claimed-signin" class="link-btn" type="button"></button> <button id="welcome-claimed-other" class="link-btn" type="button">Pick another nick</button></span></div>
+      <div id="welcome-claimed" class="applied-card" hidden><span><b id="welcome-claimed-title"></b> <span>If it is yours, sign in with it.</span> <button id="welcome-claimed-signin" class="link-btn" type="button"></button> <button id="welcome-claimed-other" class="link-btn" type="button">Pick another nick</button></span></div>
       <div id="welcome-account-links" class="welcome-account-links" hidden>
         <button id="welcome-account-link" class="link-btn account-link" type="button"></button>
         <span class="account-sep" aria-hidden="true">·</span>

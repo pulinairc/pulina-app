@@ -224,7 +224,6 @@ const el = {
   sftpCopy: $('sftp-copy'),
   settingsTabs: $('settings-tabs'),
   settingsSave: $('settings-save'),
-  settingsSaved: $('settings-saved'),
   slash: $('slash'),
   replying: $('replying'),
   openPeople: $('open-people'),
@@ -1603,8 +1602,10 @@ el.settingsTabs.addEventListener('click', (e) => {
 const UPDATE_AUTO_KEY = 'lobby.updateAuto';
 const UPDATE_CLOSED_KEY = 'lobby.updateClosed';
 const UPDATE_FIRST_MS = 20 * 1000;
-const UPDATE_EVERY_MS = 6 * 60 * 60 * 1000;
-const update = { found: null, ready: false, busy: false };
+const UPDATE_EVERY_MS = 60 * 60 * 1000;
+const UPDATE_TICK_MS = 5 * 60 * 1000;
+// Wall clock: timers stall while the computer sleeps. A failed check (a release still uploading) stays due.
+const update = { found: null, ready: false, busy: false, checkedAt: 0 };
 
 function storedFlag(k) {
   try {
@@ -1661,6 +1662,7 @@ async function installUpdate() {
 
 async function checkUpdate() {
   const found = await invoke('check_update');
+  update.checkedAt = Date.now();
   update.found = found;
   if (found?.installable && updatesAuto() && !update.ready && !update.busy) {
     await installUpdate();
@@ -1669,12 +1671,16 @@ async function checkUpdate() {
   return found;
 }
 
-function checkUpdateQuietly() {
+function checkUpdateWhenDue() {
+  if (update.busy || update.ready || Date.now() - update.checkedAt < UPDATE_EVERY_MS) {
+    return;
+  }
   checkUpdate().catch(() => {});
 }
 
-setTimeout(checkUpdateQuietly, UPDATE_FIRST_MS);
-setInterval(checkUpdateQuietly, UPDATE_EVERY_MS);
+setTimeout(checkUpdateWhenDue, UPDATE_FIRST_MS);
+setInterval(checkUpdateWhenDue, UPDATE_TICK_MS);
+window.addEventListener('focus', checkUpdateWhenDue);
 
 el.updateGo.addEventListener('click', () => {
   if (update.found?.installable) {
@@ -1707,7 +1713,7 @@ el.updateCheck.addEventListener('click', async () => {
     const found = await checkUpdate();
     const name = found && `${BRAND.name} ${found.version}`;
     el.updateResult.textContent = !found
-      ? t('{name} is up to date.', { name: BRAND.name })
+      ? t('{name} is up to date.', { name: `${BRAND.name} ${appVersion}`.trim() })
       : update.ready
         ? t('{name} is ready. Restart to start using it.', { name })
         : t('{name} is out.', { name });
@@ -1764,15 +1770,17 @@ function showAbout() {
 
 el.settingsClose.addEventListener('click', () => el.settings.close());
 
-// Settings save as they change; Save finishes the field being typed in, and either way "Saved" shows.
+// Settings save as they change; Save finishes the field being typed in, and either way the button says "Saved".
 const SAVED_SHOWN_MS = 1800;
 let savedTimer = 0;
 
 function flashSaved() {
-  el.settingsSaved.hidden = false;
+  el.settingsSave.textContent = `✓ ${t('Saved')}`;
+  el.settingsSave.classList.add('saved');
   clearTimeout(savedTimer);
   savedTimer = setTimeout(() => {
-    el.settingsSaved.hidden = true;
+    el.settingsSave.textContent = t('Save');
+    el.settingsSave.classList.remove('saved');
   }, SAVED_SHOWN_MS);
 }
 
@@ -5257,11 +5265,11 @@ el.welcomeQuick.addEventListener('submit', async (e) => {
   $('welcome-claimed').hidden = !claimed;
   if (claimed) {
     const host = BRAND.accounts.host;
-    $('welcome-claimed-title').textContent =
-      claimed === 'shell' ? t('{nick} is a {host} shell account.', { nick, host }) : t('{nick} is a {host} account.', { nick, host });
+    // Never which kind: naming shell users would hand out server login names.
+    $('welcome-claimed-title').textContent = t('{nick} is a {host} account.', { nick, host });
     const signin = $('welcome-claimed-signin');
     signin.textContent = t('Sign in as {nick} →', { nick });
-    signin.onclick = () => openSignin(claimed, nick);
+    signin.onclick = () => openSignin('account', nick);
     return;
   }
   const name = preset ? preset[0] : host;

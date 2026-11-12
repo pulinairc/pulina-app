@@ -1,3 +1,9 @@
+### 1.15.2: 2026-11-12
+
+* Fix update checks that never ran on their own
+* Change Check for updates and Saved to clear buttons
+* Remove the shell user mention from the taken-nick card
+
 ### 1.15.1: 2026-11-12
 
 * Change Block to Ignore, with /ignore and /unignore
