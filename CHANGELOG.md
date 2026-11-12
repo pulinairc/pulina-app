@@ -1,3 +1,7 @@
+### 1.18.4: 2026-11-12
+
+* Fix 1 px chat nudges as new messages arrive
+
 ### 1.18.3: 2026-11-12
 
 * Add a setting to show person cards right away

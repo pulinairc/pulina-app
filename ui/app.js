@@ -2235,9 +2235,22 @@ function fadeIn(tail, fresh, count) {
   for (let n = tail ? tail.nextElementSibling : el.col.firstElementChild; n; n = n.nextElementSibling) {
     added.push(n);
   }
+  // Stepped by hand: a CSS or Web Animations fade gets its own layer in WebKit, which sits on whole
+  // device pixels and puts the line back half a pixel off when it ends, a visible nudge on a Mac.
+  const start = performance.now();
+  const step = (now) => {
+    const p = Math.min((now - start) / ARRIVE_MS, 1);
+    for (const n of added) {
+      n.style.opacity = p < 1 ? String(1 - (1 - p) ** 2) : '';
+    }
+    if (p < 1) {
+      requestAnimationFrame(step);
+    }
+  };
   for (const n of added) {
-    n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: ARRIVE_MS, easing: 'ease-out' });
+    n.style.opacity = '0';
   }
+  requestAnimationFrame(step);
 }
 
 function glideDown() {
@@ -2250,9 +2263,15 @@ function glideDown() {
   const start = performance.now();
   const step = (now) => {
     const p = Math.min((now - start) / ARRIVE_MS, 1);
+    if (p >= 1) {
+      // The real bottom can be a fraction of a pixel below the whole-pixel sum, which a later
+      // toBottom() would show as a one-pixel nudge.
+      glide = 0;
+      return toBottom();
+    }
     const to = el.log.scrollHeight - el.log.clientHeight;
     el.log.scrollTop = from + (to - from) * (1 - (1 - p) ** 3);
-    glide = p < 1 ? requestAnimationFrame(step) : 0;
+    glide = requestAnimationFrame(step);
   };
   glide = requestAnimationFrame(step);
 }
