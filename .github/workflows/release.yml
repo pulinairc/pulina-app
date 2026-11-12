@@ -109,6 +109,32 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ needs.release.outputs.tag }}
 
+  # The .deb's binary repackaged for Arch, so it runs on the system's own WebKitGTK and GTK.
+  arch:
+    needs: [release, build]
+    if: needs.release.outputs.created == 'true'
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build the Arch package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ needs.release.outputs.tag }}
+          REPO: ${{ github.repository }}
+        run: |
+          pacman -Syu --noconfirm --needed base-devel github-cli jq
+          useradd -m builder
+          mkdir /build && cp packaging/arch/PKGBUILD /build/
+          gh release download "$TAG" -R "$REPO" -p '*.deb' -O /build/app.deb
+          chown -R builder /build
+          app=$(jq -r .productName src-tauri/tauri.conf.json | tr '[:upper:]' '[:lower:]')
+          su builder -c "cd /build && APP=$app VERSION=${TAG#v} URL=https://github.com/$REPO makepkg -d --noconfirm"
+          gh release upload "$TAG" /build/*.pkg.tar.zst --clobber -R "$REPO"
+
   # latest.json tells the installed apps what is new and where its signed files are.
   updater:
     needs: [release, build]

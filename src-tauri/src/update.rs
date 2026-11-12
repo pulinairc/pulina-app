@@ -8,7 +8,12 @@ use tauri::AppHandle;
 pub struct Available {
     version: String,
     installable: bool,
+    notes: Option<String>,
 }
+
+/// A downloaded update waits here until the restart: installing it on Windows closes the app.
+#[cfg(desktop)]
+static PENDING: std::sync::Mutex<Option<(tauri_plugin_updater::Update, Vec<u8>)>> = std::sync::Mutex::new(None);
 
 /// Whether this copy can replace itself: a .deb or an Android APK is updated by hand.
 #[tauri::command]
@@ -29,7 +34,7 @@ pub async fn check_update(app: AppHandle) -> Result<Option<Available>, String> {
         Err(Error::ReleaseNotFound) => return Err(NO_UPDATE_FILES.into()),
         Err(e) => return Err(e.to_string()),
     };
-    Ok(update.map(|u| Available { version: u.version, installable: can_install_updates() }))
+    Ok(update.map(|u| Available { version: u.version, installable: can_install_updates(), notes: u.body }))
 }
 
 #[cfg(mobile)]
@@ -42,17 +47,20 @@ pub async fn check_update(app: AppHandle) -> Result<Option<Available>, String> {
     let client = lobby_core::http().build().map_err(|e| e.to_string())?;
     let latest: serde_json::Value = client.get(url).send().await.map_err(|e| e.to_string())?.json().await.map_err(|e| e.to_string())?;
     let version = latest["version"].as_str().unwrap_or_default().trim_start_matches('v').to_string();
-    Ok(newer(&version, env!("CARGO_PKG_VERSION")).then_some(Available { version, installable: false }))
+    let notes = latest["notes"].as_str().map(String::from);
+    Ok(newer(&version, env!("CARGO_PKG_VERSION")).then_some(Available { version, installable: false, notes }))
 }
 
-/// Download and put the new version in place; it runs after a restart.
+/// Download and check the new version in the background; the restart puts it in place.
 #[cfg(desktop)]
 #[tauri::command]
 pub async fn install_update(app: AppHandle) -> Result<(), String> {
     use tauri_plugin_updater::UpdaterExt;
     let update = app.updater().map_err(|e| e.to_string())?.check().await.map_err(|e| e.to_string())?;
     let Some(update) = update else { return Ok(()) };
-    update.download_and_install(|_, _| {}, || {}).await.map_err(|e| e.to_string())
+    let bytes = update.download(|_, _| {}, || {}).await.map_err(|e| e.to_string())?;
+    *PENDING.lock().unwrap_or_else(|e| e.into_inner()) = Some((update, bytes));
+    Ok(())
 }
 
 #[cfg(mobile)]
@@ -63,8 +71,17 @@ pub async fn install_update(app: AppHandle) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn restart(app: AppHandle) {
+pub fn restart(app: AppHandle) -> Result<(), String> {
+    #[cfg(desktop)]
+    install_pending()?;
     app.restart();
+}
+
+/// Put a downloaded update in place; also on quit, so the next start runs it.
+#[cfg(desktop)]
+pub fn install_pending() -> Result<(), String> {
+    let Some((update, bytes)) = PENDING.lock().unwrap_or_else(|e| e.into_inner()).take() else { return Ok(()) };
+    update.install(bytes).map_err(|e| e.to_string())
 }
 
 /// Dotted version numbers, compared part by part.

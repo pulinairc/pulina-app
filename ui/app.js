@@ -77,6 +77,7 @@ const REACTION_SETTING = 'reactions';
 const EMOTICON_SETTING = 'emoticons';
 // Tab completes nicks either way; these only choose when the list opens by itself.
 const NICK_MENU_SETTINGS = { at: 'nick_menu_at', word: 'nick_menu_word' };
+const HOVER_CARD_SETTING = 'hover_cards';
 const BOTS_SETTING = 'bots';
 const HIGHLIGHT_WORDS_SETTING = 'highlightWords';
 /** A bot's answer joins the command it follows only this soon after it. */
@@ -162,7 +163,6 @@ const el = {
   checklistHide: $('checklist-hide'),
   updateBar: $('update-bar'),
   updateText: $('update-text'),
-  updateGo: $('update-go'),
   updateRestart: $('update-restart'),
   updateClose: $('update-close'),
   updateSection: $('update-section'),
@@ -170,6 +170,15 @@ const el = {
   updateAuto: $('update-auto'),
   updateCheck: $('update-check'),
   updateResult: $('update-result'),
+  updateAsk: $('update-ask'),
+  updateAskTitle: $('update-ask-title'),
+  updateAskText: $('update-ask-text'),
+  updateNotes: $('update-notes'),
+  updateAskAutoRow: $('update-ask-auto-row'),
+  updateAskAuto: $('update-ask-auto'),
+  updateSkip: $('update-skip'),
+  updateLater: $('update-later'),
+  updateInstall: $('update-install'),
   toast: $('toast'),
   log: $('log'),
   col: $('col'),
@@ -1514,6 +1523,7 @@ function renderSettings() {
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
   $('nick-at-toggle').checked = settingOn(NICK_MENU_SETTINGS.at);
   $('nick-word-toggle').checked = settingOn(NICK_MENU_SETTINGS.word);
+  $('hover-card-toggle').checked = settingOn(HOVER_CARD_SETTING);
   for (const r of el.replyStyle.querySelectorAll('input')) {
     r.checked = r.value === replyStyle();
   }
@@ -1621,14 +1631,19 @@ el.settingsTabs.addEventListener('click', (e) => {
     el.settings.querySelector('.settings-body').scrollTop = 0;
   }
 });
-// Updates: installed in place where the app can replace itself, announced with a download link elsewhere.
+// Updates, the way Mac apps ask: with automatic updates on, the new version downloads quietly and a
+// bar offers the restart (quitting installs it too). Otherwise a dialog asks once per version:
+// skip it, be reminded tomorrow, or install. Where the app cannot replace itself, Install opens the
+// download page instead.
 const UPDATE_AUTO_KEY = 'lobby.updateAuto';
-const UPDATE_CLOSED_KEY = 'lobby.updateClosed';
+const UPDATE_SKIP_KEY = 'lobby.updateClosed';
+const UPDATE_LATER_KEY = 'lobby.updateLater';
+const UPDATE_LATER_MS = 24 * 60 * 60 * 1000;
 const UPDATE_FIRST_MS = 20 * 1000;
 const UPDATE_EVERY_MS = 60 * 60 * 1000;
 const UPDATE_TICK_MS = 5 * 60 * 1000;
 // Wall clock: timers stall while the computer sleeps. A failed check (a release still uploading) stays due.
-const update = { found: null, ready: false, busy: false, checkedAt: 0 };
+const update = { found: null, ready: false, busy: false, dismissed: false, checkedAt: 0 };
 
 function storedFlag(k) {
   try {
@@ -1650,28 +1665,37 @@ function updatesAuto() {
   return storedFlag(UPDATE_AUTO_KEY) !== 'off';
 }
 
+function setUpdatesAuto(on) {
+  storeFlag(UPDATE_AUTO_KEY, on ? 'on' : 'off');
+  el.updateAuto.checked = on;
+}
+
+/** Not skipped, and not put off until later. */
+function shouldAsk(version) {
+  if (storedFlag(UPDATE_SKIP_KEY) === version) {
+    return false;
+  }
+  const [later, until] = (storedFlag(UPDATE_LATER_KEY) || '').split('@');
+  return later !== version || Date.now() > Number(until);
+}
+
 function renderUpdate() {
   const found = update.found;
-  el.updateBar.hidden = !found || storedFlag(UPDATE_CLOSED_KEY) === found.version;
+  // The bar shows an update on its way in or ready; asking is the dialog's job.
+  el.updateBar.hidden = !found || update.dismissed || !(update.busy || update.ready);
   if (el.updateBar.hidden) {
     return;
   }
   const name = `${BRAND.name} ${found.version}`;
-  // One step at a time: update, then restart; dismissing hides this version until the next.
-  el.updateGo.hidden = update.busy || update.ready;
   el.updateRestart.hidden = !update.ready;
-  el.updateGo.textContent = found.installable ? t('Update') : t('Download');
-  if (update.ready) {
-    el.updateText.textContent = t('{name} is ready. Restart to start using it.', { name });
-  } else if (update.busy) {
-    el.updateText.textContent = t('Installing {name}…', { name });
-  } else {
-    el.updateText.textContent = t('{name} is out.', { name });
-  }
+  el.updateText.textContent = update.ready
+    ? t('{name} is ready. Restart to start using it.', { name })
+    : t('Downloading {name}…', { name });
 }
 
 async function installUpdate() {
   update.busy = true;
+  update.dismissed = false;
   renderUpdate();
   try {
     await invoke('install_update');
@@ -1683,12 +1707,38 @@ async function installUpdate() {
   renderUpdate();
 }
 
-async function checkUpdate() {
+function askUpdate(found) {
+  el.updateAskTitle.textContent = t('A new version of {app} is out', { app: BRAND.name });
+  el.updateAskText.textContent = t('{app} {version} is out. You have {current}.', {
+    app: BRAND.name,
+    version: found.version,
+    current: appVersion,
+  });
+  // The changelog's "* Add x" lines, as a plain list.
+  el.updateNotes.textContent = (found.notes || '').trim().replace(/^[*-] /gm, '• ');
+  el.updateAskAutoRow.hidden = !found.installable;
+  el.updateAskAuto.checked = updatesAuto();
+  el.updateInstall.textContent = found.installable ? t('Install update') : t('Download');
+  if (!el.updateAsk.open) {
+    el.updateAsk.showModal();
+  }
+}
+
+async function checkUpdate({ manual = false } = {}) {
   const found = await invoke('check_update');
   update.checkedAt = Date.now();
   update.found = found;
-  if (found?.installable && updatesAuto() && !update.ready && !update.busy) {
-    await installUpdate();
+  if (found && !update.ready && !update.busy) {
+    if (manual) {
+      askUpdate(found);
+    } else if (found.installable && updatesAuto()) {
+      await installUpdate();
+    } else if (shouldAsk(found.version)) {
+      askUpdate(found);
+    }
+  }
+  if (manual && update.ready) {
+    update.dismissed = false;
   }
   renderUpdate();
   return found;
@@ -1705,16 +1755,27 @@ setTimeout(checkUpdateWhenDue, UPDATE_FIRST_MS);
 setInterval(checkUpdateWhenDue, UPDATE_TICK_MS);
 window.addEventListener('focus', checkUpdateWhenDue);
 
-el.updateGo.addEventListener('click', () => {
-  if (update.found?.installable) {
-    return installUpdate();
-  }
-  openUrl(`${BRAND.site}/releases/tag/v${update.found.version}`);
-});
-el.updateRestart.addEventListener('click', () => invoke('restart'));
+el.updateRestart.addEventListener('click', () => invoke('restart').catch((e) => renderStatus(t('Update: {error}', { error: e }))));
 el.updateClose.addEventListener('click', () => {
-  storeFlag(UPDATE_CLOSED_KEY, update.found.version);
+  update.dismissed = true;
   renderUpdate();
+});
+
+el.updateSkip.addEventListener('click', () => {
+  storeFlag(UPDATE_SKIP_KEY, update.found.version);
+  el.updateAsk.close();
+});
+el.updateLater.addEventListener('click', () => {
+  storeFlag(UPDATE_LATER_KEY, `${update.found.version}@${Date.now() + UPDATE_LATER_MS}`);
+  el.updateAsk.close();
+});
+el.updateInstall.addEventListener('click', () => {
+  el.updateAsk.close();
+  if (!update.found.installable) {
+    return openUrl(`${BRAND.site}/releases/tag/v${update.found.version}`);
+  }
+  setUpdatesAuto(el.updateAskAuto.checked);
+  installUpdate();
 });
 
 function renderUpdateSettings() {
@@ -1728,22 +1789,32 @@ function renderUpdateSettings() {
     .catch(() => {});
 }
 
-el.updateAuto.addEventListener('change', () => storeFlag(UPDATE_AUTO_KEY, el.updateAuto.checked ? 'on' : 'off'));
-el.updateCheck.addEventListener('click', async () => {
+el.updateAuto.addEventListener('change', () => setUpdatesAuto(el.updateAuto.checked));
+
+/** Settings' button and the Mac menu's Check for Updates: always answers, even for a skipped version. */
+async function checkUpdateNow() {
   el.updateResult.hidden = false;
   el.updateResult.textContent = t('Checking…');
   try {
-    const found = await checkUpdate();
+    const found = await checkUpdate({ manual: true });
     const name = found && `${BRAND.name} ${found.version}`;
     el.updateResult.textContent = !found
       ? t('{name} is up to date.', { name: `${BRAND.name} ${appVersion}`.trim() })
       : update.ready
         ? t('{name} is ready. Restart to start using it.', { name })
         : t('{name} is out.', { name });
+    if (!found && !el.settings.open) {
+      showToast(el.updateResult.textContent);
+    }
   } catch (e) {
     el.updateResult.textContent = t('Could not check: {error}', { error: e });
+    if (!el.settings.open) {
+      showToast(el.updateResult.textContent);
+    }
   }
-});
+}
+
+el.updateCheck.addEventListener('click', checkUpdateNow);
 
 // About: the version and the commit it was built from, linked to that commit.
 const REPO_URL = BRAND.site;
@@ -2258,9 +2329,12 @@ function row(l) {
   // "nick: text" right after that nick spoke reads as a reply: show what it answers.
   let text = l.text;
   const addr = l.kind === 'msg' ? parseAddress(l.text) : null;
-  const quoted = (l.own && replyHints.get(l.text)) || (addr && view.lastByNick.get(addr.nick.toLowerCase()));
+  // My own replies remember the exact line; anyone else's is read as answering that nick's latest line.
+  const linkId = l.own && addr ? replyLinks()[linkKey(l.net, l.buffer, l.text)] : undefined;
+  const hinted = (l.own && replyHints.get(l.text)) || (linkId && view.byId.get(linkId));
+  const quoted = hinted || (addr && !linkId ? view.lastByNick.get(addr.nick.toLowerCase()) : null);
   const me = state.me[l.net];
-  if (addr && quoted && quoted.line !== l && l.ts - quoted.line.ts < REPLY_WINDOW_MS) {
+  if (addr && quoted && quoted.line !== l && (hinted || l.ts - quoted.line.ts < REPLY_WINDOW_MS)) {
     const style = replyStyle();
     if (style !== 'nick') {
       r.append(quoteNode(quoted));
@@ -2424,12 +2498,9 @@ function personCard(net, nick, { spoke = true } = {}) {
   return card;
 }
 
-// Asked on hover anywhere a person is shown: the chat, the people list, the person cards.
-document.addEventListener('pointerover', (e) => {
-  const n = e.target.closest?.('[data-person]');
-  if (!n) {
-    return;
-  }
+// Asked when a person's card opens. irssi sends proxied lines through its flood queue, so a
+// WHOIS for every row the pointer crossed held a MODE behind them for seconds.
+function askWhois(n) {
   const k = key(n.dataset.net, n.dataset.nick);
   const known = whois.get(k);
   if (known && Date.now() - known.at < (known.pending ? WHOIS_WAIT_MS : WHOIS_FRESH_MS)) {
@@ -2439,7 +2510,7 @@ document.addEventListener('pointerover', (e) => {
   whois.set(k, { ...known, pending: true, at: Date.now() });
   const b = state.buffers.get(state.current);
   invoke('send', { net: n.dataset.net, buffer: b?.name || '', text: `/whois ${n.dataset.nick}` }).catch(() => whois.delete(k));
-});
+}
 
 function onWhois(w) {
   const text = formatWhois(w);
@@ -2478,6 +2549,35 @@ function quoteNode(target) {
 
 const replyHints = new Map();
 let replying = null;
+
+// Which line each reply of mine answered, kept as a setting so it survives restarts and reaches my other devices.
+const REPLY_LINKS_SETTING = 'replyLinks';
+const REPLY_LINKS_KEEP = 200;
+
+function replyLinks() {
+  try {
+    return JSON.parse(state.settings[REPLY_LINKS_SETTING] || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function linkKey(net, buffer, text) {
+  return `${net}\n${buffer.toLowerCase()}\n${text}`;
+}
+
+function rememberReply(net, buffer, text, line) {
+  if (!line.id) {
+    return;
+  }
+  const links = replyLinks();
+  links[linkKey(net, buffer, text)] = line.id;
+  const keys = Object.keys(links);
+  for (const k of keys.slice(0, Math.max(0, keys.length - REPLY_LINKS_KEEP))) {
+    delete links[k];
+  }
+  saveSetting(REPLY_LINKS_SETTING, JSON.stringify(links));
+}
 
 function addReaction(target, emoji, nick, own) {
   target.reactions ??= new Map();
@@ -3245,7 +3345,7 @@ function personRow(b, p, now) {
   });
   row.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    peopleMenu(p.nick, e.clientX, e.clientY);
+    peopleMenu(p.nick, e.clientX, e.clientY, row);
   });
   return row;
 }
@@ -3345,7 +3445,7 @@ function pickedBar(b) {
 }
 
 // Right-click: acts on everyone picked when the row is one of them, else on that one person.
-function peopleMenu(nick, x, y) {
+function peopleMenu(nick, x, y, row) {
   const b = channelShown();
   if (!b) {
     return;
@@ -3372,6 +3472,10 @@ function peopleMenu(nick, x, y) {
     }
   }
   if (targets.length === 1) {
+    item(t('Profile'), () => {
+      closePeopleMenu();
+      showProfile(row, b.net, nick);
+    });
     item(t('Message'), () => message(b, nick));
     item(t('Edit person'), () => editListed(b, nick));
     if (nick !== state.me[b.net]) {
@@ -3881,6 +3985,7 @@ async function send() {
         out = prefix + out;
       }
       replyHints.set(out, { line: replying, row: findRow(replying) });
+      rememberReply(b.net, b.name, out, replying);
     }
     await invoke('send', { net: b.net, buffer: b.name, text: out });
     lastSent = text;
@@ -4021,9 +4126,18 @@ const NICK_MENU_SIZE = 6;
  * quit is common, and their nick usually comes back. Never yourself. */
 function nickCandidates(b) {
   const seen = new Map([...b.members].map((n) => [n.toLowerCase(), n]));
+  // Recent speakers who left, but not a nick its owner has since changed away from.
+  const speakers = new Map();
   for (const l of b.lines) {
-    if (CHAT_KINDS.has(l.kind) && l.nick && !seen.has(l.nick.toLowerCase())) {
-      seen.set(l.nick.toLowerCase(), l.nick);
+    if (l.kind === 'nick') {
+      speakers.delete(l.nick.toLowerCase());
+    } else if (CHAT_KINDS.has(l.kind) && l.nick) {
+      speakers.set(l.nick.toLowerCase(), l.nick);
+    }
+  }
+  for (const [low, nick] of speakers) {
+    if (!seen.has(low)) {
+      seen.set(low, nick);
     }
   }
   seen.delete((state.me[b.net] || '').toLowerCase());
@@ -4200,13 +4314,22 @@ el.input.addEventListener('focus', () => (keyboardPinned = stuck || atBottom()))
 window.visualViewport?.addEventListener('resize', fitKeyboard);
 window.visualViewport?.addEventListener('scroll', fitKeyboard);
 
+let fittedLength = 0;
+
 function fitInput() {
-  // Measuring collapses the box for a moment, which scrolls the chat; the bottom stays the bottom.
-  const pinned = atBottom();
-  el.input.style.height = 'auto';
-  el.input.style.height = `${el.input.scrollHeight}px`;
-  if (pinned) {
-    toBottom();
+  // Collapsing the box to measure it lays out the whole chat twice, which made typing lag in a
+  // long channel: text that only grew and still fits needs no measuring.
+  const length = el.input.value.length;
+  const grew = length >= fittedLength;
+  fittedLength = length;
+  if (!(grew && el.input.scrollHeight <= el.input.clientHeight)) {
+    // Measuring collapses the box for a moment, which scrolls the chat; the bottom stays the bottom.
+    const pinned = atBottom();
+    el.input.style.height = 'auto';
+    el.input.style.height = `${el.input.scrollHeight}px`;
+    if (pinned) {
+      toBottom();
+    }
   }
   renderRoom();
 }
@@ -5901,6 +6024,7 @@ async function start() {
   await listen('notification-click', (e) => openNotified(e.payload));
   await listen('show-about', showAbout);
   await listen('show-settings', () => el.settings.open || el.gear.click());
+  await listen('check-updates', checkUpdateNow);
   // iPhone: the volume buttons step the text size.
   await listen('volume-key', (e) => applyTextSize(textSize() + e.payload * TEXT_SIZE_STEP));
   showVersion();
@@ -6026,10 +6150,16 @@ const TIP_GAP_PX = 8;
 let tipFor = null;
 let tipX = 0;
 
+// People's cards wait for the pointer to rest, so sweeping across the list shows nothing.
+const CARD_REST_MS = 400;
+let cardTimer = 0;
+let cardPinned = false;
+
 function showTip(target, x, { fresh = false } = {}) {
   tipX = x;
   if (target !== tipFor || fresh) {
     if (target.dataset.person) {
+      askWhois(target);
       const card = personCard(target.dataset.net, target.dataset.nick, { spoke: !target.dataset.noSpoke });
       tip.style.setProperty('--tint', card.style.getPropertyValue('--tint'));
       tip.replaceChildren(card);
@@ -6054,19 +6184,42 @@ function showTip(target, x, { fresh = false } = {}) {
 }
 
 function hideTip() {
+  clearTimeout(cardTimer);
   tip.hidden = true;
   tipFor = null;
+  cardPinned = false;
+}
+
+/** The card for a person picked from a menu: stays until the next click. */
+function showProfile(node, net, nick) {
+  personTip(node, net, nick);
+  const box = node.getBoundingClientRect();
+  hideTip();
+  showTip(node, box.left + box.width / 2);
+  cardPinned = true;
 }
 
 document.addEventListener('pointermove', (e) => {
-  if (e.pointerType !== 'mouse') {
+  if (e.pointerType !== 'mouse' || cardPinned) {
     return;
   }
   const target = e.target.closest?.('[data-tip], [data-person]');
-  if (target) {
+  clearTimeout(cardTimer);
+  if (!target) {
+    if (!tip.hidden) {
+      hideTip();
+    }
+    return;
+  }
+  if (!target.dataset.person || target === tipFor) {
     showTip(target, e.clientX);
-  } else if (!tip.hidden) {
+    return;
+  }
+  if (!tip.hidden) {
     hideTip();
+  }
+  if (settingOn(HOVER_CARD_SETTING)) {
+    cardTimer = setTimeout(() => showTip(target, e.clientX), CARD_REST_MS);
   }
 });
 document.addEventListener('pointerdown', hideTip);
@@ -7848,6 +8001,7 @@ el.emoticonToggle.addEventListener('change', () => saveSetting(EMOTICON_SETTING,
 for (const [id, key] of [
   ['nick-at-toggle', NICK_MENU_SETTINGS.at],
   ['nick-word-toggle', NICK_MENU_SETTINGS.word],
+  ['hover-card-toggle', HOVER_CARD_SETTING],
 ]) {
   $(id).addEventListener('change', (e) => saveSetting(key, e.target.checked ? 'on' : 'off'));
 }

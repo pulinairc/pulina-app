@@ -1,3 +1,18 @@
+### 1.18.0: 2026-11-12
+
+* Add an update dialog: skip, remind later or install
+* Download updates in the background, install on restart
+* Add Check for Updates to the Mac app menu
+* Add an Arch Linux package to releases
+* Add Profile to the people list menu
+* Add a setting for person cards on hover
+* Fix a 10 s delay when giving voice or op
+* Fix typing lag in long channels
+* Fix the nick glimmer keeping the processor busy
+* Fix reply bubbles quoting the wrong message
+* Fix renamed nicks staying in suggestions
+* Fix the Android build
+
 ### 1.17.0: 2026-11-12
 
 * Add a copy button to the shell sign-in command

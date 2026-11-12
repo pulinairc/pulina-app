@@ -413,12 +413,13 @@ a:focus-visible {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
-/* Your name in a line meant for you: a soft shine crosses it now and then. */
+/* Your name in a line meant for you: a soft shine crosses it a few times. Never forever: every
+   mention in the backlog repainting each frame kept a core busy where WebKit draws on the CPU. */
 .text.for-me .mention {
   background: linear-gradient(110deg, var(--mention-bg) 35%, color-mix(in srgb, var(--mention) 38%, transparent) 50%, var(--mention-bg) 65%)
     no-repeat;
   background-size: 300% 100%;
-  animation: glimmer 2.6s ease-in-out infinite;
+  animation: glimmer 2.6s ease-in-out 3;
 }
 @keyframes glimmer {
   0%,
@@ -1213,6 +1214,40 @@ dialog:focus {
 #notify-guide .person-buttons {
   padding: 18px;
 }
+/* A new version: what changed, then Skip, Later or Install, as Mac apps ask. */
+.update-ask-text {
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+.update-notes {
+  max-height: 220px;
+  overflow-y: auto;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--dim);
+  white-space: pre-line;
+}
+.update-notes:empty {
+  display: none;
+}
+.update-ask-auto {
+  margin-top: 16px;
+}
+.update-ask-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin-top: 20px;
+}
+.update-ask-buttons .primary-btn {
+  margin-left: auto;
+}
+
 /* Report a message: the message, a note, block too, then Send. */
 .report-body {
   padding: 4px 18px 18px;
