@@ -1,3 +1,7 @@
+### 1.18.2: 2026-11-12
+
+* Fix 1 px jumps in the chat while typing
+
 ### 1.18.1: 2026-11-12
 
 * Fix reply bubbles quoting a line meant for others

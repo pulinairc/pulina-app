@@ -387,6 +387,19 @@ export function parseAddress(text) {
   return m ? { nick: m[1], rest: m[2] } : null;
 }
 
+/** How far to scroll to put a held line back: nothing for less than a pixel of drift. */
+export function anchorShift(delta) {
+  return Math.abs(delta) < 1 ? 0 : Math.round(delta);
+}
+
+/**
+ * The message box's height for its text: whole lines at the real line height. scrollHeight is
+ * rounded to a pixel, and a box a fraction off its natural size nudges the chat above it.
+ */
+export function boxHeight(scrollHeight, line, padding) {
+  return Math.max(1, Math.round((scrollHeight - padding) / line)) * line + padding;
+}
+
 /**
  * Which of a person's lines a "nick: text" reply answers: their latest, unless that went to
  * someone else and they said something to this replier within `windowMs`.
