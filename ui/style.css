@@ -4332,6 +4332,14 @@ body.docked #update-bar {
   align-items: center;
   gap: 8px;
 }
+/* As tall as the close button beside it, whatever the text size. */
+.settings-actions .primary-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  line-height: 1;
+}
 .settings-actions .primary-btn.saved {
   background: var(--mention);
 }
