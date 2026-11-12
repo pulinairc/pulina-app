@@ -136,9 +136,23 @@ fn is_reply_numeric(cmd: &str) -> bool {
     cmd.len() == 3 && cmd.bytes().all(|b| b.is_ascii_digit()) && !BURST.contains(&cmd) && !matches!(cmd, "332" | "333" | "353" | "366")
 }
 
+// QuakeNet's limit, the shortest of the networks in use.
+const NICK_MAX: usize = 15;
+
+/// milla_ first, then milla2, milla3: cut short so the suffix still fits.
+fn stand_in_nick(wanted: &str, tries: usize) -> String {
+    let suffix = if tries == 1 { "_".to_string() } else { tries.to_string() };
+    let base: String = wanted.chars().take(NICK_MAX - suffix.len()).collect();
+    format!("{base}{suffix}")
+}
+
 pub struct Session {
     net: String,
     me: String,
+    /// The nick asked for: taken at sign-on, another one stands in until it frees up.
+    wanted: String,
+    registered: bool,
+    nick_tries: usize,
     chans: HashMap<String, Chan>,
     whois: HashMap<String, Whois>,
     support: Support,
@@ -158,6 +172,9 @@ impl Session {
         Self {
             net: net.to_string(),
             me: me.to_string(),
+            wanted: me.to_string(),
+            registered: false,
+            nick_tries: 0,
             chans: HashMap::new(),
             whois: HashMap::new(),
             support: Support::default(),
@@ -254,6 +271,11 @@ impl Session {
         changed
     }
 
+    /// The wanted nick back once whoever held it leaves or changes away from it.
+    fn win_back(&self, gone: &str) -> Option<Out> {
+        (self.registered && same(gone, &self.wanted) && !same(&self.me, &self.wanted)).then(|| Out::Send(format!("NICK {}", self.wanted)))
+    }
+
     /// Channels a nick is on, as display names.
     fn chans_with(&self, nick: &str) -> Vec<String> {
         let key = nick.to_lowercase();
@@ -267,8 +289,15 @@ impl Session {
         match msg.command.as_str() {
             "PING" => vec![Out::Send(format!("PONG :{}", msg.param(0)))],
             "001" => {
+                self.registered = true;
                 self.me = msg.param(0).to_string();
                 vec![Out::Me(self.me.clone())]
+            }
+            // Nick in use, or held for a while after a split: without another one the server cuts the link.
+            "433" | "437" if !self.registered => {
+                self.nick_tries += 1;
+                self.me = stand_in_nick(&self.wanted, self.nick_tries);
+                vec![Out::Send(format!("NICK {}", self.me))]
             }
             "PRIVMSG" | "NOTICE" => self.on_message(msg, now),
             "005" => self.on_support(msg),
@@ -339,13 +368,16 @@ impl Session {
                     }
                     out.push(Out::Line(self.line(&name, "quit", msg, msg.param(0), now)));
                 }
+                out.extend(self.win_back(&nick));
                 out
             }
             "NICK" => {
                 let new = msg.param(0).to_string();
                 let mut out = Vec::new();
                 if is_me {
+                    // A nick picked after sign-on is the one wanted from now on.
                     self.me = new.clone();
+                    self.wanted = new.clone();
                     out.push(Out::Me(new.clone()));
                 }
                 if let Some(url) = self.avatars.remove(&nick.to_lowercase()) {
@@ -360,6 +392,9 @@ impl Session {
                         }
                     }
                     out.push(Out::Line(self.line(&name, "nick", msg, &new, now)));
+                }
+                if !is_me {
+                    out.extend(self.win_back(&nick));
                 }
                 out
             }
@@ -580,6 +615,37 @@ mod tests {
                 _ => None,
             })
             .collect()
+    }
+
+    fn sent(outs: &[Out]) -> Vec<String> {
+        outs.iter()
+            .filter_map(|o| match o {
+                Out::Send(l) => Some(l.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn takes_another_nick_when_taken_and_wins_it_back() {
+        let mut s = Session::new("net", "milla");
+        assert_eq!(sent(&feed(&mut s, ":srv 433 * milla :Nickname is already in use.")), vec!["NICK milla_"]);
+        assert_eq!(sent(&feed(&mut s, ":srv 433 * milla_ :Nickname is already in use.")), vec!["NICK milla2"]);
+        let mut long = Session::new("net", "fifteencharsabc");
+        assert_eq!(sent(&feed(&mut long, ":srv 433 * fifteencharsabc :in use")), vec!["NICK fifteencharsab_"]);
+
+        feed(&mut s, ":srv 001 milla2 :Welcome");
+        assert!(sent(&feed(&mut s, ":srv 433 milla2 rolle :Nickname is already in use.")).is_empty());
+
+        feed(&mut s, ":milla2!m@h JOIN #pulina");
+        feed(&mut s, ":srv 353 milla2 = #pulina :milla2 milla");
+        assert_eq!(sent(&feed(&mut s, ":milla!m@other QUIT :bye")), vec!["NICK milla"]);
+        feed(&mut s, ":milla2!m@h NICK milla");
+        assert!(sent(&feed(&mut s, ":kaisla!k@h QUIT :bye")).is_empty());
+
+        feed(&mut s, ":milla!m@h NICK mimmi");
+        feed(&mut s, ":milla!x@y JOIN #pulina");
+        assert!(sent(&feed(&mut s, ":milla!x@y QUIT :bye")).is_empty());
     }
 
     #[test]

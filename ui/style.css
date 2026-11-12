@@ -5018,6 +5018,18 @@ dialog.welcome::backdrop {
 .account-link[hidden] {
   display: none;
 }
+.welcome-account-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+}
+.welcome-account-links[hidden] {
+  display: none;
+}
+.account-sep {
+  color: var(--faint);
+}
 .applied-card {
   display: flex;
   gap: 12px;

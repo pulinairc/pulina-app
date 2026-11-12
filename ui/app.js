@@ -4795,7 +4795,10 @@ function showNickFace() {
   }
 }
 
-el.welcomeNick.addEventListener('input', showNickFace);
+el.welcomeNick.addEventListener('input', () => {
+  $('welcome-claimed').hidden = true;
+  showNickFace();
+});
 
 function openQuickStart() {
   renderWelcomeNets();
@@ -4916,15 +4919,15 @@ function showAccountChoice() {
     return;
   }
   const host = acc.host;
-  const link = $('welcome-account-link');
-  link.hidden = false;
-  link.textContent = t('I want my own {host} account →', { host });
+  $('welcome-account-links').hidden = false;
+  $('signin-shell').hidden = !acc.shell;
   $('accounts-title').textContent = acc.title;
   $('accounts-lead').textContent = acc.lead;
   $('accounts-own-title').textContent = t('Own {host} account', { host });
   $('accounts-mask-line').textContent = t('Others see you as nick!account@{host}, your own address stays hidden', { host });
   // "pulina.fi-tunnus" must not break at its hyphen: a non-breaking one keeps it whole.
   const whole = (text) => text.replaceAll(`${host}-`, `${host}\u2011`);
+  $('welcome-account-link').textContent = whole(t('I want a {host} account', { host }));
   $('apply-title').textContent = whole(t('Apply for a {host} account', { host }));
   $('signin-title').textContent = whole(t('Sign in with your {host} account', { host }));
   $('shell-title').textContent = whole(t('Sign in with your {host} shell', { host }));
@@ -4942,6 +4945,32 @@ function showApplied() {
 }
 
 $('welcome-account-link').addEventListener('click', () => showWelcomeStep('accounts'));
+$('welcome-have-account').addEventListener('click', () => openSignin('account', ''));
+$('signin-shell').addEventListener('click', () => openSignin('shell', $('signin-account').value.trim()));
+
+/** Sign-in with an account or a shell, straight from the first view; Back returns there. */
+function openSignin(kind, nick) {
+  const step = kind === 'shell' ? 'shell' : 'signin';
+  showWelcomeStep(step);
+  $(`welcome-${step}`).querySelector('.step-back').dataset.back = 'quick';
+  $(`${step}-account`).value = nick;
+  (nick && kind !== 'shell' ? $('signin-password') : $(`${step}-account`)).focus();
+}
+
+/** A nick that is someone's account: offer to sign in with it instead of joining under it. */
+async function claimedNick(nick) {
+  if (!BRAND.accounts) {
+    return null;
+  }
+  const who = await invoke('account_call', { action: 'who', body: { account: nick.toLowerCase() } }).catch(() => null);
+  return who?.kind ?? null;
+}
+
+$('welcome-claimed-other').addEventListener('click', () => {
+  $('welcome-claimed').hidden = true;
+  el.welcomeNick.select();
+  el.welcomeNick.focus();
+});
 $('accounts-direct').addEventListener('click', () => {
   showWelcomeStep('quick');
   el.welcomeNick.focus();
@@ -4952,10 +4981,12 @@ $('accounts-apply').addEventListener('click', () => {
 });
 $('accounts-shell').addEventListener('click', () => {
   showWelcomeStep('shell');
+  $('welcome-shell').querySelector('.step-back').dataset.back = 'accounts';
   $('shell-account').focus();
 });
 $('accounts-signin').addEventListener('click', () => {
   showWelcomeStep('signin');
+  $('welcome-signin').querySelector('.step-back').dataset.back = 'accounts';
   $('signin-account').focus();
 });
 $('apply-account').addEventListener('input', () => {
@@ -5183,6 +5214,17 @@ el.welcomeQuick.addEventListener('submit', async (e) => {
   if (problem) {
     return;
   }
+  const claimed = await claimedNick(nick);
+  $('welcome-claimed').hidden = !claimed;
+  if (claimed) {
+    const host = BRAND.accounts.host;
+    $('welcome-claimed-title').textContent =
+      claimed === 'shell' ? t('{nick} is a {host} shell account.', { nick, host }) : t('{nick} is a {host} account.', { nick, host });
+    const signin = $('welcome-claimed-signin');
+    signin.textContent = t('Sign in as {nick} →', { nick });
+    signin.onclick = () => openSignin(claimed, nick);
+    return;
+  }
   const name = preset ? preset[0] : host;
   const connection = {
     mode: 'irc',
@@ -5199,7 +5241,7 @@ el.welcomeQuick.addEventListener('submit', async (e) => {
     .split(/[\s,]+/)
     .filter(Boolean)
     .map((c) => (isChannel(c) ? c : `#${c}`));
-  onboarding = { connection, plan: { net: name, channels } };
+  onboarding = { connection, plan: { net: name, channels, nick } };
   // A one-channel fork walks through its rules, notifications and a picture first.
   if (ONLY) {
     showRules();
@@ -5337,6 +5379,67 @@ $('photo-skip').addEventListener('click', () => {
   finishWelcome();
 });
 
+const NICK_WAIT_MS = 5000;
+let nickTakenNet = null;
+
+function openNickTaken(net, wanted, now) {
+  nickTakenNet = net;
+  $('nick-taken-title').textContent = t('{nick} is taken', { nick: wanted });
+  $('nick-taken-text').textContent = t('Someone already uses {nick}, so for now you are {now}. Pick a nick of your own.', {
+    nick: wanted,
+    now,
+  });
+  $('nick-taken-keep').textContent = t('Keep {now}', { now });
+  $('nick-taken-error').hidden = true;
+  $('nick-taken-field').value = '';
+  $('nick-taken').showModal();
+  $('nick-taken-field').focus();
+}
+
+/** Resolves true once the network confirms the new nick, false if it did not take it in time. */
+function nickTaken(net, nick) {
+  const start = Date.now();
+  return new Promise((resolve) => {
+    const tick = () => {
+      if (state.me[net]?.toLowerCase() === nick.toLowerCase()) {
+        return resolve(true);
+      }
+      if (Date.now() - start > NICK_WAIT_MS) {
+        return resolve(false);
+      }
+      setTimeout(tick, 200);
+    };
+    tick();
+  });
+}
+
+$('nick-taken-keep').addEventListener('click', () => {
+  invoke('remember_nick', { nick: state.me[nickTakenNet] }).catch(() => {});
+  $('nick-taken').close();
+});
+$('nick-taken-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const nick = $('nick-taken-field').value.trim();
+  const error = $('nick-taken-error');
+  const say = (text) => {
+    error.textContent = text;
+    error.hidden = !text;
+  };
+  if (!NICK_RE.test(nick)) {
+    return say(t('Pick a nick that starts with a letter: letters, digits and - _ after it.'));
+  }
+  const net = nickTakenNet;
+  $('nick-taken-go').disabled = true;
+  await invoke('send', { net, buffer: '', text: `/nick ${nick}` }).catch((err) => say(String(err)));
+  const ok = await nickTaken(net, nick);
+  $('nick-taken-go').disabled = false;
+  if (!ok) {
+    return say(t('{nick} is taken too. Try another one.', { nick }));
+  }
+  invoke('remember_nick', { nick }).catch(() => {});
+  $('nick-taken').close();
+});
+
 /** The channels picked in the welcome, joined once the network first answers. */
 function joinAfterSetup(net) {
   let plan = null;
@@ -5354,6 +5457,11 @@ function joinAfterSetup(net) {
     /* joined once anyway */
   }
   askToNotify();
+  // Someone had the nick: the server gave a stand-in, so ask for one of the person's own.
+  const now = state.me[net];
+  if (plan.nick && now && now.toLowerCase() !== plan.nick.toLowerCase()) {
+    openNickTaken(net, plan.nick, now);
+  }
   // What the welcome asked for, kept until there was somewhere to save it.
   if (plan.words) {
     saveSetting(NOTIFY_WORDS_SETTING, plan.words);
