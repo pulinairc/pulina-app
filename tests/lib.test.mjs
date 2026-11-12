@@ -400,6 +400,21 @@ test('people sort by when they last spoke, ops first', () => {
       ['away', ['iida', 'jaska', 'pekka']],
     ],
   );
+  const muted = peopleGroups(
+    ['iida', 'otso', 'veera'],
+    modes,
+    (n) => spoke[n],
+    now,
+    dayStart,
+    (n) => n !== 'iida',
+  );
+  assert.deepEqual(
+    muted.map((g) => [g.id, g.people.map((p) => p.nick)]),
+    [
+      ['away', ['iida']],
+      ['muted', ['veera', 'otso']],
+    ],
+  );
   assert.deepEqual(
     byActivity(['b', 'A', 'c'], () => 0),
     ['A', 'b', 'c'],

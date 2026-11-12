@@ -782,6 +782,22 @@ function trackMembers(b, l) {
   }
 }
 
+/** A muted nick keeps its mute through a nick change, and loses it by highlighting me. */
+function followMute(l) {
+  if (!isMutedNick(l.nick)) {
+    return;
+  }
+  if (l.kind === 'nick') {
+    setKey(MUTED_NICKS_SETTING, l.nick.toLowerCase(), false);
+    setKey(MUTED_NICKS_SETTING, l.text.toLowerCase(), true);
+    return;
+  }
+  if (CHAT_KINDS.has(l.kind) && !l.own && mentions(l.text, myWords(l.net))) {
+    setNickMuted(l.nick, false);
+    localNote(t('{nick} highlighted you and is no longer muted', { nick: l.nick }));
+  }
+}
+
 function onLine(l) {
   if (l.kind === 'info' && Date.now() - lastCommandAt < COMMAND_ANSWER_MS && view) {
     const pinned = atBottom();
@@ -797,6 +813,8 @@ function onLine(l) {
   if (l.id) {
     b.ids.add(l.id);
   }
+  // Before the line is kept, so a highlight that unmutes is drawn once, as a new line.
+  followMute(l);
   b.lines.push(l);
   if (b.lines.length > MAX_LINES) {
     const gone = b.lines.shift();
@@ -902,9 +920,29 @@ function isIgnored(nick) {
   return keySet(BLOCKED_SETTING).has((nick || '').toLowerCase());
 }
 
+// Muted nicks, lower-case: kept in this app only, nothing goes to IRC. Hidden like ignored ones
+// until they highlight me, which unmutes them.
+const MUTED_NICKS_SETTING = 'mutedNicks';
+
+function isMutedNick(nick) {
+  return keySet(MUTED_NICKS_SETTING).has((nick || '').toLowerCase());
+}
+
+function setNickMuted(nick, on) {
+  setKey(MUTED_NICKS_SETTING, nick.toLowerCase(), on);
+  closePeopleMenu();
+  nicklist.picked.clear();
+  refilter();
+  renderNicklist();
+}
+
 /** Left out of the chat, highlights, shelf, counts and notifications. */
 function isMuffled(l) {
-  return isIgnored(l.nick) || (!l.own && CHAT_KINDS.has(l.kind) && mentions(l.text, wordList(state.settings[FILTER_WORDS_SETTING])));
+  return (
+    isIgnored(l.nick) ||
+    isMutedNick(l.nick) ||
+    (!l.own && CHAT_KINDS.has(l.kind) && mentions(l.text, wordList(state.settings[FILTER_WORDS_SETTING])))
+  );
 }
 
 /** Text as it is shown, never as it is sent. */
@@ -2922,6 +2960,7 @@ function lineChoices(line) {
     if (BRAND.reportMessages) {
       choices.push([t('Report message'), openReport, ICONS.flag]);
     }
+    choices.push([t('Mute {name}', { name: line.nick }), (l) => setNickMuted(l.nick, true), EYE_OFF]);
     choices.push([t('Ignore {nick}', { nick: line.nick }), (l) => ignore(l.nick), ICONS.ignore]);
   }
   return choices;
@@ -3228,7 +3267,7 @@ function renderPill() {
   }
   const spokeAt = spokeIn(b.net);
   const now = Date.now();
-  const talking = byActivity(b.members, spokeAt).filter((n) => now - spokeAt(n) < TALKING_MS);
+  const talking = byActivity(b.members, spokeAt).filter((n) => now - spokeAt(n) < TALKING_MS && !isMutedNick(n));
   const faces = h('span', 'pill-faces');
   faces.append(...talking.slice(0, PILL_FACES).map((n) => avatar(n, '')));
   el.pill.replaceChildren(talking.length ? faces : svg(PEOPLE_ICON));
@@ -3310,7 +3349,7 @@ function renderNicklist() {
   if (nicklist.tab === 'today') {
     scroll.append(...todayRanking(b));
   } else {
-    for (const g of peopleGroups([...b.members], b.modes, spokeIn(b.net), now, midnight)) {
+    for (const g of peopleGroups([...b.members], b.modes, spokeIn(b.net), now, midnight, isMutedNick)) {
       const head = h('div', 'nl-head', `${g.title} · ${g.people.length}`);
       if (g.id === 'now') {
         head.prepend(h('span', 'live'));
@@ -3332,6 +3371,7 @@ function renderNicklist() {
 }
 
 const HOVER = matchMedia('(hover: hover)');
+const MUTED_FADE = 0.35;
 
 function personRow(b, p, now) {
   const picked = nicklist.picked.has(p.nick);
@@ -3339,7 +3379,7 @@ function personRow(b, p, now) {
   const row = h('button', `nl-row${picked ? ' picked' : ''}`);
   row.type = 'button';
   row.setAttribute('aria-pressed', String(picked));
-  row.style.setProperty('--fade', fadeFor(p.ts, now));
+  row.style.setProperty('--fade', isMutedNick(p.nick) ? MUTED_FADE : fadeFor(p.ts, now));
   const face = h('span', 'nl-face');
   const check = h('span', 'nl-check');
   check.append(svg(ICONS.check));
@@ -3459,6 +3499,8 @@ function pickedBar(b) {
       [t('Edit'), () => editListed(b, picked[0])],
     ];
     if (picked[0] !== state.me[b.net]) {
+      const muted = isMutedNick(picked[0]);
+      choices.push([muted ? t('Unmute') : t('Mute'), () => setNickMuted(picked[0], !muted)]);
       choices.push([isIgnored(picked[0]) ? t('Unignore') : t('Ignore'), () => toggleIgnore(picked[0])]);
     }
     for (const [label, run] of choices) {
@@ -3507,6 +3549,8 @@ function peopleMenu(nick, x, y, row) {
     item(t('Message'), () => message(b, nick));
     item(t('Edit person'), () => editListed(b, nick));
     if (nick !== state.me[b.net]) {
+      const muted = isMutedNick(nick);
+      item(muted ? t('Unmute {name}', { name: nick }) : t('Mute {name}', { name: nick }), () => setNickMuted(nick, !muted));
       item(isIgnored(nick) ? t('Unignore {nick}', { nick }) : t('Ignore {nick}', { nick }), () => toggleIgnore(nick));
     }
   }
@@ -8452,7 +8496,7 @@ function dayStart(daysBack = 0) {
 async function talkers(b, since, until) {
   const bots = botNicks(state.settings[BOTS_SETTING]);
   const list = await invoke('talkers', { net: b.net, buffer: b.name, since, until }).catch(() => null);
-  return list?.filter((t) => !bots.has(t.nick.toLowerCase()) && !isIgnored(t.nick)) ?? null;
+  return list?.filter((t) => !bots.has(t.nick.toLowerCase()) && !isIgnored(t.nick) && !isMutedNick(t.nick)) ?? null;
 }
 
 async function addRecap(b) {
