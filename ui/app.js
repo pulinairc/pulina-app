@@ -96,6 +96,14 @@ const CAMERA_ICON =
   '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
 // A "nick: text" line shows the nick's previous message as a quote when it is this recent.
 const REPLY_WINDOW_MS = 30 * 60 * 1000;
+// How a reply shows: 'quote' bubble only, 'both' bubble and nick, 'nick' only.
+const REPLY_STYLE_SETTING = 'replyStyle';
+const REPLY_STYLES = ['quote', 'both', 'nick'];
+
+function replyStyle() {
+  const style = state.settings[REPLY_STYLE_SETTING];
+  return REPLY_STYLES.includes(style) ? style : 'quote';
+}
 const QUOTE_CHARS = 120;
 const READ_SETTING = 'read';
 const READ_SAVE_DELAY_MS = 1500;
@@ -181,6 +189,7 @@ const el = {
   notifyGuideGo: $('notify-guide-go'),
   notifyGuideLater: $('notify-guide-later'),
   emoticonToggle: $('emoticon-toggle'),
+  replyStyle: $('reply-style'),
   botsField: $('bots-field'),
   highlightField: $('highlight-field'),
   channelAlerts: $('channel-alerts'),
@@ -1483,6 +1492,9 @@ function renderSettings() {
   el.notifyToggle.checked = notifyOn();
   renderNotifyState();
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
+  for (const r of el.replyStyle.querySelectorAll('input')) {
+    r.checked = r.value === replyStyle();
+  }
   // Both lists read the same way, separated by commas, however they were typed.
   el.botsField.value = commaList(state.settings[BOTS_SETTING]);
   el.highlightField.value = commaList(state.settings[HIGHLIGHT_WORDS_SETTING]);
@@ -2218,13 +2230,15 @@ function row(l) {
   const quoted = (l.own && replyHints.get(l.text)) || (addr && view.lastByNick.get(addr.nick.toLowerCase()));
   const me = state.me[l.net];
   if (addr && quoted && quoted.line !== l && l.ts - quoted.line.ts < REPLY_WINDOW_MS) {
-    r.append(quoteNode(quoted));
+    const style = replyStyle();
+    if (style !== 'nick') {
+      r.append(quoteNode(quoted));
+    }
     text = addr.rest;
-    // Taking "nick:" off the front must not hide who the line was for, least of all you.
-    if (me && addr.nick.toLowerCase() === me.toLowerCase()) {
-      r.append(h('span', 'mention', me), ' ');
-    } else {
-      r.append(nickRef(l.net, { value: addr.nick, nick: addr.nick }), ' ');
+    // The bubble already names who the line was for; without it the nick stays in front.
+    if (style !== 'quote') {
+      const forMe = me && addr.nick.toLowerCase() === me.toLowerCase();
+      r.append(forMe ? h('span', 'mention', me) : nickRef(l.net, { value: addr.nick, nick: addr.nick }), ' ');
     }
   }
   replyHints.delete(l.text);
@@ -5747,6 +5761,9 @@ async function start() {
     if (e.payload.key === HIGHLIGHTS_SETTING) {
       renderInbox();
     }
+    if (e.payload.key === REPLY_STYLE_SETTING) {
+      renderLog();
+    }
     if ([BLOCKED_SETTING, FILTER_WORDS_SETTING, MASK_SETTING].includes(e.payload.key)) {
       el.filterField.value = commaList(state.settings[FILTER_WORDS_SETTING]);
       el.maskToggle.checked = state.settings[MASK_SETTING] === 'on';
@@ -7643,6 +7660,10 @@ el.notifyToggle.addEventListener('change', () => {
 });
 
 el.emoticonToggle.addEventListener('change', () => saveSetting(EMOTICON_SETTING, el.emoticonToggle.checked ? 'on' : 'off'));
+el.replyStyle.addEventListener('change', (e) => {
+  saveSetting(REPLY_STYLE_SETTING, e.target.value);
+  renderLog();
+});
 el.shortcodeToggle.addEventListener('change', () => saveSetting(SHORTCODE_SETTING, el.shortcodeToggle.checked ? 'on' : 'off'));
 
 // Attachments: files go to the file host set in Settings, and their address into the message.
