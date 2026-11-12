@@ -412,6 +412,8 @@ export const COMMANDS = [
   { name: 'deop', args: 'nick', desc: 'Take operator status' },
   { name: 'voice', args: 'nick', desc: 'Give voice' },
   { name: 'devoice', args: 'nick', desc: 'Take voice' },
+  { name: 'ignore', args: 'nick', desc: 'Hide what someone says', local: true },
+  { name: 'unignore', args: 'nick', desc: 'Show someone again', local: true },
   { name: 'mute', args: '', desc: 'Mute this channel', local: true },
   { name: 'unmute', args: '', desc: 'Unmute this channel', local: true },
   { name: 'say', args: 'text', desc: 'Send text as is, even starting with /' },

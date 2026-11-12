@@ -1,3 +1,9 @@
+### 1.15.1: 2026-11-12
+
+* Change Block to Ignore, with /ignore and /unignore
+* Remove Report message where no admins take reports
+* Change the phone's long-press to Reply, then ⋮
+
 ### 1.15.0: 2026-11-12
 
 * Add a stand-in nick when the nick is taken

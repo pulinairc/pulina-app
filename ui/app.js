@@ -857,19 +857,19 @@ const NOTIFY_ALL_SETTING = 'notifyAll';
 const NOTIFY_NICKS_SETTING = 'notifyNicks';
 const NOTIFY_WORDS_SETTING = 'notifyWords';
 
-// Blocked nicks, lower-case: their lines are left out everywhere. Filter words hide whole messages.
+// Ignored nicks, lower-case, as irssi's /ignore: their lines are left out everywhere. Filter words hide whole messages.
 const BLOCKED_SETTING = 'blocked';
 const FILTER_WORDS_SETTING = 'filterWords';
 // Offensive words show as •••, off unless turned on.
 const MASK_SETTING = 'maskOffensive';
 
-function isBlocked(nick) {
+function isIgnored(nick) {
   return keySet(BLOCKED_SETTING).has((nick || '').toLowerCase());
 }
 
 /** Left out of the chat, highlights, shelf, counts and notifications. */
 function isMuffled(l) {
-  return isBlocked(l.nick) || (!l.own && CHAT_KINDS.has(l.kind) && mentions(l.text, wordList(state.settings[FILTER_WORDS_SETTING])));
+  return isIgnored(l.nick) || (!l.own && CHAT_KINDS.has(l.kind) && mentions(l.text, wordList(state.settings[FILTER_WORDS_SETTING])));
 }
 
 /** Text as it is shown, never as it is sent. */
@@ -877,12 +877,12 @@ function shownText(text) {
   return state.settings[MASK_SETTING] === 'on' ? maskWords(text, OFFENSIVE_WORDS) : text;
 }
 
-function block(nick) {
+function ignore(nick) {
   setKey(BLOCKED_SETTING, nick.toLowerCase(), true);
   refilter();
 }
 
-function unblock(nick) {
+function unignore(nick) {
   setKey(BLOCKED_SETTING, nick.toLowerCase(), false);
   refilter();
 }
@@ -903,7 +903,7 @@ function refilter() {
     renderShelf();
   }
   if (el.settings.open) {
-    renderBlocked();
+    renderIgnored();
   }
 }
 
@@ -1503,7 +1503,7 @@ function renderSettings() {
   el.shortcodeToggle.checked = settingOn(SHORTCODE_SETTING);
   el.maskToggle.checked = state.settings[MASK_SETTING] === 'on';
   el.filterField.value = commaList(state.settings[FILTER_WORDS_SETTING]);
-  renderBlocked();
+  renderIgnored();
   renderAboutReport();
   renderLangChoices();
   renderIconChoices();
@@ -1525,17 +1525,17 @@ function renderSettings() {
   el.configPath.textContent = state.configPath;
 }
 
-function renderBlocked() {
+function renderIgnored() {
   const rows = [...keySet(BLOCKED_SETTING)].sort().map((nick) => {
     const row = h('div', 'conn');
-    const undo = h('button', 'link-btn', t('Unblock'));
+    const undo = h('button', 'link-btn', t('Unignore'));
     undo.type = 'button';
-    undo.setAttribute('aria-label', t('Unblock {nick}', { nick }));
-    undo.addEventListener('click', () => unblock(nick));
+    undo.setAttribute('aria-label', t('Unignore {nick}', { nick }));
+    undo.addEventListener('click', () => unignore(nick));
     row.append(h('span', '', nick), undo);
     return row;
   });
-  el.blockedList.replaceChildren(...(rows.length ? rows : [h('p', 'hint', t('Nobody is blocked.'))]));
+  el.blockedList.replaceChildren(...(rows.length ? rows : [h('p', 'hint', t('Nobody is ignored.'))]));
 }
 
 /** Settings > About: "Report a problem: address", the address a mail link. */
@@ -2599,7 +2599,7 @@ function openReport(line) {
   el.reportQuote.replaceChildren(name, h('span', 'quote-text', shownText(stripFormatting(line.text))));
   el.reportNote.value = '';
   el.reportBlock.checked = true;
-  el.reportBlockLabel.textContent = t('Block {nick} too', { nick: line.nick });
+  el.reportBlockLabel.textContent = t('Ignore {nick} too', { nick: line.nick });
   el.reportTo.textContent = t('Send opens your mail app with the report to {email}.', { email: BRAND.reportEmail });
   el.report.showModal();
 }
@@ -2610,7 +2610,7 @@ el.reportSend.addEventListener('click', () => {
   el.report.close();
   openUrl(reportMail(BRAND.reportEmail, line, el.reportNote.value)).catch((e) => renderStatus(String(e)));
   if (el.reportBlock.checked) {
-    block(line.nick);
+    ignore(line.nick);
   }
 });
 
@@ -2630,10 +2630,6 @@ const ICONS = {
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
   moreH:
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
-  flag: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>',
-  block:
-    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></svg>',
-  copy: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2.5"/><path d="M15 9V5.5A2.5 2.5 0 0 0 12.5 3h-7A2.5 2.5 0 0 0 3 5.5v7A2.5 2.5 0 0 0 5.5 15H9"/></svg>',
   dock: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/><path class="pane" d="M15 4h3a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-3z" fill="currentColor" stroke="none"/></svg>',
   close:
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
@@ -2733,19 +2729,26 @@ function moreMenu() {
     });
     return b;
   };
-  menu.append(
-    item(t('Reply'), startReply),
-    item(t('Copy text'), (line) => navigator.clipboard?.writeText(stripFormatting(line.text))),
-    item(t('Edit person'), (line) => openPerson(line.nick, line.mask)),
-  );
   const shown = hoveredLine();
-  if (shown && !isMine(shown)) {
-    menu.append(
-      item(t('Report message'), openReport),
-      item(t('Block {nick}', { nick: shown.nick }), (line) => block(line.nick)),
-    );
-  }
+  menu.append(...(shown ? lineChoices(shown) : []).map(([label, run]) => item(label, run)));
   return menu;
+}
+
+/** What the ⋮ menu offers for a line, the same on desktop and in the phone's long-press sheet. */
+function lineChoices(line) {
+  const choices = [
+    [t('Reply'), startReply],
+    [t('Copy text'), (l) => navigator.clipboard?.writeText(stripFormatting(l.text))],
+    [t('Edit person'), (l) => openPerson(l.nick, l.mask)],
+  ];
+  if (!isMine(line)) {
+    // Only a fork with its own admins takes reports; plain IRC has nobody to send them to.
+    if (BRAND.reportMessages) {
+      choices.push([t('Report message'), openReport]);
+    }
+    choices.push([t('Ignore {nick}', { nick: line.nick }), (l) => ignore(l.nick)]);
+  }
+  return choices;
 }
 
 function fillActions() {
@@ -2863,14 +2866,32 @@ function openSheet(row) {
     b.addEventListener('click', pick(run));
     pill.append(b);
   };
-  tool(t('Reply'), ICONS.reply, () => startReply(line));
-  // Text cannot be selected on touch, so the sheet copies it.
-  tool(t('Copy'), ICONS.copy, () => navigator.clipboard?.writeText(stripFormatting(line.text)));
   tool(t('More emojis'), ICONS.moreH, () => openPicker(row, (e) => react(line, e)));
-  if (!isMine(line)) {
-    tool(t('Report message'), ICONS.flag, () => openReport(line));
-    tool(t('Block {nick}', { nick: line.nick }), ICONS.block, () => block(line.nick));
-  }
+  tool(t('Reply'), ICONS.reply, () => startReply(line));
+  // The rest, Copy among them since text cannot be selected on touch, as in desktop's ⋮ menu.
+  const more = h('button', 'sheet-tool');
+  more.type = 'button';
+  more.setAttribute('aria-label', t('More'));
+  more.append(svg(ICONS.moreV));
+  more.addEventListener('click', () => {
+    const open = pill.querySelector('.more-menu');
+    if (open) {
+      open.remove();
+      return;
+    }
+    const menu = h('div', 'glass more-menu');
+    for (const [label, run] of lineChoices(line)) {
+      const b = h('button', 'menu-item', label);
+      b.type = 'button';
+      b.addEventListener(
+        'click',
+        pick(() => run(line)),
+      );
+      menu.append(b);
+    }
+    pill.append(menu);
+  });
+  pill.append(more);
   dim.addEventListener('click', closeSheet);
   sheet.addEventListener('pointerdown', (e) => e.stopPropagation());
   sheet.addEventListener('touchmove', (e) => e.target === dim && e.preventDefault(), { passive: false });
@@ -3172,8 +3193,8 @@ function personRow(b, p, now) {
     personTip(row, b.net, p.nick);
     row.dataset.noSpoke = '1';
   }
-  const quiet = isBlocked(p.nick) ? t('Blocked') : quietFor(p.ts, now);
-  row.classList.toggle('blocked', isBlocked(p.nick));
+  const quiet = isIgnored(p.nick) ? t('Ignored') : quietFor(p.ts, now);
+  row.classList.toggle('blocked', isIgnored(p.nick));
   if (quiet) {
     row.append(h('span', 'nl-ago', quiet));
   }
@@ -3218,13 +3239,13 @@ function sendModes(b, act, word) {
   renderNicklist();
 }
 
-function toggleBlock(nick) {
+function toggleIgnore(nick) {
   closePeopleMenu();
   nicklist.picked.clear();
-  if (isBlocked(nick)) {
-    unblock(nick);
+  if (isIgnored(nick)) {
+    unignore(nick);
   } else {
-    block(nick);
+    ignore(nick);
   }
 }
 
@@ -3279,7 +3300,7 @@ function pickedBar(b) {
       [t('Edit'), () => editListed(b, picked[0])],
     ];
     if (picked[0] !== state.me[b.net]) {
-      choices.push([isBlocked(picked[0]) ? t('Unblock') : t('Block'), () => toggleBlock(picked[0])]);
+      choices.push([isIgnored(picked[0]) ? t('Unignore') : t('Ignore'), () => toggleIgnore(picked[0])]);
     }
     for (const [label, run] of choices) {
       const btn = h('button', 'nl-act plain', label);
@@ -3323,7 +3344,7 @@ function peopleMenu(nick, x, y) {
     item(t('Message'), () => message(b, nick));
     item(t('Edit person'), () => editListed(b, nick));
     if (nick !== state.me[b.net]) {
-      item(isBlocked(nick) ? t('Unblock {nick}', { nick }) : t('Block {nick}', { nick }), () => toggleBlock(nick));
+      item(isIgnored(nick) ? t('Unignore {nick}', { nick }) : t('Ignore {nick}', { nick }), () => toggleIgnore(nick));
     }
   }
   if (nicklist.picked.size) {
@@ -3768,6 +3789,24 @@ async function runLocal(b, text) {
       }
       select(buffer(b.net, rest.split(' ')[0]).key);
       return true;
+    // As irssi: /ignore lists, /ignore nick hides the nick, /unignore nick shows it again.
+    case 'ignore':
+    case 'unignore': {
+      const nick = rest.split(' ')[0];
+      if (!nick) {
+        const list = [...keySet(BLOCKED_SETTING)].sort();
+        localNote(list.length ? t('Ignored: {nicks}', { nicks: list.join(', ') }) : t('Nobody is ignored.'));
+        return true;
+      }
+      const on = cmd.toLowerCase() === 'ignore';
+      if (on) {
+        ignore(nick);
+      } else {
+        unignore(nick);
+      }
+      localNote(on ? t('{nick} ignored', { nick }) : t('{nick} no longer ignored', { nick }));
+      return true;
+    }
     case 'names':
       localNote(t('{n} people: {names}', { n: b.members.size, names: [...b.members].sort((x, y) => x.localeCompare(y)).join(', ') }));
       return true;
@@ -8150,7 +8189,7 @@ function dayStart(daysBack = 0) {
 async function talkers(b, since, until) {
   const bots = botNicks(state.settings[BOTS_SETTING]);
   const list = await invoke('talkers', { net: b.net, buffer: b.name, since, until }).catch(() => null);
-  return list?.filter((t) => !bots.has(t.nick.toLowerCase()) && !isBlocked(t.nick)) ?? null;
+  return list?.filter((t) => !bots.has(t.nick.toLowerCase()) && !isIgnored(t.nick)) ?? null;
 }
 
 async function addRecap(b) {
