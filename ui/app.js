@@ -81,6 +81,7 @@ const EMOTICON_SETTING = 'emoticons';
 // Tab completes nicks either way; these only choose when the list opens by itself.
 const NICK_MENU_SETTINGS = { at: 'nick_menu_at', word: 'nick_menu_word' };
 const HOVER_CARD_SETTING = 'hover_cards';
+const HOVER_CARD_WAIT_SETTING = 'hover_card_wait';
 const BOTS_SETTING = 'bots';
 const HIGHLIGHT_WORDS_SETTING = 'highlightWords';
 /** A bot's answer joins the command it follows only this soon after it. */
@@ -1529,6 +1530,8 @@ function renderSettings() {
   $('nick-at-toggle').checked = settingOn(NICK_MENU_SETTINGS.at);
   $('nick-word-toggle').checked = settingOn(NICK_MENU_SETTINGS.word);
   $('hover-card-toggle').checked = settingOn(HOVER_CARD_SETTING);
+  $('hover-wait-toggle').checked = settingOn(HOVER_CARD_WAIT_SETTING);
+  $('hover-wait-toggle').disabled = !settingOn(HOVER_CARD_SETTING);
   for (const r of el.replyStyle.querySelectorAll('input')) {
     r.checked = r.value === replyStyle();
   }
@@ -6174,11 +6177,13 @@ const CARD_REST_MS = 400;
 let cardTimer = 0;
 let cardPinned = false;
 
-function showTip(target, x, { fresh = false } = {}) {
+function showTip(target, x, { fresh = false, ask = true } = {}) {
   tipX = x;
   if (target !== tipFor || fresh) {
     if (target.dataset.person) {
-      askWhois(target);
+      if (ask) {
+        askWhois(target);
+      }
       const card = personCard(target.dataset.net, target.dataset.nick, { spoke: !target.dataset.noSpoke });
       tip.style.setProperty('--tint', card.style.getPropertyValue('--tint'));
       tip.replaceChildren(card);
@@ -6223,6 +6228,11 @@ document.addEventListener('pointermove', (e) => {
     return;
   }
   const target = e.target.closest?.('[data-tip], [data-person]');
+  // Still on the same thing: its card and a WHOIS on the way are left as they are.
+  if (target && target === tipFor) {
+    showTip(target, e.clientX);
+    return;
+  }
   clearTimeout(cardTimer);
   if (!target) {
     if (!tip.hidden) {
@@ -6230,16 +6240,23 @@ document.addEventListener('pointermove', (e) => {
     }
     return;
   }
-  if (!target.dataset.person || target === tipFor) {
+  if (!target.dataset.person) {
     showTip(target, e.clientX);
     return;
   }
   if (!tip.hidden) {
     hideTip();
   }
-  if (settingOn(HOVER_CARD_SETTING)) {
-    cardTimer = setTimeout(() => showTip(target, e.clientX), CARD_REST_MS);
+  if (!settingOn(HOVER_CARD_SETTING)) {
+    return;
   }
+  if (settingOn(HOVER_CARD_WAIT_SETTING)) {
+    cardTimer = setTimeout(() => showTip(target, e.clientX), CARD_REST_MS);
+    return;
+  }
+  // Right away: the card shows at once, the WHOIS still waits for the pointer to rest.
+  showTip(target, e.clientX, { ask: false });
+  cardTimer = setTimeout(() => askWhois(target), CARD_REST_MS);
 });
 document.addEventListener('pointerdown', hideTip);
 
@@ -8022,9 +8039,13 @@ for (const [id, key] of [
   ['nick-at-toggle', NICK_MENU_SETTINGS.at],
   ['nick-word-toggle', NICK_MENU_SETTINGS.word],
   ['hover-card-toggle', HOVER_CARD_SETTING],
+  ['hover-wait-toggle', HOVER_CARD_WAIT_SETTING],
 ]) {
   $(id).addEventListener('change', (e) => saveSetting(key, e.target.checked ? 'on' : 'off'));
 }
+$('hover-card-toggle').addEventListener('change', (e) => {
+  $('hover-wait-toggle').disabled = !e.target.checked;
+});
 el.replyStyle.addEventListener('change', (e) => {
   saveSetting(REPLY_STYLE_SETTING, e.target.value);
   renderLog();
