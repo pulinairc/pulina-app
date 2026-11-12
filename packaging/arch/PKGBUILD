@@ -12,6 +12,7 @@ depends=(webkit2gtk-4.1 gtk3)
 source=(app.deb)
 noextract=(app.deb)
 sha256sums=(SKIP)
+options=(!debug)
 
 package() {
   bsdtar -xOf app.deb 'data.tar*' | bsdtar -xf - -C "$pkgdir"
