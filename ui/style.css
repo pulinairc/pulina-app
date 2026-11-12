@@ -3304,7 +3304,8 @@ body.docked #update-bar {
   transition: opacity 300ms ease 120ms;
 }
 .sheet-lift,
-.sheet-pill {
+.sheet-pill,
+.sheet-menu {
   position: absolute;
   transform: translateY(0);
   transition:
@@ -3312,7 +3313,8 @@ body.docked #update-bar {
     opacity 170ms cubic-bezier(0.4, 0, 1, 1);
 }
 .sheet.lifted .sheet-lift,
-.sheet.lifted .sheet-pill {
+.sheet.lifted .sheet-pill,
+.sheet.lifted .sheet-menu {
   transform: translateY(var(--rise));
 }
 /* A solid pane in the dim's own colour, so the real message under it does not show through. */
@@ -3390,9 +3392,52 @@ body.docked #update-bar {
 .sheet-tool:active {
   background: rgb(255 255 255 / 10%);
 }
+/* All emojis: a round button at the end of the reactions, as in Signal. */
+.sheet-all {
+  width: 40px;
+  height: 40px;
+  margin-left: 4px;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 8%);
+}
+/* Everything else, under the message. */
+.sheet-menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 220px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border-radius: 18px;
+  box-sizing: border-box;
+  animation: sheet-rise 340ms cubic-bezier(0.16, 0.86, 0.26, 1) 200ms both;
+}
+.sheet-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--strong);
+  font: inherit;
+  font-size: 17px;
+  text-align: left;
+}
+.sheet-item svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  color: var(--dim);
+}
+.sheet-item:active {
+  background: rgb(255 255 255 / 10%);
+}
 /* The way out: the message and the reactions leave first, the dim follows. */
 .sheet.closing .sheet-lift,
-.sheet.closing .sheet-pill {
+.sheet.closing .sheet-pill,
+.sheet.closing .sheet-menu {
   opacity: 0;
   transform: translateY(0);
 }
@@ -3414,10 +3459,12 @@ body.docked #update-bar {
   .text.pressed,
   .text.released,
   .sheet-lift,
-  .sheet-pill {
+  .sheet-pill,
+  .sheet-menu {
     transition: none;
   }
   .sheet-dim,
+  .sheet-menu,
   .sheet-pill > * {
     animation: none;
   }

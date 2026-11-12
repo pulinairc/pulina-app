@@ -2800,6 +2800,12 @@ const ICONS = {
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>',
   moreH:
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>',
+  copy: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></svg>',
+  person:
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 20c1-4 4-6 8-6s7 2 8 6"/></svg>',
+  flag: '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/></svg>',
+  ignore:
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></svg>',
   dock: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M15 4v16"/><path class="pane" d="M15 4h3a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3h-3z" fill="currentColor" stroke="none"/></svg>',
   close:
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>',
@@ -2907,16 +2913,16 @@ function moreMenu() {
 /** What the ⋮ menu offers for a line, the same on desktop and in the phone's long-press sheet. */
 function lineChoices(line) {
   const choices = [
-    [t('Reply'), startReply],
-    [t('Copy text'), (l) => navigator.clipboard?.writeText(stripFormatting(l.text))],
-    [t('Edit person'), (l) => openPerson(l.nick, l.mask)],
+    [t('Reply'), startReply, ICONS.reply],
+    [t('Copy text'), (l) => navigator.clipboard?.writeText(stripFormatting(l.text)), ICONS.copy],
+    [t('Edit person'), (l) => openPerson(l.nick, l.mask), ICONS.person],
   ];
   if (!isMine(line)) {
     // Only a fork with its own admins takes reports; plain IRC has nobody to send them to.
     if (BRAND.reportMessages) {
-      choices.push([t('Report message'), openReport]);
+      choices.push([t('Report message'), openReport, ICONS.flag]);
     }
-    choices.push([t('Ignore {nick}', { nick: line.nick }), (l) => ignore(l.nick)]);
+    choices.push([t('Ignore {nick}', { nick: line.nick }), (l) => ignore(l.nick), ICONS.ignore]);
   }
   return choices;
 }
@@ -3013,6 +3019,7 @@ function openSheet(row) {
   copy.querySelector('.actions')?.remove();
   copy.classList.remove('pressed');
   lifted.append(copy);
+  // As in Signal: the reactions above the message, everything else in a menu under it.
   const pill = h('div', 'glass sheet-pill');
   const pick = (run) => () => {
     closeSheet();
@@ -3028,72 +3035,54 @@ function openSheet(row) {
     );
     pill.append(b);
   }
-  const tool = (label, icon, run) => {
-    const b = h('button', 'sheet-tool');
+  const all = h('button', 'sheet-tool sheet-all');
+  all.type = 'button';
+  all.setAttribute('aria-label', t('More emojis'));
+  all.append(svg(ICONS.moreH));
+  all.addEventListener(
+    'click',
+    pick(() => openPicker(row, (e) => react(line, e))),
+  );
+  pill.append(all);
+  const menu = h('div', 'glass sheet-menu');
+  for (const [label, run, icon] of lineChoices(line)) {
+    const b = h('button', 'sheet-item');
     b.type = 'button';
-    b.setAttribute('aria-label', label);
-    b.append(svg(icon));
-    b.addEventListener('click', pick(run));
-    pill.append(b);
-  };
-  tool(t('More emojis'), ICONS.moreH, () => openPicker(row, (e) => react(line, e)));
-  tool(t('Reply'), ICONS.reply, () => startReply(line));
-  // The rest, Copy among them since text cannot be selected on touch, as in desktop's ⋮ menu.
-  const more = h('button', 'sheet-tool');
-  more.type = 'button';
-  more.setAttribute('aria-label', t('More'));
-  more.append(svg(ICONS.moreV));
-  more.addEventListener('click', () => {
-    const open = pill.querySelector('.more-menu');
-    if (open) {
-      open.remove();
-      return;
-    }
-    const menu = h('div', 'glass more-menu');
-    for (const [label, run] of lineChoices(line)) {
-      const b = h('button', 'menu-item', label);
-      b.type = 'button';
-      b.addEventListener(
-        'click',
-        pick(() => run(line)),
-      );
-      menu.append(b);
-    }
-    pill.append(menu);
-  });
-  pill.append(more);
+    b.append(svg(icon), h('span', null, label));
+    b.addEventListener(
+      'click',
+      pick(() => run(line)),
+    );
+    menu.append(b);
+  }
   dim.addEventListener('click', closeSheet);
   sheet.addEventListener('pointerdown', (e) => e.stopPropagation());
   sheet.addEventListener('touchmove', (e) => e.target === dim && e.preventDefault(), { passive: false });
-  sheet.append(dim, lifted, pill);
+  sheet.append(dim, lifted, pill, menu);
   document.body.append(sheet);
   press.sheet = sheet;
 
   // Measured against the page, which the keyboard shortens; `k` turns measured pixels into
   // style pixels when the window is zoomed for text size. The message rises toward the middle,
-  // never down, keeps room for the reactions above it, and scrolls inside when too tall.
+  // keeps room for the reactions above it and the menu under it, and scrolls inside when too tall.
   const k = sheet.getBoundingClientRect().width / sheet.offsetWidth || 1;
   const page = document.body.getBoundingClientRect();
   const r = row.getBoundingClientRect();
   const above = (SHEET_PILL_PX + PICKER_GAP + SHEET_MARGIN_PX) * k;
-  const room = Math.max(96 * k, page.height - above - SHEET_MARGIN_PX * k);
+  const below = menu.getBoundingClientRect().height + (PICKER_GAP + SHEET_MARGIN_PX) * k;
+  const room = Math.max(48 * k, page.height - above - below);
   const height = Math.min(r.height, room);
-  let dy = Math.min(0, page.top + (page.height - height) / 2 - r.top);
-  if (r.top + dy < page.top + above) {
-    dy = page.top + above - r.top;
-  }
-  const over = r.top + height + dy + SHEET_MARGIN_PX * k - page.bottom;
-  if (over > 0) {
-    dy = Math.max(page.top + above - r.top, dy - over);
-  }
+  let dy = page.top + above + (room - height) / 2 - r.top;
+  dy = Math.min(dy, page.bottom - below - height - r.top);
+  dy = Math.max(dy, page.top + above - r.top);
   Object.assign(lifted.style, { left: `${r.left / k}px`, top: `${r.top / k}px`, width: `${r.width / k}px` });
   if (height < r.height) {
     lifted.style.height = `${height / k}px`;
     lifted.classList.add('scrolls');
   }
-  const pillWidth = pill.offsetWidth;
-  const left = Math.max(SHEET_MARGIN_PX, Math.min(r.left / k, page.width / k - pillWidth - SHEET_MARGIN_PX));
-  Object.assign(pill.style, { left: `${left}px`, top: `${(r.top - (SHEET_PILL_PX + PICKER_GAP) * k) / k}px` });
+  const leftOf = (w) => Math.max(SHEET_MARGIN_PX, Math.min(r.left / k, page.width / k - w - SHEET_MARGIN_PX));
+  Object.assign(pill.style, { left: `${leftOf(pill.offsetWidth)}px`, top: `${(r.top - (SHEET_PILL_PX + PICKER_GAP) * k) / k}px` });
+  Object.assign(menu.style, { left: `${leftOf(menu.offsetWidth)}px`, top: `${(r.top + height + PICKER_GAP * k) / k}px` });
   sheet.style.setProperty('--rise', `${dy / k}px`);
   requestAnimationFrame(() => sheet.classList.add('lifted'));
 }
@@ -4387,6 +4376,21 @@ Object.defineProperty(el.input, 'value', {
   },
 });
 
+// A phone's Return can arrive while a predicted word is still being written (iOS shows it inline),
+// so keydown lets it through as composing; the line break it then asks for sends instead.
+let lineBreakAsked = false;
+el.input.addEventListener('beforeinput', (e) => {
+  if (e.inputType !== 'insertLineBreak' && e.inputType !== 'insertParagraph') {
+    return;
+  }
+  if (lineBreakAsked) {
+    lineBreakAsked = false;
+    return;
+  }
+  e.preventDefault();
+  el.form.requestSubmit();
+});
+
 el.input.addEventListener('keydown', (e) => {
   if (slashItems.length) {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -4413,6 +4417,7 @@ el.input.addEventListener('keydown', (e) => {
     return;
   }
   // Enter sends, Shift+Enter starts a new line (sent as its own IRC line).
+  lineBreakAsked = e.key === 'Enter' && e.shiftKey;
   if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
     e.preventDefault();
     el.form.requestSubmit();
