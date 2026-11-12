@@ -1,3 +1,7 @@
+### 1.19.0: 2026-11-12
+
+* Add Mute for people, lifted when they highlight you
+
 ### 1.18.7: 2026-11-12
 
 * Fix the start light widening below the lamp

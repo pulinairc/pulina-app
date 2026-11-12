@@ -938,20 +938,22 @@ export function byActivity(nicks, spokeAt) {
 }
 
 /**
- * The list's groups: Ops, Talking now, Earlier today, Away. Empty groups are left out.
+ * The list's groups: Ops, Talking now, Earlier today, Away, Muted. Empty groups are left out.
  * `modes` maps nick to name prefixes, `spokeAt` gives a nick's last message time, `dayStart` is local midnight.
  */
-export function peopleGroups(nicks, modes, spokeAt, now, dayStart) {
-  const people = byActivity(nicks, spokeAt).map((nick) => {
+export function peopleGroups(nicks, modes, spokeAt, now, dayStart, isMuted = () => false) {
+  const all = byActivity(nicks, spokeAt).map((nick) => {
     const held = modes.get(nick) || '';
     return { nick, held, role: roleOf(held), ts: spokeAt(nick) || 0 };
   });
+  const people = all.filter((p) => !isMuted(p.nick));
   const rest = people.filter((p) => p.role !== 'op');
   return [
     { id: 'ops', title: t('Ops'), people: people.filter((p) => p.role === 'op') },
     { id: 'now', title: t('Talking now'), people: rest.filter((p) => p.ts && now - p.ts < TALKING_MS) },
     { id: 'today', title: t('Earlier today'), people: rest.filter((p) => p.ts >= dayStart && now - p.ts >= TALKING_MS) },
     { id: 'away', title: t('Away'), people: rest.filter((p) => p.ts < dayStart) },
+    { id: 'muted', title: t('Muted'), people: all.filter((p) => isMuted(p.nick)) },
   ].filter((g) => g.people.length);
 }
 

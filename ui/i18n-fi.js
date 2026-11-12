@@ -40,6 +40,8 @@ export const FI = {
   Ops: 'Opit',
   'Talking now': 'Äänessä nyt',
   'Earlier today': 'Aiemmin tänään',
+  Muted: 'Mykistetyt',
+  '{nick} highlighted you and is no longer muted': '{nick} highlightasi sinua, joten mykistys poistui',
   Away: 'Poissa',
 
   // WHOIS
