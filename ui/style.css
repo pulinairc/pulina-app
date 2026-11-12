@@ -2617,6 +2617,13 @@ label.switch-row {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+/* A choice that only matters while another switch is on. */
+label.switch-row:has(.switch:disabled) {
+  opacity: 0.5;
+}
+.switch:disabled {
+  cursor: default;
+}
 
 .item.muted .name {
   color: var(--faint);

@@ -712,6 +712,7 @@ export const FI = {
   'Suggest nicks after @': 'Ehdota nimimerkkejä @-merkin jälkeen',
   'Suggest nicks as you type': 'Ehdota nimimerkkejä kirjoittaessa',
   "Show a person's card on hover": 'Näytä henkilön tiedot hiiren ollessa nimen päällä',
+  'Wait until the pointer stops before showing it': 'Näytä tiedot vasta, kun hiiri pysähtyy',
   Profile: 'Profiili',
   'Log in to your shell and run this within 10 minutes:': 'Kirjaudu shelliin ja aja tämä 10 minuutin sisällä:',
   'Waiting for your shell…': 'Odotetaan shelliltäsi…',

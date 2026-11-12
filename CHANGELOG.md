@@ -1,3 +1,7 @@
+### 1.18.3: 2026-11-12
+
+* Add a setting to show person cards right away
+
 ### 1.18.2: 2026-11-12
 
 * Fix 1 px jumps in the chat while typing
