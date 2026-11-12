@@ -112,7 +112,8 @@ jobs:
   # The .deb's binary repackaged for Arch, so it runs on the system's own WebKitGTK and GTK.
   arch:
     needs: [release, build]
-    if: needs.release.outputs.created == 'true'
+    # A Mac build that never gets a runner must not hold back the other platforms.
+    if: always() && needs.release.outputs.created == 'true'
     runs-on: ubuntu-latest
     container: archlinux:latest
     permissions:
@@ -138,7 +139,8 @@ jobs:
   # latest.json tells the installed apps what is new and where its signed files are.
   updater:
     needs: [release, build]
-    if: needs.release.outputs.created == 'true'
+    # A Mac build that never gets a runner must not hold back the other platforms.
+    if: always() && needs.release.outputs.created == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
