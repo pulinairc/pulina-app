@@ -44,6 +44,8 @@ import {
   nickColor,
   parseAddress,
   replyTarget,
+  boxHeight,
+  anchorShift,
   quotedText,
   personFor,
   parseReaction,
@@ -2067,7 +2069,7 @@ function toSpot(spot) {
   if (!row) {
     return false;
   }
-  el.log.scrollTop += Math.round(row.getBoundingClientRect().top - el.log.getBoundingClientRect().top - spot.offset);
+  el.log.scrollTop += anchorShift(row.getBoundingClientRect().top - el.log.getBoundingClientRect().top - spot.offset);
   return true;
 }
 
@@ -4340,8 +4342,10 @@ function fitInput() {
   if (!(grew && el.input.scrollHeight <= el.input.clientHeight)) {
     // Measuring collapses the box for a moment, which scrolls the chat; the bottom stays the bottom.
     const pinned = atBottom();
+    const css = getComputedStyle(el.input);
+    const padding = Number.parseFloat(css.paddingTop) + Number.parseFloat(css.paddingBottom);
     el.input.style.height = 'auto';
-    el.input.style.height = `${el.input.scrollHeight}px`;
+    el.input.style.height = `${boxHeight(el.input.scrollHeight, Number.parseFloat(css.lineHeight), padding)}px`;
     if (pinned) {
       toBottom();
     }

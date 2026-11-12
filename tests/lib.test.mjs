@@ -40,6 +40,8 @@ import {
   parseAddress,
   quotedText,
   replyTarget,
+  boxHeight,
+  anchorShift,
   commandMatches,
   personFor,
   glob,
@@ -568,4 +570,19 @@ test('replyTarget picks the line said to the replier', () => {
   assert.equal(replyTarget(toNaaq, undefined, 3000, 60000), toNaaq);
   assert.equal(replyTarget(toNaaq, toScaha, 100000, 60000), toNaaq);
   assert.equal(replyTarget(undefined, undefined, 3000, 60000), undefined);
+});
+
+test('boxHeight keeps the message box at its exact natural height', () => {
+  // 16.48px text: one line is 23.896px, so the box is 43.896px, never the rounded 44.
+  assert.equal(boxHeight(44, 23.896, 20), 43.896);
+  assert.equal(boxHeight(116, 23.896, 20), 4 * 23.896 + 20);
+  assert.equal(boxHeight(10, 23.896, 20), 43.896);
+});
+
+test('anchorShift leaves sub-pixel drift alone', () => {
+  // Rounding half a pixel either way moved the whole chat by one pixel.
+  assert.equal(anchorShift(0.5), 0);
+  assert.equal(anchorShift(-0.75), 0);
+  assert.equal(anchorShift(12.4), 12);
+  assert.equal(anchorShift(-3.6), -4);
 });
