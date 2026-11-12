@@ -266,7 +266,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.json(400, {'error': 'bad request'})
         routes = {'/accounts/apply': self.apply, '/accounts/status': self.status, '/accounts/cancel': self.cancel,
                   '/accounts/forgot': self.forgot, '/accounts/notified': self.notified, '/accounts/admin/remove': self.remove,
-                  '/accounts/shell': self.shell_start, '/accounts/shell/check': self.shell_check}
+                  '/accounts/shell': self.shell_start, '/accounts/shell/check': self.shell_check, '/accounts/who': self.who}
         if url.path in routes:
             return routes[url.path](data)
         if url.path.startswith('/accounts/review/'):
@@ -314,6 +314,15 @@ class Handler(BaseHTTPRequestHandler):
                 # The waiting key has done its job; from now on only the password signs in.
                 conn.execute('UPDATE accounts SET "check" = NULL WHERE name = ?', (row['name'],))
         self.json(200, answer)
+
+    def who(self, data):
+        """Whether a nick is someone's account, so the app can offer to sign in instead of joining under it."""
+        name = str(data.get('account', '')).strip().lower()
+        if not NAME_RE.fullmatch(name):
+            return self.json(200, {'kind': None})
+        with db() as conn:
+            row = conn.execute("SELECT shell FROM accounts WHERE name = ? AND status IN ('approved', 'shell')", (name,)).fetchone()
+        self.json(200, {'kind': ('shell' if row['shell'] else 'account') if row else None})
 
     def shell_start(self, data):
         """A shell user signs in a device: pulina-verify in their shell proves it is them. No password."""
