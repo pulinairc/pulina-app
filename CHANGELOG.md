@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Change the header topic to sit 2px lower
 * Change the highlights pill to sit beside the tabs
 * Add a setting to use the full window width for the chat
 * Fix Mac updates asking for an admin password
