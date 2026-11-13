@@ -1,3 +1,7 @@
+### 1.21.2: 2026-11-13
+
+* Fix spacing above update and notification results
+
 ### 1.21.1: 2026-11-13
 
 * Fix spacing above Check for updates

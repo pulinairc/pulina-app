@@ -1187,7 +1187,7 @@ dialog:focus {
   display: block;
   margin-top: 12px;
 }
-.notify-result {
+#settings .notify-result {
   margin: 8px 0 0;
   padding: 6px 10px;
   border-radius: 8px;
@@ -4361,7 +4361,7 @@ body.docked #update-bar {
 .settings-actions .primary-btn.saved {
   background: var(--mention);
 }
-.update-result {
+#settings .update-result {
   margin: 8px 0 0;
   color: var(--text);
   font-size: 14px;
