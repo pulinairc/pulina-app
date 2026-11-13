@@ -5476,3 +5476,32 @@ body.rail-settle #status,
 body.rail-settle #update-bar {
   transition: margin-right 0.18s ease-out;
 }
+
+/* Masked words: drifting dust until tapped, the same as ~/bot's spoiler. Inline so it wraps with
+   the text; the canvas covers the union of its line boxes. */
+.spoiler {
+  position: relative;
+  display: inline;
+  border-radius: 0.3em;
+  cursor: pointer;
+}
+.spoiler.is-hidden {
+  user-select: none;
+  -webkit-user-select: none;
+}
+.spoiler-text {
+  opacity: 0;
+}
+.spoiler.is-hidden::selection,
+.spoiler.is-hidden .spoiler-text::selection {
+  background: transparent;
+}
+.spoiler-canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pm-highlight-row {
+  margin-top: 14px;
+}

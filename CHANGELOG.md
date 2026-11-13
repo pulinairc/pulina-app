@@ -1,3 +1,8 @@
+### 1.21.0: 2026-11-13
+
+* Add spoiler dust for hidden words, tap to reveal
+* Add private messages as highlights, with a setting
+
 ### 1.20.1: 2026-11-13
 
 * Fix the people list scrolling sideways on phones
