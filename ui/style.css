@@ -3498,7 +3498,7 @@ body.docked #update-bar {
   }
 }
 
-/* Highlights inbox: "@3" beside the channel name, a list that drops from it, a sheet on a phone. */
+/* Highlights inbox: "@3" beside the Chat and Shelf tabs, a list that drops from it, a sheet on a phone. */
 .top-gap {
   flex: 1;
 }
@@ -3532,7 +3532,7 @@ body.docked #update-bar {
 .inbox-panel {
   position: absolute;
   top: 54px;
-  left: 12px;
+  right: 12px;
   width: min(380px, calc(var(--view-w, 100vw) - 24px));
   max-height: min(560px, calc(var(--view-h, 100vh) - 80px));
   display: flex;
