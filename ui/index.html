@@ -368,7 +368,10 @@
       <h3>AI</h3>
       <p class="hint">AI features use your own OpenRouter key. Only the lines a feature needs go to OpenRouter, and only when it needs them.</p>
       <label class="field-label" for="ai-key">OpenRouter API key</label>
-      <input id="ai-key" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-…">
+      <div class="key-row">
+        <input id="ai-key" class="field" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-…">
+        <button id="ai-key-test" class="wide-btn key-test" type="button">Test</button>
+      </div>
       <p id="ai-key-result" class="ai-key-result" role="status" hidden></p>
       <p class="hint"><a href="https://openrouter.ai/settings/keys">Create a key</a> on OpenRouter and copy it here.</p>
       <label class="switch-row ai-row" for="ai-replies-toggle">

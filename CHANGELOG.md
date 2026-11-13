@@ -1,3 +1,8 @@
+### Unreleased
+
+* Add a test button for the OpenRouter key
+* Fix Mac updates asking the other account for a password
+
 ### 1.23.0: 2026-11-13
 
 * Change quick reactions to your five most used
