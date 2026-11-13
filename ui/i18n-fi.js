@@ -168,6 +168,7 @@ export const FI = {
   'Send a test notification': 'Lähetä testi-ilmoitus',
   'Text size': 'Tekstin koko',
   'Text size in percent': 'Tekstin koko prosentteina',
+  'Use the full window width for the conversation': 'Näytä keskustelu koko ikkunan levyisenä',
   Reset: 'Palauta',
   'App icon': 'Sovelluksen kuvake',
   Updates: 'Päivitykset',
