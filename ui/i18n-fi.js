@@ -147,6 +147,18 @@ export const FI = {
   General: 'Yleiset',
   Notifications: 'Ilmoitukset',
   Music: 'Musiikki',
+  AI: 'Tekoäly',
+  'AI features use your own OpenRouter key. Only the lines a feature needs go to OpenRouter, and only when it needs them.':
+    'Tekoälyominaisuudet käyttävät omaa OpenRouter-avaintasi. OpenRouteriin lähtevät vain ne rivit, joita ominaisuus tarvitsee, ja vain silloin kun se niitä tarvitsee.',
+  'OpenRouter API key': 'OpenRouter-API-avain',
+  'Create a key': 'Luo avain',
+  'on OpenRouter and copy it here.': 'OpenRouterissa ja liitä se tähän.',
+  'Find the message a reply answers': 'Tunnista viesti, johon vastataan',
+  'When someone answers a person who has said several things, AI picks the message the reply is about.':
+    'Kun joku vastaa ihmiselle, joka on sanonut useamman asian, tekoäly valitsee viestin, josta vastauksessa on kyse.',
+  'Key works': 'Avain toimii',
+  'OpenRouter did not accept the key': 'OpenRouter ei hyväksynyt avainta',
+  'Checking the key…': 'Tarkistetaan avainta…',
   Files: 'Tiedostot',
   People: 'Ihmiset',
   Connections: 'Yhteydet',

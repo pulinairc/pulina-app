@@ -1202,6 +1202,20 @@ dialog:focus {
   color: var(--new);
   background: color-mix(in srgb, var(--new) 14%, transparent);
 }
+#settings .ai-key-result {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--dim);
+}
+.ai-key-result.ok {
+  color: var(--ok);
+}
+.ai-key-result.fail {
+  color: var(--new);
+}
+#settings .ai-row {
+  margin-top: 20px;
+}
 #notify-guide {
   width: min(380px, calc(var(--view-w, 100vw) - 24px));
 }

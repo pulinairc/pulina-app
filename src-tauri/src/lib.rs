@@ -1,3 +1,4 @@
+mod ai;
 mod config;
 #[cfg(target_os = "linux")]
 mod cursor;
@@ -276,6 +277,16 @@ fn percent_decode(text: &str) -> String {
         }
     }
     String::from_utf8_lossy(&out).into_owned()
+}
+
+#[tauri::command]
+async fn ai_check(key: String) -> Result<(), String> {
+    ai::check_key(&key).await
+}
+
+#[tauri::command]
+async fn ai_reply(key: String, lines: Vec<ai::ChatLine>, from: String, to: String, text: String) -> Result<Option<usize>, String> {
+    ai::reply_target(&key, &lines, &from, &to, &text).await
 }
 
 #[tauri::command]
@@ -880,6 +891,8 @@ pub fn run() {
             count_unread,
             talkers,
             now_playing,
+            ai_check,
+            ai_reply,
             links,
             send,
             preview,

@@ -1847,6 +1847,8 @@ function renderSettings() {
   renderChannelTools();
   el.lastfmUser.value = state.settings[LASTFM_USER_SETTING] || '';
   el.lastfmKey.value = state.settings[LASTFM_KEY_SETTING] || '';
+  $('ai-key').value = state.settings[AI_KEY_SETTING] || '';
+  $('ai-replies-toggle').checked = settingOn(AI_REPLIES_SETTING);
   el.npFormat.value = state.settings[NP_FORMAT_SETTING] || '';
   const rows = state.networks.map((n) => {
     const row = h('div', 'conn');
@@ -2716,12 +2718,16 @@ function row(l) {
     const them = addr.nick.toLowerCase();
     return replyTarget(view.lastByNick.get(them), view.lastToward.get(`${them}>${speaker}`), l.ts, REPLY_WINDOW_MS);
   };
-  const quoted = hinted || (addr && !linkId ? guess() : null);
+  const guessed = !hinted && addr && !linkId ? guess() : null;
+  const quoted = hinted || (guessed && aiPicked(l, guessed)) || guessed;
   const me = state.me[l.net];
   if (addr && quoted && quoted.line !== l && (hinted || l.ts - quoted.line.ts < REPLY_WINDOW_MS)) {
     const style = replyStyle();
     if (style !== 'nick') {
       r.append(quoteNode(quoted));
+      if (guessed) {
+        askAiReply(l, addr);
+      }
     }
     text = addr.rest;
     // The bubble already names who the line was for; without it the nick stays in front.
@@ -2934,6 +2940,135 @@ function quoteNode(target) {
   });
   return q;
 }
+
+// AI, with the user's own OpenRouter key: which earlier message a reply answers, when the one who
+// was answered said several things lately. Answers are kept per line, so a line is asked about once.
+
+const AI_KEY_SETTING = 'aiKey';
+const AI_REPLIES_SETTING = 'aiReplies';
+const AI_REPLIES_KEY = 'lobby.aiReplies';
+const AI_REPLIES_KEPT = 2000;
+const AI_CONTEXT_LINES = 14;
+const AI_PARALLEL = 2;
+let aiReplies = {};
+try {
+  aiReplies = JSON.parse(localStorage.getItem(AI_REPLIES_KEY) || '{}');
+} catch {
+  /* start fresh */
+}
+const aiAsked = new Set();
+const aiQueue = [];
+let aiRunning = 0;
+
+function aiOn(setting) {
+  return Boolean(state.settings[AI_KEY_SETTING]) && settingOn(setting);
+}
+
+const aiLineKey = (l) => `${l.net}|${l.buffer.toLowerCase()}|${l.id}`;
+
+/** The line AI said a reply answers, when it was asked before and that line is in view. */
+function aiPicked(l, guessed) {
+  const id = l.id && aiReplies[aiLineKey(l)];
+  const picked = id && view.byId.get(id);
+  return picked && picked.line.nick === guessed.line.nick ? picked : null;
+}
+
+/** The lines before `l` in its window, oldest first, as far back as a reply is looked for. */
+function aiContext(l) {
+  const lines = state.buffers.get(key(l.net, l.buffer))?.lines || [];
+  const at = lines.lastIndexOf(l);
+  const out = [];
+  for (let i = at - 1; i >= 0 && out.length < AI_CONTEXT_LINES; i--) {
+    const c = lines[i];
+    if (l.ts - c.ts > REPLY_WINDOW_MS) {
+      break;
+    }
+    if (CHAT_KINDS.has(c.kind) && c.id) {
+      out.unshift(c);
+    }
+  }
+  return out;
+}
+
+function askAiReply(l, addr) {
+  if (!l.id || !aiOn(AI_REPLIES_SETTING) || aiLineKey(l) in aiReplies || aiAsked.has(aiLineKey(l))) {
+    return;
+  }
+  const context = aiContext(l);
+  const theirs = context.filter((c) => c.nick.toLowerCase() === addr.nick.toLowerCase());
+  if (theirs.length < 2) {
+    return;
+  }
+  aiAsked.add(aiLineKey(l));
+  aiQueue.push({ l, addr, context });
+  runAiQueue();
+}
+
+async function runAiQueue() {
+  while (aiRunning < AI_PARALLEL && aiQueue.length) {
+    const job = aiQueue.shift();
+    aiRunning++;
+    aiReply(job).finally(() => {
+      aiRunning--;
+      runAiQueue();
+    });
+  }
+}
+
+async function aiReply({ l, addr, context }) {
+  const lines = context.map((c) => ({ nick: c.nick, text: stripFormatting(c.text) }));
+  const at = await invoke('ai_reply', {
+    key: state.settings[AI_KEY_SETTING],
+    lines,
+    from: l.nick,
+    to: addr.nick,
+    text: stripFormatting(addr.rest),
+  }).catch(() => null);
+  const picked = at === null || at === undefined ? null : context[at];
+  if (!picked) {
+    return;
+  }
+  aiReplies[aiLineKey(l)] = picked.id;
+  const keys = Object.keys(aiReplies);
+  for (const old of keys.slice(0, Math.max(0, keys.length - AI_REPLIES_KEPT))) {
+    delete aiReplies[old];
+  }
+  try {
+    localStorage.setItem(AI_REPLIES_KEY, JSON.stringify(aiReplies));
+  } catch {
+    /* kept for this run */
+  }
+  // The chat may have been drawn again while waiting: the line's quote as it is now.
+  const target = view?.byId.get(picked.id);
+  const shown = view?.byId.get(l.id)?.row.querySelector(':scope > .quote');
+  if (target && shown) {
+    shown.replaceWith(quoteNode(target));
+  }
+}
+
+const aiKeyField = $('ai-key');
+const aiKeyResult = $('ai-key-result');
+
+async function checkAiKey() {
+  const key = state.settings[AI_KEY_SETTING];
+  aiKeyResult.hidden = !key;
+  if (!key) {
+    return;
+  }
+  aiKeyResult.className = 'ai-key-result';
+  aiKeyResult.textContent = t('Checking the key…');
+  const ok = await invoke('ai_check', { key })
+    .then(() => true)
+    .catch(() => false);
+  aiKeyResult.classList.add(ok ? 'ok' : 'fail');
+  aiKeyResult.textContent = ok ? t('Key works') : t('OpenRouter did not accept the key');
+}
+
+aiKeyField.addEventListener('change', () => {
+  saveSetting(AI_KEY_SETTING, aiKeyField.value.trim());
+  checkAiKey();
+});
+$('ai-replies-toggle').addEventListener('change', (e) => saveSetting(AI_REPLIES_SETTING, e.target.checked ? 'on' : 'off'));
 
 // Reactions and replies
 
