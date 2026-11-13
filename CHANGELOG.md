@@ -1,3 +1,10 @@
+### Unreleased
+
+* Add a setting to use the full window width for the chat
+* Fix Mac updates asking for an admin password
+* Fix a second Dock icon after each Mac update
+* Change the Restart button in the update bar to be lower
+
 ### 1.22.0: 2026-11-13
 
 * Add AI settings with your own OpenRouter key

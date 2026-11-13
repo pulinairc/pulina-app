@@ -81,7 +81,116 @@ pub fn restart(app: AppHandle) -> Result<(), String> {
 #[cfg(desktop)]
 pub fn install_pending() -> Result<(), String> {
     let Some((update, bytes)) = PENDING.lock().unwrap_or_else(|e| e.into_inner()).take() else { return Ok(()) };
+    #[cfg(target_os = "macos")]
+    match in_bundle::install(&update, &bytes) {
+        Ok(()) => return Ok(()),
+        Err(e) => eprintln!("updating inside the bundle failed, replacing it instead: {e}"),
+    }
     update.install(bytes).map_err(|e| e.to_string())
+}
+
+/// Swaps only Contents, so the .app folder stays: the Dock keeps its icon and a bundle
+/// the user owns needs no admin password. Replacing the whole bundle broke both.
+#[cfg(target_os = "macos")]
+mod in_bundle {
+    use std::ffi::CString;
+    use std::io;
+    use std::os::unix::ffi::OsStrExt;
+    use std::os::unix::fs::MetadataExt;
+    use std::path::{Component, Path, PathBuf};
+
+    pub fn install(update: &tauri_plugin_updater::Update, bytes: &[u8]) -> io::Result<()> {
+        update.verify(bytes).map_err(io::Error::other)?;
+        replace_contents(&bundle_path()?, bytes)
+    }
+
+    fn replace_contents(bundle: &Path, bytes: &[u8]) -> io::Result<()> {
+        let staging = std::env::temp_dir().join(format!("lobby-update-{}", std::process::id()));
+        if staging.parent().map(|p| p.metadata()).transpose()?.map(|m| m.dev()) != Some(bundle.metadata()?.dev()) {
+            return Err(io::Error::other("temp dir is on another volume"));
+        }
+        let _ = std::fs::remove_dir_all(&staging);
+        std::fs::create_dir(&staging)?;
+        let result = unpack(bytes, &staging).and_then(|()| swap(&staging.join("Contents"), &bundle.join("Contents")));
+        let _ = std::fs::remove_dir_all(&staging);
+        result?;
+        let _ = std::process::Command::new("touch").arg(bundle).status();
+        Ok(())
+    }
+
+    fn bundle_path() -> io::Result<PathBuf> {
+        let exe = std::env::current_exe()?;
+        let bundle = exe.ancestors().nth(3).ok_or_else(|| io::Error::other("no bundle"))?;
+        if bundle.extension().is_none_or(|e| e != "app") {
+            return Err(io::Error::other("not run from an .app bundle"));
+        }
+        Ok(bundle.to_path_buf())
+    }
+
+    /// The archive holds Name.app/Contents/...; it lands as dir/Contents/...
+    fn unpack(bytes: &[u8], dir: &Path) -> io::Result<()> {
+        let mut archive = tar::Archive::new(flate2::read::GzDecoder::new(bytes));
+        for entry in archive.entries()? {
+            let mut entry = entry?;
+            let inner: PathBuf = entry.path()?.components().skip(1).collect();
+            if inner.as_os_str().is_empty() {
+                continue;
+            }
+            if inner.components().any(|c| !matches!(c, Component::Normal(_))) {
+                return Err(io::Error::other("unexpected path in the update"));
+            }
+            let target = dir.join(&inner);
+            if let Some(parent) = target.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            entry.unpack(&target)?;
+        }
+        if !dir.join("Contents/MacOS").is_dir() {
+            return Err(io::Error::other("the update has no app inside"));
+        }
+        Ok(())
+    }
+
+    fn swap(a: &Path, b: &Path) -> io::Result<()> {
+        let (a, b) = (CString::new(a.as_os_str().as_bytes())?, CString::new(b.as_os_str().as_bytes())?);
+        if unsafe { libc::renamex_np(a.as_ptr(), b.as_ptr(), libc::RENAME_SWAP) } == 0 {
+            return Ok(());
+        }
+        Err(io::Error::last_os_error())
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        fn archive(version: &str) -> Vec<u8> {
+            let mut tar = tar::Builder::new(flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast()));
+            let mut header = tar::Header::new_gnu();
+            header.set_size(version.len() as u64);
+            header.set_mode(0o755);
+            tar.append_data(&mut header, "Lobby.app/Contents/MacOS/lobby", version.as_bytes()).unwrap();
+            tar.into_inner().unwrap().finish().unwrap()
+        }
+
+        #[test]
+        fn keeps_the_bundle_folder_and_swaps_its_contents() {
+            let root = std::env::temp_dir().join(format!("lobby-bundle-test-{}", std::process::id()));
+            let bundle = root.join("Lobby.app");
+            std::fs::create_dir_all(bundle.join("Contents/MacOS")).unwrap();
+            std::fs::write(bundle.join("Contents/MacOS/lobby"), "old").unwrap();
+            std::fs::write(bundle.join("Contents/MacOS/stale"), "gone after").unwrap();
+            let inode = bundle.metadata().unwrap().ino();
+
+            replace_contents(&bundle, &archive("new")).unwrap();
+
+            assert_eq!(bundle.metadata().unwrap().ino(), inode);
+            assert_eq!(std::fs::read_to_string(bundle.join("Contents/MacOS/lobby")).unwrap(), "new");
+            assert!(!bundle.join("Contents/MacOS/stale").exists());
+            assert!(replace_contents(&bundle, b"not an archive").is_err());
+            assert_eq!(std::fs::read_to_string(bundle.join("Contents/MacOS/lobby")).unwrap(), "new");
+            std::fs::remove_dir_all(root).unwrap();
+        }
+    }
 }
 
 /// Dotted version numbers, compared part by part.

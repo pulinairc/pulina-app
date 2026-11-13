@@ -7913,6 +7913,30 @@ function applyTextSize(percent) {
     .catch(() => {});
 }
 
+// Conversation width, per device like the text size: a narrow column unless asked for.
+const WIDE_CHAT_KEY = 'lobby.wideChat';
+
+function wideChat() {
+  try {
+    return localStorage.getItem(WIDE_CHAT_KEY) === 'on';
+  } catch {
+    return false;
+  }
+}
+
+function applyWideChat(on) {
+  try {
+    localStorage.setItem(WIDE_CHAT_KEY, on ? 'on' : 'off');
+  } catch {
+    /* lasts this run */
+  }
+  document.documentElement.classList.toggle('wide-chat', on);
+  $('wide-chat-toggle').checked = on;
+}
+
+applyWideChat(wideChat());
+$('wide-chat-toggle').addEventListener('change', (e) => applyWideChat(e.target.checked));
+
 /** The window in the zoomed page's pixels: 100vw and 100vh ignore the zoom and overflow on iPhone. */
 function viewSize() {
   const root = document.documentElement;
