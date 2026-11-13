@@ -1,6 +1,6 @@
 //! AI features through the user's own OpenRouter key. The model is chosen here, not in Settings.
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::time::Duration;
 
@@ -17,13 +17,40 @@ pub struct ChatLine {
     pub text: String,
 }
 
-/// Whether OpenRouter accepts the key.
-pub async fn check_key(key: &str) -> Result<(), String> {
+/// What a working key may still spend, in US dollars of OpenRouter credit.
+#[derive(Serialize)]
+pub struct KeyInfo {
+    pub usage: f64,
+    pub limit: Option<f64>,
+    pub limit_remaining: Option<f64>,
+    pub limit_reset: Option<String>,
+}
+
+/// The error for a key OpenRouter turned down, told apart from a network failure.
+pub const KEY_REJECTED: &str = "rejected";
+
+/// Whether OpenRouter accepts the key, and its spending limit.
+pub async fn check_key(key: &str) -> Result<KeyInfo, String> {
     let res = client()?.get(format!("{API}/key")).bearer_auth(key).send().await.map_err(|e| format!("OpenRouter: {e}"))?;
-    if res.status().is_success() {
-        return Ok(());
+    let status = res.status();
+    if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
+        return Err(KEY_REJECTED.into());
     }
-    Err(format!("OpenRouter: {}", res.status()))
+    if !status.is_success() {
+        return Err(format!("OpenRouter: {status}"));
+    }
+    let json: Value = res.json().await.map_err(|e| format!("OpenRouter: {e}"))?;
+    Ok(key_info(&json))
+}
+
+fn key_info(json: &Value) -> KeyInfo {
+    let data = &json["data"];
+    KeyInfo {
+        usage: data["usage"].as_f64().unwrap_or(0.0),
+        limit: data["limit"].as_f64(),
+        limit_remaining: data["limit_remaining"].as_f64(),
+        limit_reset: data["limit_reset"].as_str().map(str::to_owned),
+    }
 }
 
 /// Which of `lines` (oldest first) by `to` the message from `from` answers, as an index into `lines`.
@@ -101,6 +128,17 @@ mod tests {
         assert_eq!(picked(" [1]\n", &[0, 2]), Some(0));
         assert_eq!(picked("2", &[0, 2]), None);
         assert_eq!(picked("none", &[0, 2]), None);
+    }
+
+    #[test]
+    fn reads_the_keys_spending_limit() {
+        let info = key_info(&json!({ "data": { "usage": 0.25, "limit": 10, "limit_remaining": 9.75, "limit_reset": "monthly" } }));
+        assert_eq!(
+            (info.usage, info.limit, info.limit_remaining, info.limit_reset.as_deref()),
+            (0.25, Some(10.0), Some(9.75), Some("monthly"))
+        );
+        let open = key_info(&json!({ "data": { "usage": 1.5, "limit": null, "limit_remaining": null } }));
+        assert_eq!((open.limit, open.limit_remaining), (None, None));
     }
 
     /// Asks OpenRouter for real, with the key in OPENROUTER_KEY_FILE: `cargo test -p lobby -- --ignored live`.
