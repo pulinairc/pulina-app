@@ -75,7 +75,7 @@ const LAST_BUFFER_KEY = 'lobby.current';
 const FIRST_PICK_DELAY_MS = 400;
 const QUICK_REACTIONS = ['👍', '😂', '❤️', '🔥', '😮'];
 /** How many of your most used emojis the hover row and the long-press sheet offer. */
-const QUICK_REACTION_COUNT = 3;
+const QUICK_REACTION_COUNT = 5;
 const REACTION_SETTING = 'reactions';
 // Emoji helpers in the message box, on unless turned off.
 const EMOTICON_SETTING = 'emoticons';
