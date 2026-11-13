@@ -5302,9 +5302,9 @@ let recordingShortcut = null;
 
 function shortcuts() {
   try {
-    return { ...defaultShortcuts(IS_MAC), ...JSON.parse(state.settings[SHORTCUT_SETTING] || '{}') };
+    return { ...defaultShortcuts(PLATFORM.value), ...JSON.parse(state.settings[SHORTCUT_SETTING] || '{}') };
   } catch {
-    return defaultShortcuts(IS_MAC);
+    return defaultShortcuts(PLATFORM.value);
   }
 }
 

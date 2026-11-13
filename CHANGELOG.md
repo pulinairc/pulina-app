@@ -1,3 +1,7 @@
+### Unreleased
+
+* Change Linux mark read and scroll keys to Alt
+
 ### 1.23.1: 2026-11-13
 
 * Change the highlights pill to match the tabs
