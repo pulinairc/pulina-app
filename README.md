@@ -246,11 +246,11 @@ token_file = "~/.config/lobby/server.token"
 | `Alt+Left`, `Alt+Right`, `Cmd` on a Mac while the message box is empty | Previous and next channel |
 | `Alt+A`, or the unread counter | Next channel with unread, mentions first |
 | `Alt+U`, or the unread pill | Jump to the first unread message in this channel |
-| `Ctrl+Enter` (`Cmd+Enter` on a Mac) | Mark this channel read and go to the newest message |
+| `Alt+Enter` on Linux, `Ctrl+Enter` on Windows, `Cmd+Enter` on a Mac | Mark this channel read and go to the newest message |
 | `Tab` | Complete a nick, or pick one from the list that opens as you type a name or `@` |
 | `Up` in an empty input | Bring back the last message |
 | `Ctrl+Shift+R` (`Cmd+Shift+R` on a Mac) | Reply to the last message |
-| `Ctrl+Up`, `Ctrl+Down` (`Cmd` on a Mac) | Scroll the chat up and down |
+| `Alt+Up`, `Alt+Down` on Linux, `Ctrl` on Windows, `Cmd` on a Mac | Scroll the chat up and down |
 | `Ctrl+End` (`Cmd+End` on a Mac) | Back to the newest message |
 | `PageUp`, `PageDown` | Scroll the chat a page at a time |
 | `Ctrl+Shift+H` (`Cmd+Shift+H` on a Mac) | Open highlights. `Down` and `Up` move between them, `Enter` opens one, `Delete` marks it done |
@@ -263,7 +263,7 @@ Every shortcut can be changed under Settings, Keyboard shortcuts.
 
 **Reactions and replies.** Point at a message for your favourite emojis, more emojis, reply and a menu. On a phone, hold a message instead: it lifts out of the chat with your favourite emojis, more emojis and reply above it. IRC has no reactions, so a reaction is sent as `nick: 😂`, and Lobby shows such lines from anyone as a reaction under that person's message. A reply goes out as `nick: text` and shows the message it answers.
 
-**Unread.** A red New line marks where unread messages start. Nothing is marked read on its own: click the checkmark at the end of the New line, the Mark read button at the top, or press `Ctrl+Enter` (`Cmd+Enter` on a Mac).
+**Unread.** A red New line marks where unread messages start. Nothing is marked read on its own: click the checkmark at the end of the New line, the Mark read button at the top, or press `Alt+Enter` (`Ctrl+Enter` on Windows, `Cmd+Enter` on a Mac).
 
 **People.** Click a name or photo in the chat, or open the gear and People. `Kaisla` also covers `Kaisla_` and `Kaisla-`, `Kaisla*` covers any ending, and `kaisla@*.example.net` matches by ident and host. The colour follows the photo unless you pick one. Click the channel icon in the header to give a channel its own picture or colour, or to mute it. A muted channel adds nothing to unread counts or jumps, except when someone mentions you. `/mute` and `/unmute` work too, and so does the bell beside each channel in the channel list.
 

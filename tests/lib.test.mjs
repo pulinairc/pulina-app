@@ -481,9 +481,17 @@ test('nick suggestions find the word at the caret', () => {
 });
 
 test('channel shortcuts move to Cmd on a Mac, so Option still types', () => {
-  assert.equal(defaultShortcuts(true).channelNumber, 'Mod');
-  assert.equal(defaultShortcuts(true).prevChannel, 'Mod+ArrowLeft');
-  assert.equal(defaultShortcuts(false).channelNumber, 'Alt');
+  assert.equal(defaultShortcuts('macos').channelNumber, 'Mod');
+  assert.equal(defaultShortcuts('macos').prevChannel, 'Mod+ArrowLeft');
+  assert.equal(defaultShortcuts('windows').channelNumber, 'Alt');
+});
+
+test('mark read and chat scrolling use Alt on Linux', () => {
+  assert.equal(defaultShortcuts('linux').markRead, 'Alt+Enter');
+  assert.equal(defaultShortcuts('linux').scrollUp, 'Alt+ArrowUp');
+  assert.equal(defaultShortcuts('linux').scrollDown, 'Alt+ArrowDown');
+  assert.equal(defaultShortcuts('windows').markRead, 'Mod+Enter');
+  assert.equal(defaultShortcuts('macos').scrollUp, 'Mod+ArrowUp');
 });
 
 test('shelf sorts links into stills, pictures, videos and rows', () => {

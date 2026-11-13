@@ -799,8 +799,16 @@ const MAC_SHORTCUTS = {
   channelNumber: 'Mod',
 };
 
-export function defaultShortcuts(mac) {
-  return mac ? { ...DEFAULT_SHORTCUTS, ...MAC_SHORTCUTS } : { ...DEFAULT_SHORTCUTS };
+const LINUX_SHORTCUTS = {
+  markRead: 'Alt+Enter',
+  scrollUp: 'Alt+ArrowUp',
+  scrollDown: 'Alt+ArrowDown',
+};
+
+const PLATFORM_SHORTCUTS = { macos: MAC_SHORTCUTS, linux: LINUX_SHORTCUTS };
+
+export function defaultShortcuts(platform) {
+  return { ...DEFAULT_SHORTCUTS, ...PLATFORM_SHORTCUTS[platform] };
 }
 
 const MODIFIER_KEYS = ['Control', 'Meta', 'Alt', 'Shift'];
