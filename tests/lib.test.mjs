@@ -621,3 +621,10 @@ test('maskParts splits out the masked words and keeps the rest', () => {
   assert.deepEqual(maskParts('paskanen', ['paska']), [['paskanen', false]]);
   assert.deepEqual(maskParts('mitään', []), [['mitään', false]]);
 });
+
+test('imgur picture pages show as pictures', () => {
+  assert.equal(directLink('https://imgur.com/63pca7j'), 'https://i.imgur.com/63pca7j.jpeg');
+  assert.equal(mediaKind('https://imgur.com/63pca7j'), 'image');
+  assert.equal(mediaKind('https://imgur.com/a/Xy12abc'), 'link');
+  assert.equal(directLink('https://imgur.com/upload'), 'https://imgur.com/upload');
+});

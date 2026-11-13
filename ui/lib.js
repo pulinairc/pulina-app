@@ -1020,13 +1020,25 @@ export function botNicks(value = '') {
 
 const IMAGE_EXT = /\.(?:jpe?g|png|gif|webp|avif|heic)$/i;
 
-/** A Dropbox share link opens a web page; with raw=1 it serves the file itself. */
+const IMGUR_PAGE = /^\/([A-Za-z0-9]{5,8})$/;
+
+/** The id of an imgur page that shows one picture; their ids carry a digit or a capital, site pages do not. */
+function imgurPicture(u) {
+  const id = /^(www\.|m\.)?imgur\.com$/.test(u.hostname) ? IMGUR_PAGE.exec(u.pathname)?.[1] : null;
+  return id && /[0-9A-Z]/.test(id) ? id : null;
+}
+
+/** A Dropbox share link opens a web page; with raw=1 it serves the file itself. An imgur page has its picture on i.imgur.com. */
 export function directLink(url) {
   let u;
   try {
     u = new URL(url);
   } catch {
     return url;
+  }
+  const imgur = imgurPicture(u);
+  if (imgur) {
+    return `https://i.imgur.com/${imgur}.jpeg`;
   }
   if (!/^(www\.)?dropbox\.com$/.test(u.hostname) || !/^\/(scl\/fi|s)\//.test(u.pathname)) {
     return url;
@@ -1042,13 +1054,14 @@ export function mediaKind(url) {
   if (youtube(url)) {
     return 'youtube';
   }
-  let path = '';
+  let u;
   try {
-    path = new URL(url).pathname;
+    u = new URL(url);
   } catch {
     return 'link';
   }
-  if (IMAGE_EXT.test(path)) {
+  const path = u.pathname;
+  if (IMAGE_EXT.test(path) || imgurPicture(u)) {
     return 'image';
   }
   return VIDEO_EXT.test(path) ? 'video' : 'link';

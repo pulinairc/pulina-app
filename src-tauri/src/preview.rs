@@ -103,6 +103,21 @@ fn direct(url: &Url) -> Url {
     file
 }
 
+/// An imgur page names its picture in og:image; `?fb` there is a 600x315 crop for Facebook.
+fn imgur_picture(mut p: Preview, page: &Url) -> Preview {
+    let site = page.host_str().unwrap_or("").trim_start_matches("www.").trim_start_matches("m.");
+    let Ok(mut image) = Url::parse(&p.image) else {
+        return p;
+    };
+    if site != "imgur.com" || image.host_str() != Some("i.imgur.com") {
+        return p;
+    }
+    image.set_query(None);
+    p.kind = "image".into();
+    p.image = image.to_string();
+    p
+}
+
 pub async fn fetch(raw: &str) -> Option<Preview> {
     let url = direct(&Url::parse(raw).ok()?);
     if is_youtube(&url) {
@@ -138,7 +153,7 @@ pub async fn fetch(raw: &str) -> Option<Preview> {
         }
     }
 
-    let mut preview = parse(&String::from_utf8_lossy(&body), res.url());
+    let mut preview = imgur_picture(parse(&String::from_utf8_lossy(&body), res.url()), res.url());
     if preview.title.is_empty() && preview.image.is_empty() {
         return None;
     }
@@ -293,6 +308,17 @@ mod tests {
         assert_eq!(direct(&share).as_str(), "https://www.dropbox.com/scl/fi/abc/kuva.jpg?rlkey=x&st=y&e=1&raw=1");
         let other = Url::parse("https://example.org/kuva.jpg?dl=0").unwrap();
         assert_eq!(direct(&other), other);
+    }
+
+    #[test]
+    fn imgur_pages_show_their_picture() {
+        let html = r#"<title>Imgur: The magic of the Internet</title>
+            <meta property="og:image" content="https://i.imgur.com/63pca7j.jpeg?fb">"#;
+        let page = Url::parse("https://imgur.com/63pca7j").unwrap();
+        let p = imgur_picture(parse(html, &page), &page);
+        assert_eq!((p.kind.as_str(), p.image.as_str()), ("image", "https://i.imgur.com/63pca7j.jpeg"));
+        let other = Url::parse("https://example.org/63pca7j").unwrap();
+        assert_eq!(imgur_picture(parse(html, &other), &other).kind, "page");
     }
 
     #[test]
