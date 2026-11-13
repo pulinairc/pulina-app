@@ -3784,7 +3784,12 @@ body.docked #update-bar {
 @media (max-width: 600px) {
   .inbox-pill {
     height: 34px;
+    padding: 0 8px;
     border-radius: 17px;
+  }
+  /* With the highlights pill too, three faces leave the channel name room on a phone. */
+  #top:has(.inbox-pill:not([hidden])) .pill-faces .av:nth-child(n + 4) {
+    display: none;
   }
   .views {
     box-sizing: border-box;
