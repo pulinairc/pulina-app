@@ -1,4 +1,4 @@
-### Unreleased
+### 1.23.1: 2026-11-13
 
 * Change the highlights pill to match the tabs
 * Add a test button for the OpenRouter key
