@@ -412,49 +412,17 @@
       </div>
       <p class="hint">Keys and passwords are saved with your other settings, on your lobby-server when you use one. Only pictures, PDFs and text files go to your own bucket or folder.</p>
     </section>
-    <section data-tab="people">
-      <h3>People</h3>
-      <button id="open-people" class="wide-btn" type="button">People and photos</button>
-    </section>
-    <section data-tab="connections">
-      <h3>Connections</h3>
-      <div id="connections"></div>
-      <button id="open-connection" class="wide-btn" type="button">Set up the connection</button>
-      <p class="hint">Saved in <span id="config-path" class="mono"></span></p>
-    </section>
-    <section data-tab="connections" class="start-over">
-      <h3>Sign out or start over</h3>
-      <div class="start-over-row">
-        <button id="sign-out" class="link-btn danger" type="button">Sign out</button>
-        <p class="hint">Disconnects and forgets this connection. History, settings and people stay.</p>
-      </div>
-      <div class="start-over-row">
-        <button id="reset-app" class="link-btn danger" type="button">Reset the app</button>
-        <p class="hint">Removes everything the app keeps on this device: connections, history, settings and people. It starts as if new.</p>
-      </div>
-    </section>
-    <section id="about-section" data-tab="about">
-      <h3>About</h3>
-      <p class="about"><a id="about-version" href="https://github.com/rollecode/lobby">Lobby</a></p>
-      <p id="about-report" class="hint"></p>
-      <p class="hint">Made by <a href="https://github.com/rollecode">Rolle Laukkarinen</a>, <a href="https://github.com/rollecode/lobby/blob/main/LICENSE">MIT licence</a>.</p>
-      <p class="hint">Built with <a href="https://www.rust-lang.org">Rust</a>, <a href="https://tauri.app">Tauri</a>, <a href="https://tokio.rs">Tokio</a> and <a href="https://www.sqlite.org">SQLite</a>, emoji data from <a href="https://github.com/missive/emoji-mart">emoji-mart</a>. For people who keep <a href="https://irssi.org">irssi</a> running.</p>
-    </section>
-    </div>
-  </dialog>
-  <dialog id="people" tabindex="-1" aria-labelledby="people-title">
-    <div class="sheet-head">
+    <section id="people" data-tab="people">
+      <div class="people-head">
       <button id="people-back" class="icon-btn" type="button" aria-label="Back to people" data-tip="Back" hidden>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
       </button>
-      <h2 id="people-title">People</h2>
+      <h3 id="people-title">People</h3>
       <button id="person-new" class="icon-btn" type="button" aria-label="Add a person" data-tip="Add a person">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
       </button>
-      <button id="people-close" class="icon-btn" type="button" aria-label="Close">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
-      </button>
     </div>
+
 
     <div id="people-list-view">
       <div id="people-list"></div>
@@ -490,6 +458,32 @@
         <button id="person-save" class="primary-btn" type="submit">Save</button>
       </div>
     </form>
+    </section>
+    <section data-tab="connections">
+      <h3>Connections</h3>
+      <div id="connections"></div>
+      <button id="open-connection" class="wide-btn" type="button">Set up the connection</button>
+      <p class="hint">Saved in <span id="config-path" class="mono"></span></p>
+    </section>
+    <section data-tab="connections" class="start-over">
+      <h3>Sign out or start over</h3>
+      <div class="start-over-row">
+        <button id="sign-out" class="link-btn danger" type="button">Sign out</button>
+        <p class="hint">Disconnects and forgets this connection. History, settings and people stay.</p>
+      </div>
+      <div class="start-over-row">
+        <button id="reset-app" class="link-btn danger" type="button">Reset the app</button>
+        <p class="hint">Removes everything the app keeps on this device: connections, history, settings and people. It starts as if new.</p>
+      </div>
+    </section>
+    <section id="about-section" data-tab="about">
+      <h3>About</h3>
+      <p class="about"><a id="about-version" href="https://github.com/rollecode/lobby">Lobby</a></p>
+      <p id="about-report" class="hint"></p>
+      <p class="hint">Made by <a href="https://github.com/rollecode">Rolle Laukkarinen</a>, <a href="https://github.com/rollecode/lobby/blob/main/LICENSE">MIT licence</a>.</p>
+      <p class="hint">Built with <a href="https://www.rust-lang.org">Rust</a>, <a href="https://tauri.app">Tauri</a>, <a href="https://tokio.rs">Tokio</a> and <a href="https://www.sqlite.org">SQLite</a>, emoji data from <a href="https://github.com/missive/emoji-mart">emoji-mart</a>. For people who keep <a href="https://irssi.org">irssi</a> running.</p>
+    </section>
+    </div>
   </dialog>
   <dialog id="update-ask" tabindex="-1" aria-labelledby="update-ask-title">
     <div class="sheet-head">

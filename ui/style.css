@@ -1885,25 +1885,18 @@ dialog:focus {
   cursor: pointer;
 }
 
-#people[open] {
+.people-head {
   display: flex;
-  flex-direction: column;
-}
-#people .sheet-head {
+  align-items: center;
   gap: 4px;
-  padding: 12px 12px 4px 16px;
+  margin-bottom: 8px;
 }
-#people .sheet-head h2 {
+#settings .people-head h3 {
   flex: 1;
-  font-size: 17px;
+  margin: 0;
 }
 #people-back {
   margin-left: -8px;
-}
-#people-list-view,
-#person-edit {
-  padding: 8px 16px 16px;
-  overflow-y: auto;
 }
 #person-edit {
   display: flex;
@@ -4357,6 +4350,9 @@ body.docked #update-bar {
   height: 32px;
   padding: 0 14px;
   line-height: 1;
+}
+.settings-actions .primary-btn[hidden] {
+  display: none;
 }
 .settings-actions .primary-btn.saved {
   background: var(--mention);
