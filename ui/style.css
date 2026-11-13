@@ -3519,11 +3519,11 @@ body.docked #update-bar {
 }
 .inbox-pill {
   flex-shrink: 0;
-  /* As tall as the Chat and Shelf tabs beside it. */
+  /* As tall and as round as the Chat and Shelf tabs beside it. */
   height: 30px;
   padding: 0 10px;
   border: 0;
-  border-radius: 15px;
+  border-radius: 9px;
   background: var(--mention-bg);
   color: var(--mention);
   font-size: 12px;

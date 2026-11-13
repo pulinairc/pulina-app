@@ -1,5 +1,6 @@
 ### Unreleased
 
+* Change the highlights pill to match the tabs
 * Add a test button for the OpenRouter key
 * Fix Mac updates asking the other account for a password
 
