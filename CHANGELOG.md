@@ -1,4 +1,4 @@
-### Unreleased
+### 1.22.0: 2026-11-13
 
 * Add AI settings with your own OpenRouter key
 * Add AI matching of replies to the message they answer
