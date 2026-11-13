@@ -786,4 +786,7 @@ export const FI = {
   'nick or mask': 'nimimerkki tai maski',
   mask: 'maski',
   'Kick and ban': 'Potkaise ja bannaa',
+  'Hidden text, activate to reveal': 'Piilotettu teksti, paljasta painamalla',
+  'Revealed text, activate to hide it again': 'Paljastettu teksti, piilota painamalla uudelleen',
+  'Consider private messages as highlights': 'Käsittele yksityisviestit highlighteina',
 };

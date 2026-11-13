@@ -266,6 +266,27 @@ export function maskWords(text, words) {
   return re ? text.replace(re, MASK) : text;
 }
 
+/** Text cut into [piece, masked] pairs, masked pieces being the matched words themselves. */
+export function maskParts(text, words) {
+  const re = wordPattern(words);
+  if (!re) {
+    return [[text, false]];
+  }
+  const parts = [];
+  let at = 0;
+  for (const m of text.matchAll(re)) {
+    if (m.index > at) {
+      parts.push([text.slice(at, m.index), false]);
+    }
+    parts.push([m[0], true]);
+    at = m.index + m[0].length;
+  }
+  if (at < text.length || !parts.length) {
+    parts.push([text.slice(at), false]);
+  }
+  return parts;
+}
+
 /** Split text into plain, link and mention pieces. */
 export function tokenize(text, me) {
   const clean = stripFormatting(text);

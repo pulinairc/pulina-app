@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { BRAND } from '../ui/brand.js';
 import {
+  maskParts,
   maskWords,
   OFFENSIVE_WORDS,
   reportMail,
@@ -600,4 +601,15 @@ test('anchorShift leaves sub-pixel drift alone', () => {
   assert.equal(anchorShift(-0.75), 0);
   assert.equal(anchorShift(12.4), 12);
   assert.equal(anchorShift(-3.6), -4);
+});
+
+test('maskParts splits out the masked words and keeps the rest', () => {
+  assert.deepEqual(maskParts('ihan paska juttu', ['paska']), [
+    ['ihan ', false],
+    ['paska', true],
+    [' juttu', false],
+  ]);
+  assert.deepEqual(maskParts('paska', ['paska']), [['paska', true]]);
+  assert.deepEqual(maskParts('paskanen', ['paska']), [['paskanen', false]]);
+  assert.deepEqual(maskParts('mitään', []), [['mitään', false]]);
 });

@@ -59,6 +59,7 @@ import {
   mediaKind,
   directLink,
   inboxSplit,
+  maskParts,
   maskWords,
   OFFENSIVE_WORDS,
   reportMail,
@@ -84,6 +85,8 @@ const HOVER_CARD_SETTING = 'hover_cards';
 const HOVER_CARD_WAIT_SETTING = 'hover_card_wait';
 const BOTS_SETTING = 'bots';
 const HIGHLIGHT_WORDS_SETTING = 'highlightWords';
+// On unless turned off: a private message counts as a highlight, in Highlights, the count and notifications.
+const PM_HIGHLIGHT_SETTING = 'pmHighlights';
 /** A bot's answer joins the command it follows only this soon after it. */
 const BOT_ANSWER_MS = 60 * 1000;
 const SHORTCODE_SETTING = 'shortcodes';
@@ -641,7 +644,7 @@ function recountUnread(b) {
   const seen = readMap[b.key];
   const fresh = b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l));
   b.unread = (b.unreadGap || 0) + fresh.length;
-  b.mention = fresh.length > 0 && (isPrivate(b) || fresh.some((l) => mentions(l.text, myWords(l.net))));
+  b.mention = fresh.length > 0 && fresh.some(forMe);
 }
 
 function applyReadSetting(value) {
@@ -852,7 +855,7 @@ function onLine(l) {
     inbox.lines.set(l.id, l);
     renderInbox();
   }
-  const mentioned = isPrivate(b) || mentions(l.text, myWords(l.net));
+  const mentioned = forMe(l);
   if (mentioned) {
     b.mention = true;
   }
@@ -954,6 +957,256 @@ function isMuffled(l) {
 /** Text as it is shown, never as it is sent. */
 function shownText(text) {
   return state.settings[MASK_SETTING] === 'on' ? maskWords(text, OFFENSIVE_WORDS) : text;
+}
+
+/** Text for the chat itself: masked words go under spoiler dust instead of dots. */
+function shownNodes(text) {
+  if (state.settings[MASK_SETTING] !== 'on') {
+    return [text];
+  }
+  return maskParts(text, OFFENSIVE_WORDS).map(([piece, masked]) => (masked ? spoiler(piece) : piece));
+}
+
+// Spoiler, the same as ~/bot's (apps/neai-web spoiler.tsx): the word sits under fine drifting dust
+// seeded from its real character boxes; a tap dissolves the dust outward while the word fades in,
+// and another tap puts it back. The loop runs only on screen and stops once fully revealed.
+const SPOILER_MAX_PARTICLES = 5000;
+const SPOILER_DENSITY = 0.32;
+const SPOILER_VSPREAD = 0.45;
+const SPOILER_FADE_MS = 420;
+const SPOILER_SEED_TRIES = 30;
+const easeOutCubic = (x) => 1 - (1 - x) ** 3;
+
+function spoiler(word) {
+  const host = h('span', 'spoiler is-hidden');
+  host.setAttribute('role', 'button');
+  host.tabIndex = 0;
+  const text = h('span', 'spoiler-text', word);
+  const canvas = document.createElement('canvas');
+  canvas.className = 'spoiler-canvas';
+  canvas.setAttribute('aria-hidden', 'true');
+  host.append(text, canvas);
+  const state = { revealed: false };
+  const label = () =>
+    host.setAttribute('aria-label', state.revealed ? t('Revealed text, activate to hide it again') : t('Hidden text, activate to reveal'));
+  label();
+  let start = () => {};
+  const toggle = (e) => {
+    e.stopPropagation();
+    state.revealed = !state.revealed;
+    host.classList.toggle('is-revealed', state.revealed);
+    host.classList.toggle('is-hidden', !state.revealed);
+    label();
+    canvas.style.display = 'block';
+    start();
+  };
+  host.addEventListener('click', toggle);
+  host.addEventListener('pointerdown', (e) => e.stopPropagation());
+  host.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggle(e);
+    }
+  });
+  requestAnimationFrame(() => {
+    start = animateSpoiler(host, text, canvas, state);
+  });
+  return host;
+}
+
+function animateSpoiler(host, text, canvas, state) {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    text.style.opacity = '1';
+    return () => {};
+  }
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  let particles = [];
+  let colour = '#fff';
+  let w = 1;
+  let hgt = 1;
+  let raf = 0;
+  let last = 0;
+  let progress = 0;
+  let onScreen = true;
+  let seedTries = 0;
+
+  const apply = () => {
+    // With no dust nothing covers the word, so hiding it would leave a hole in the sentence.
+    if (!particles.length) {
+      text.style.opacity = '1';
+      canvas.style.display = 'none';
+      return;
+    }
+    text.style.opacity = String(easeOutCubic(progress));
+    canvas.style.display = progress >= 1 ? 'none' : 'block';
+  };
+
+  const seed = () => {
+    const box = host.getBoundingClientRect();
+    if (box.width < 1 || box.height < 1) {
+      particles = [];
+      apply();
+      if (host.isConnected && seedTries < SPOILER_SEED_TRIES) {
+        seedTries += 1;
+        requestAnimationFrame(seed);
+      }
+      return;
+    }
+    seedTries = 0;
+    w = Math.max(1, Math.ceil(box.width));
+    hgt = Math.max(1, Math.ceil(box.height));
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(hgt * dpr);
+    canvas.style.width = `${w}px`;
+    canvas.style.height = `${hgt}px`;
+    // In a wrapped inline element mobile WebKit puts the canvas on the first line only: measure
+    // where it landed and move it onto the whole box.
+    const prevDisplay = canvas.style.display;
+    if (prevDisplay === 'none') {
+      canvas.style.display = 'block';
+    }
+    canvas.style.transform = '';
+    const cr = canvas.getBoundingClientRect();
+    if (cr.width > 0.5) {
+      const dx = box.left - cr.left;
+      const dy = box.top - cr.top;
+      canvas.style.transform = Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5 ? `translate(${dx}px, ${dy}px)` : '';
+    }
+    if (prevDisplay === 'none') {
+      canvas.style.display = prevDisplay;
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    colour = getComputedStyle(text).color;
+
+    const walker = document.createTreeWalker(text, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    const seeds = [];
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      const value = node.nodeValue ?? '';
+      for (let i = 0; i < value.length; i++) {
+        if (/\s/.test(value[i])) {
+          continue;
+        }
+        range.setStart(node, i);
+        range.setEnd(node, i + 1);
+        const r = range.getBoundingClientRect();
+        if (r.width <= 0 || r.height <= 0) {
+          continue;
+        }
+        const inset = r.height * 0.16;
+        const bandH = r.height - inset * 2;
+        const count = Math.max(2, Math.round(r.width * bandH * SPOILER_DENSITY));
+        const x0 = r.left - box.left;
+        const y0 = r.top - box.top + inset;
+        for (let k = 0; k < count; k++) {
+          const bell = (Math.random() + Math.random() + Math.random()) / 3 - 0.5;
+          seeds.push({ x: x0 + Math.random() * r.width, y: y0 + bandH * 0.5 + bell * bandH * (1 + SPOILER_VSPREAD * 2) });
+        }
+      }
+    }
+    const stride = Math.max(1, Math.ceil(seeds.length / SPOILER_MAX_PARTICLES));
+    particles = seeds
+      .filter((_, i) => i % stride === 0)
+      .map((p) => {
+        const angle = Math.random() * Math.PI * 2;
+        return {
+          x: p.x,
+          y: p.y,
+          dx: Math.cos(angle),
+          dy: Math.sin(angle),
+          size: Math.random() < 0.7 ? 0.5 : 1,
+          base: 0.7 + Math.random() * 0.3,
+          phase: Math.random() * Math.PI * 2,
+          speed: 0.7 + Math.random() * 1.1,
+          amp: 1.2 + Math.random() * 1.4,
+        };
+      });
+  };
+
+  const paint = (time) => {
+    ctx.clearRect(0, 0, w, hgt);
+    if (progress >= 1) {
+      return;
+    }
+    const eased = easeOutCubic(progress);
+    const spread = eased * 14;
+    const fade = 1 - eased;
+    ctx.fillStyle = colour;
+    for (const p of particles) {
+      const ph = p.phase + time * 0.004 * p.speed;
+      ctx.globalAlpha = Math.min(1, p.base * (0.8 + 0.2 * Math.sin(ph)) * fade);
+      ctx.fillRect(p.x + Math.sin(ph * 1.7) * p.amp + p.dx * spread, p.y + Math.cos(ph * 1.1) * p.amp + p.dy * spread, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+  };
+
+  const frame = (time) => {
+    const dt = last ? time - last : 16;
+    last = time;
+    const target = state.revealed ? 1 : 0;
+    if (progress !== target) {
+      const step = dt / SPOILER_FADE_MS;
+      progress = target > progress ? Math.min(target, progress + step) : Math.max(target, progress - step);
+      apply();
+    }
+    paint(time);
+    if (!host.isConnected || (progress >= 1 && target === 1)) {
+      raf = 0;
+      return;
+    }
+    raf = requestAnimationFrame(frame);
+  };
+
+  const start = () => {
+    if (raf || !onScreen) {
+      return;
+    }
+    if (reduced) {
+      progress = state.revealed ? 1 : 0;
+      apply();
+      paint(0);
+      return;
+    }
+    last = 0;
+    raf = requestAnimationFrame(frame);
+  };
+
+  seed();
+  apply();
+  start();
+
+  const io = new IntersectionObserver(
+    ([entry]) => {
+      onScreen = entry.isIntersecting;
+      if (!host.isConnected) {
+        io.disconnect();
+        ro.disconnect();
+      }
+      if (!onScreen) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      } else {
+        start();
+      }
+    },
+    { rootMargin: '120px 0px' },
+  );
+  io.observe(host);
+  // The block around it reflows reliably; an inline span alone misses rewraps.
+  const ro = new ResizeObserver(() => {
+    seed();
+    if (reduced) {
+      paint(0);
+    }
+  });
+  ro.observe(host);
+  const block = host.parentElement?.closest('p, div, li') ?? host.parentElement;
+  if (block && block !== host) {
+    ro.observe(block);
+  }
+  return start;
 }
 
 function ignore(nick) {
@@ -1067,9 +1320,7 @@ function attentionCount(b) {
     return 0;
   }
   const seen = readMap[b.key] ?? Infinity;
-  return (
-    b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l) && mentions(l.text, myWords(l.net))).length || 1
-  );
+  return b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l) && forMe(l)).length || 1;
 }
 
 const BELL =
@@ -1180,9 +1431,7 @@ function badgeCount() {
     }
     // Chosen people and words not already counted as highlights.
     const seen = readMap[b.key] ?? Infinity;
-    n += b.lines.filter(
-      (l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l) && !mentions(l.text, myWords(l.net)) && chosen(l),
-    ).length;
+    n += b.lines.filter((l) => l.id > seen && CHAT_KINDS.has(l.kind) && !l.own && !isMuffled(l) && !forMe(l) && chosen(l)).length;
   }
   return n;
 }
@@ -1574,6 +1823,7 @@ function renderSettings() {
   $('nick-at-toggle').checked = settingOn(NICK_MENU_SETTINGS.at);
   $('nick-word-toggle').checked = settingOn(NICK_MENU_SETTINGS.word);
   $('hover-card-toggle').checked = settingOn(HOVER_CARD_SETTING);
+  $('pm-highlight-toggle').checked = settingOn(PM_HIGHLIGHT_SETTING);
   $('hover-wait-toggle').checked = settingOn(HOVER_CARD_WAIT_SETTING);
   $('hover-wait-toggle').disabled = !settingOn(HOVER_CARD_SETTING);
   for (const r of el.replyStyle.querySelectorAll('input')) {
@@ -2452,7 +2702,7 @@ function row(l) {
     } else if (t.type === 'nick') {
       r.append(nickRef(l.net, t));
     } else {
-      r.append(shownText(t.value));
+      r.append(...shownNodes(t.value));
     }
   }
   // A message that is only a link gets replaced by its card.
@@ -7803,6 +8053,16 @@ function shortWhen(ts) {
   return sameDay(ts, Date.now()) ? clock(ts).slice(0, 5) : dayLabel(ts);
 }
 
+/** A private message from someone, which counts as a highlight unless that is turned off. */
+function pmToMe(l) {
+  return settingOn(PM_HIGHLIGHT_SETTING) && Boolean(l.buffer) && !isChannel(l.buffer) && !l.own && CHAT_KINDS.has(l.kind);
+}
+
+/** Names me, or is a private message to me. */
+function forMe(l) {
+  return mentions(l.text, myWords(l.net)) || pmToMe(l);
+}
+
 /** A line that names you; a reaction ("rolle: 🎉") shows as a reaction, not a highlight. */
 function isHighlight(l) {
   return (
@@ -7811,8 +8071,7 @@ function isHighlight(l) {
     Boolean(l.id) &&
     !l.own &&
     CHAT_KINDS.has(l.kind) &&
-    isChannel(l.buffer) &&
-    mentions(l.text, myWords(l.net))
+    (isChannel(l.buffer) ? mentions(l.text, myWords(l.net)) : pmToMe(l))
   );
 }
 
@@ -7856,6 +8115,16 @@ async function loadHighlights(before) {
   for (const l of lines) {
     if (isHighlight(l)) {
       inbox.lines.set(l.id, l);
+    }
+  }
+  // Private messages have no word to search for: the ones already loaded go in as they are.
+  if (before === null) {
+    for (const b of state.buffers.values()) {
+      for (const l of isPrivate(b) ? b.lines : []) {
+        if (isHighlight(l)) {
+          inbox.lines.set(l.id, l);
+        }
+      }
     }
   }
   // The first page decides too: a short one is all there is.
@@ -7905,7 +8174,7 @@ function renderInbox() {
 function inboxText(l) {
   const box = h('div', 'inbox-text');
   for (const t of tokenize(l.text, myWords(l.net))) {
-    box.append(t.type === 'mention' ? h('span', 'mention', t.value) : t.type === 'url' ? shortUrl(t.value) : shownText(t.value));
+    box.append(...(t.type === 'mention' ? [h('span', 'mention', t.value)] : t.type === 'url' ? [shortUrl(t.value)] : shownNodes(t.value)));
   }
   return box;
 }
@@ -8452,9 +8721,15 @@ for (const [id, key] of [
   ['nick-word-toggle', NICK_MENU_SETTINGS.word],
   ['hover-card-toggle', HOVER_CARD_SETTING],
   ['hover-wait-toggle', HOVER_CARD_WAIT_SETTING],
+  ['pm-highlight-toggle', PM_HIGHLIGHT_SETTING],
 ]) {
   $(id).addEventListener('change', (e) => saveSetting(key, e.target.checked ? 'on' : 'off'));
 }
+$('pm-highlight-toggle').addEventListener('change', () => {
+  inbox.lines.clear();
+  renderInbox();
+  loadHighlightsSoon();
+});
 $('hover-card-toggle').addEventListener('change', (e) => {
   $('hover-wait-toggle').disabled = !e.target.checked;
 });
