@@ -1276,7 +1276,8 @@ dialog:focus {
   text-decoration: line-through;
   color: var(--faint);
 }
-#settings .switch-row + .switch-row {
+#settings .switch-row + .switch-row,
+#settings .switch-row:not([hidden]) + .wide-btn {
   margin-top: 12px;
 }
 .shortcut-list {

@@ -1,3 +1,7 @@
+### 1.21.1: 2026-11-13
+
+* Fix spacing above Check for updates
+
 ### 1.21.0: 2026-11-13
 
 * Add spoiler dust for hidden words, tap to reveal
