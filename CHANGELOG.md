@@ -1,3 +1,7 @@
+### 1.20.1: 2026-11-13
+
+* Fix the people list scrolling sideways on phones
+
 ### 1.20.0: 2026-11-12
 
 * Add op tools: kick, bans and channel modes
