@@ -1,6 +1,7 @@
 ### Unreleased
 
 * Change People and photos to sit directly in Settings
+* Fix reactions going to a message that slid into place
 
 ### 1.21.2: 2026-11-13
 

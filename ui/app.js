@@ -2508,11 +2508,63 @@ function flushLive() {
   }
   fadeIn(tail, fresh, lines.length);
   // Your own message always brings the view down to it.
-  if (pinned || lines.some((l) => l.own || l.nick === state.me[l.net])) {
+  if (lines.some((l) => l.own || l.nick === state.me[l.net])) {
+    aimHeld = false;
+    glideDown();
+  } else if ((pinned || aimHeld) && aiming()) {
+    holdForAim();
+  } else if (pinned || aimHeld) {
+    aimHeld = false;
     glideDown();
   }
   updateJumps();
 }
+
+// A mouse moving over the chat is on its way to a message's buttons: new lines wait below
+// instead of sliding that message away, so a reaction never lands on the message that took its place.
+const AIM_HOLD_MS = 1500;
+let aimAt = 0;
+let aimHeld = false;
+let aimTimer = 0;
+
+function aiming() {
+  return performance.now() - aimAt < AIM_HOLD_MS;
+}
+
+function holdForAim() {
+  aimHeld = true;
+  clearTimeout(aimTimer);
+  aimTimer = setTimeout(releaseAim, AIM_HOLD_MS);
+}
+
+function releaseAim() {
+  clearTimeout(aimTimer);
+  aimTimer = 0;
+  if (!aimHeld) {
+    return;
+  }
+  if (aiming() || actionPanel) {
+    holdForAim();
+    return;
+  }
+  aimHeld = false;
+  glideDown();
+  updateJumps();
+}
+
+el.col.addEventListener('pointermove', (e) => {
+  if (e.pointerType === 'mouse') {
+    aimAt = performance.now();
+  }
+});
+el.col.addEventListener('pointerleave', () => {
+  aimAt = 0;
+  releaseAim();
+});
+// Scrolling by hand takes over: the view stays where it is put.
+el.col.addEventListener('wheel', () => {
+  aimHeld = false;
+});
 
 // A new message fades in while the chat glides up to it. The glide moves the scroll position
 // itself, so the chat never counts as scrolled away while it runs.
@@ -5465,7 +5517,7 @@ for (const kind of ['wheel', 'touchmove', 'pointerdown']) {
   el.log.addEventListener(kind, () => (movedByHand = true), { passive: true });
 }
 const stayDown = new ResizeObserver(() => {
-  if (actionPanel) {
+  if (actionPanel || aimHeld) {
     return;
   }
   if (glide) {
