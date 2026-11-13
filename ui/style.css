@@ -3504,10 +3504,11 @@ body.docked #update-bar {
 }
 .inbox-pill {
   flex-shrink: 0;
-  height: 22px;
-  padding: 0 8px;
+  /* As tall as the Chat and Shelf tabs beside it. */
+  height: 30px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 11px;
+  border-radius: 15px;
   background: var(--mention-bg);
   color: var(--mention);
   font-size: 12px;
@@ -3780,6 +3781,10 @@ body.docked #update-bar {
 }
 /* On a phone the switch is the people pill's twin: same height, border and round ends. */
 @media (max-width: 600px) {
+  .inbox-pill {
+    height: 34px;
+    border-radius: 17px;
+  }
   .views {
     box-sizing: border-box;
     height: 34px;
