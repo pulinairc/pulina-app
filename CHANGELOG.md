@@ -1,4 +1,4 @@
-### Unreleased
+### 1.23.0: 2026-11-13
 
 * Change quick reactions to your five most used
 * Change the header topic to sit 2px lower
