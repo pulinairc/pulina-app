@@ -280,7 +280,7 @@ fn percent_decode(text: &str) -> String {
 }
 
 #[tauri::command]
-async fn ai_check(key: String) -> Result<(), String> {
+async fn ai_check(key: String) -> Result<ai::KeyInfo, String> {
     ai::check_key(&key).await
 }
 

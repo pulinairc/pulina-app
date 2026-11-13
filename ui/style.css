@@ -1224,16 +1224,89 @@ dialog:focus {
   padding: 0 16px;
   text-align: center;
 }
-#settings .ai-key-result {
-  margin: 8px 0 0;
-  font-size: 14px;
+#settings .key-result {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
   color: var(--dim);
+  font-size: 14px;
 }
-.ai-key-result.ok {
+.key-result-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+.key-result-text {
+  display: grid;
+  min-width: 0;
+}
+.key-result-text b {
+  font-weight: 600;
+}
+.key-result-text span {
+  color: var(--dim);
+  font-size: 13px;
+}
+#settings .key-result.ok {
+  border-color: color-mix(in srgb, var(--ok) 40%, transparent);
+  background: color-mix(in srgb, var(--ok) 10%, transparent);
   color: var(--ok);
+  animation: key-ok-pop 360ms cubic-bezier(0.3, 1.5, 0.5, 1);
 }
-.ai-key-result.fail {
+.key-result.ok .key-result-icon {
+  background: var(--ok);
+  color: var(--bg);
+}
+.key-result.ok .tick {
+  stroke-dasharray: 22;
+  animation: key-ok-tick 300ms ease-out 120ms both;
+}
+#settings .key-result.fail {
+  border-color: color-mix(in srgb, var(--new) 40%, transparent);
+  background: color-mix(in srgb, var(--new) 10%, transparent);
   color: var(--new);
+}
+.key-result.fail .key-result-icon {
+  background: var(--new);
+  color: var(--bg);
+}
+.key-result.checking .key-result-icon {
+  width: 16px;
+  height: 16px;
+  margin: 3px;
+  border: 2px solid var(--line);
+  border-top-color: var(--dim);
+  animation: joining-spin 0.8s linear infinite;
+}
+.key-row[data-check="ok"] .field {
+  border-color: color-mix(in srgb, var(--ok) 55%, var(--line));
+}
+.key-row[data-check="fail"] .field {
+  border-color: color-mix(in srgb, var(--new) 55%, var(--line));
+}
+@keyframes key-ok-pop {
+  from {
+    transform: scale(0.97);
+    opacity: 0.4;
+  }
+}
+@keyframes key-ok-tick {
+  from {
+    stroke-dashoffset: 22;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .key-result.ok,
+  .key-result.ok .tick {
+    animation: none;
+  }
 }
 #settings .ai-row {
   margin-top: 20px;

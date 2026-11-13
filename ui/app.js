@@ -3050,25 +3050,68 @@ const aiKeyField = $('ai-key');
 const aiKeyResult = $('ai-key-result');
 
 const aiKeyTest = $('ai-key-test');
+// Matches ai::KEY_REJECTED in Rust.
+const KEY_REJECTED = 'rejected';
+
+const KEY_CHECK_ICONS = {
+  ok: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path class="tick" d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  fail: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17"/></svg>',
+  checking: '',
+};
+const LIMIT_PERIODS = {
+  daily: '{left} of {limit} left today',
+  weekly: '{left} of {limit} left this week',
+  monthly: '{left} of {limit} left this month',
+};
+
+function dollars(n) {
+  return new Intl.NumberFormat(currentLang() === 'fi' ? 'fi-FI' : 'en-US', { style: 'currency', currency: 'USD' }).format(n);
+}
+
+/** How much a working key may still spend. */
+function keyBudget(info) {
+  if (info.limit == null) {
+    return t('{used} used, no spending limit', { used: dollars(info.usage) });
+  }
+  const vars = { left: dollars(info.limit_remaining ?? info.limit), limit: dollars(info.limit) };
+  return t(LIMIT_PERIODS[info.limit_reset] ?? '{left} of {limit} left', vars);
+}
+
+function showKeyCheck(kind, title, detail = '') {
+  aiKeyResult.hidden = false;
+  aiKeyResult.className = `key-result ${kind}`;
+  aiKeyField.closest('.key-row').dataset.check = kind;
+  const icon = h('span', 'key-result-icon');
+  icon.innerHTML = KEY_CHECK_ICONS[kind];
+  const text = h('span', 'key-result-text');
+  text.append(h('b', '', title));
+  if (detail) {
+    text.append(h('span', '', detail));
+  }
+  aiKeyResult.replaceChildren(icon, text);
+}
 
 /** Asks OpenRouter about the key in the field, saved or not. */
 async function checkAiKey() {
   const key = aiKeyField.value.trim();
-  aiKeyResult.hidden = false;
-  aiKeyResult.className = 'ai-key-result';
   if (!key) {
-    aiKeyResult.classList.add('fail');
-    aiKeyResult.textContent = t('Paste a key first');
+    showKeyCheck('fail', t('Paste a key first'));
     return;
   }
-  aiKeyResult.textContent = t('Checking the key…');
+  showKeyCheck('checking', t('Checking the key…'));
   aiKeyTest.disabled = true;
-  const ok = await invoke('ai_check', { key })
-    .then(() => true)
-    .catch(() => false);
-  aiKeyTest.disabled = false;
-  aiKeyResult.classList.add(ok ? 'ok' : 'fail');
-  aiKeyResult.textContent = ok ? t('Key works') : t('OpenRouter did not accept the key');
+  try {
+    const info = await invoke('ai_check', { key });
+    showKeyCheck('ok', t('Key works'), keyBudget(info));
+  } catch (e) {
+    if (String(e) === KEY_REJECTED) {
+      showKeyCheck('fail', t('OpenRouter did not accept the key'), t('Check that you copied the whole key.'));
+    } else {
+      showKeyCheck('fail', t("Couldn't reach OpenRouter"), t('Check your connection and try again.'));
+    }
+  } finally {
+    aiKeyTest.disabled = false;
+  }
 }
 
 aiKeyField.addEventListener('change', () => {
