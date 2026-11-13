@@ -221,7 +221,6 @@ export const FI = {
   Copied: 'Kopioitu',
   'Keys and passwords are saved with your other settings, on your lobby-server when you use one. Only pictures, PDFs and text files go to your own bucket or folder.':
     'Avaimet ja salasanat tallentuvat muiden asetusten mukana, lobby-serveriä käyttäessä sinne. Omaan säilöön tai kansioon menevät vain kuvat, PDF-tiedostot ja tekstitiedostot.',
-  'People and photos': 'Ihmiset ja kuvat',
   'Set up the connection': 'Määritä yhteys',
   'Saved in': 'Asetukset tiedostossa',
   'Made by': 'Tekijä',

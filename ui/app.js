@@ -246,11 +246,9 @@ const el = {
   settingsSave: $('settings-save'),
   slash: $('slash'),
   replying: $('replying'),
-  openPeople: $('open-people'),
   people: $('people'),
   peopleTitle: $('people-title'),
   peopleBack: $('people-back'),
-  peopleClose: $('people-close'),
   peopleList: $('people-list-view'),
   peopleItems: $('people-list'),
   personNew: $('person-new'),
@@ -421,7 +419,7 @@ function refreshForPhotos() {
   photoRefreshTimer = setTimeout(() => {
     renderHeader();
     redrawKeepingScroll();
-    if (el.people.open && !el.peopleList.hidden) {
+    if (peopleListShown()) {
       renderPeople();
     }
   }, PHOTO_REFRESH_DELAY_MS);
@@ -1920,6 +1918,11 @@ let settingsTab = 'general';
 
 function showSettingsTab(tab) {
   settingsTab = tab;
+  // The person editor has its own Save.
+  el.settingsSave.hidden = tab === 'people';
+  if (tab === 'people') {
+    showList();
+  }
   for (const b of el.settingsTabs.children) {
     b.setAttribute('aria-selected', String(b.dataset.tab === tab));
   }
@@ -6700,7 +6703,7 @@ async function start() {
     state.people = e.payload;
     renderHeader();
     renderLog();
-    if (el.people.open && !el.peopleList.hidden) {
+    if (peopleListShown()) {
       renderPeople();
     }
   });
@@ -6997,6 +7000,10 @@ function personAvatar(p, cls) {
   return av;
 }
 
+function peopleListShown() {
+  return el.settings.open && settingsTab === 'people' && !el.peopleList.hidden;
+}
+
 function showList() {
   editing = null;
   editingFromChat = false;
@@ -7010,7 +7017,7 @@ function showList() {
 
 function editChannel(b) {
   const look = channelLook(b);
-  el.people.showModal();
+  openSettingsTab('people');
   editPerson({ id: 0, channel: b.key, name: label(b), color: look.color || '', photo: look.photo || '', nicks: [] });
   editingFromChat = true;
 }
@@ -7135,7 +7142,7 @@ function toHex(color) {
 
 function openPerson(nick, mask) {
   const found = personFor(state.people, nick, mask);
-  el.people.showModal();
+  openSettingsTab('people');
   editPerson(found || { id: 0, name: nick, color: '', photo: '', nicks: [nick] });
   editingFromChat = true;
 }
@@ -7261,19 +7268,7 @@ async function setPhoto(file) {
   }
 }
 
-el.openPeople.addEventListener('click', () => {
-  el.settings.close();
-  el.people.showModal();
-  el.people.focus();
-  showList();
-});
-el.peopleClose.addEventListener('click', () => el.people.close());
 el.peopleBack.addEventListener('click', showList);
-el.people.addEventListener('click', (e) => {
-  if (e.target === el.people) {
-    el.people.close();
-  }
-});
 el.personNew.addEventListener('click', () => editPerson({ id: 0, name: '', color: '', photo: '', nicks: [] }));
 el.personPhoto.addEventListener('click', () => el.personFile.click());
 el.personFile.addEventListener('change', () => {
@@ -7358,7 +7353,7 @@ el.personEdit.addEventListener('submit', async (e) => {
     }
     all[editing.channel] = { photo: editing.photo, color: editing.color };
     saveSetting(CHANNELS_SETTING, JSON.stringify(all));
-    el.people.close();
+    el.settings.close();
     renderHeader();
     return;
   }
@@ -7369,7 +7364,7 @@ el.personEdit.addEventListener('submit', async (e) => {
       shareOwnPhoto(person.photo);
     }
     if (editingFromChat) {
-      el.people.close();
+      el.settings.close();
     } else {
       showList();
     }
@@ -7388,7 +7383,6 @@ el.personDelete.addEventListener('click', async () => {
     renderStatus(String(err));
   }
 });
-el.people.addEventListener('close', () => el.input.focus());
 
 // Emoji picker: search, frequently used, every category, and a bar to jump between them.
 
