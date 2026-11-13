@@ -157,6 +157,8 @@ export const FI = {
   'When someone answers a person who has said several things, AI picks the message the reply is about.':
     'Kun joku vastaa ihmiselle, joka on sanonut useamman asian, tekoäly valitsee viestin, josta vastauksessa on kyse.',
   'Key works': 'Avain toimii',
+  'Paste a key first': 'Liitä ensin avain',
+  Test: 'Testaa',
   'OpenRouter did not accept the key': 'OpenRouter ei hyväksynyt avainta',
   'Checking the key…': 'Tarkistetaan avainta…',
   Files: 'Tiedostot',

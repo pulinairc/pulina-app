@@ -96,7 +96,7 @@ mod in_bundle {
     use std::ffi::CString;
     use std::io;
     use std::os::unix::ffi::OsStrExt;
-    use std::os::unix::fs::MetadataExt;
+    use std::os::unix::fs::{MetadataExt, PermissionsExt};
     use std::path::{Component, Path, PathBuf};
 
     pub fn install(update: &tauri_plugin_updater::Update, bytes: &[u8]) -> io::Result<()> {
@@ -111,10 +111,31 @@ mod in_bundle {
         }
         let _ = std::fs::remove_dir_all(&staging);
         std::fs::create_dir(&staging)?;
-        let result = unpack(bytes, &staging).and_then(|()| swap(&staging.join("Contents"), &bundle.join("Contents")));
+        let gid = bundle.metadata()?.gid();
+        let result = unpack(bytes, &staging)
+            .and_then(|()| share_with_group(&staging.join("Contents"), gid))
+            .and_then(|()| swap(&staging.join("Contents"), &bundle.join("Contents")));
         let _ = std::fs::remove_dir_all(&staging);
         result?;
         let _ = std::process::Command::new("touch").arg(bundle).status();
+        Ok(())
+    }
+
+    /// The bundle's group may update it too, so another account on the Mac needs no password.
+    fn share_with_group(path: &Path, gid: u32) -> io::Result<()> {
+        let meta = std::fs::symlink_metadata(path)?;
+        std::os::unix::fs::lchown(path, None, Some(gid))?;
+        if meta.file_type().is_symlink() {
+            return Ok(());
+        }
+        let mut perms = meta.permissions();
+        perms.set_mode(perms.mode() | 0o020);
+        std::fs::set_permissions(path, perms)?;
+        if meta.is_dir() {
+            for entry in std::fs::read_dir(path)? {
+                share_with_group(&entry?.path(), gid)?;
+            }
+        }
         Ok(())
     }
 
@@ -184,6 +205,7 @@ mod in_bundle {
             replace_contents(&bundle, &archive("new")).unwrap();
 
             assert_eq!(bundle.metadata().unwrap().ino(), inode);
+            assert_eq!(bundle.join("Contents/MacOS/lobby").metadata().unwrap().mode() & 0o020, 0o020);
             assert_eq!(std::fs::read_to_string(bundle.join("Contents/MacOS/lobby")).unwrap(), "new");
             assert!(!bundle.join("Contents/MacOS/stale").exists());
             assert!(replace_contents(&bundle, b"not an archive").is_err());

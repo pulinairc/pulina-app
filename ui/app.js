@@ -3049,25 +3049,35 @@ async function aiReply({ l, addr, context }) {
 const aiKeyField = $('ai-key');
 const aiKeyResult = $('ai-key-result');
 
+const aiKeyTest = $('ai-key-test');
+
+/** Asks OpenRouter about the key in the field, saved or not. */
 async function checkAiKey() {
-  const key = state.settings[AI_KEY_SETTING];
-  aiKeyResult.hidden = !key;
+  const key = aiKeyField.value.trim();
+  aiKeyResult.hidden = false;
+  aiKeyResult.className = 'ai-key-result';
   if (!key) {
+    aiKeyResult.classList.add('fail');
+    aiKeyResult.textContent = t('Paste a key first');
     return;
   }
-  aiKeyResult.className = 'ai-key-result';
   aiKeyResult.textContent = t('Checking the key…');
+  aiKeyTest.disabled = true;
   const ok = await invoke('ai_check', { key })
     .then(() => true)
     .catch(() => false);
+  aiKeyTest.disabled = false;
   aiKeyResult.classList.add(ok ? 'ok' : 'fail');
   aiKeyResult.textContent = ok ? t('Key works') : t('OpenRouter did not accept the key');
 }
 
 aiKeyField.addEventListener('change', () => {
   saveSetting(AI_KEY_SETTING, aiKeyField.value.trim());
-  checkAiKey();
+  if (aiKeyField.value.trim()) {
+    checkAiKey();
+  }
 });
+aiKeyTest.addEventListener('click', checkAiKey);
 $('ai-replies-toggle').addEventListener('change', (e) => saveSetting(AI_REPLIES_SETTING, e.target.checked ? 'on' : 'off'));
 
 // Reactions and replies

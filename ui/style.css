@@ -1210,6 +1210,20 @@ dialog:focus {
   color: var(--new);
   background: color-mix(in srgb, var(--new) 14%, transparent);
 }
+.key-row {
+  display: flex;
+  gap: 8px;
+}
+.key-row .field {
+  flex: 1;
+  min-width: 0;
+}
+#settings .key-test {
+  flex: none;
+  width: auto;
+  padding: 0 16px;
+  text-align: center;
+}
 #settings .ai-key-result {
   margin: 8px 0 0;
   font-size: 14px;
