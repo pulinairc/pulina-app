@@ -4168,13 +4168,15 @@ body.docked #update-bar {
   rx: 1px;
   transform-box: fill-box;
   transform-origin: bottom;
-  animation: eq 0.7s ease-in-out infinite;
+  /* Stepped, so WebKit redraws 11 times a second instead of every frame of a 165 Hz screen. */
+  animation: eq 0.7s steps(4) infinite;
 }
+/* Whole steps (0.0875 s) apart, so the three bars change on the same redraw. */
 .eq rect:nth-child(1) {
-  animation-delay: -0.23s;
+  animation-delay: -0.2625s;
 }
 .eq rect:nth-child(2) {
-  animation-delay: -0.47s;
+  animation-delay: -0.525s;
 }
 @keyframes eq {
   0%,

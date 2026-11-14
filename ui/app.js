@@ -973,6 +973,8 @@ const SPOILER_DENSITY = 0.32;
 const SPOILER_VSPREAD = 0.45;
 const SPOILER_FADE_MS = 420;
 const SPOILER_SEED_TRIES = 30;
+// The dust drifts slowly; 30 paints a second look the same and spare a 165 Hz screen.
+const SPOILER_PAINT_MS = 33;
 const easeOutCubic = (x) => 1 - (1 - x) ** 3;
 
 function spoiler(word) {
@@ -1140,16 +1142,21 @@ function animateSpoiler(host, text, canvas, state) {
     ctx.globalAlpha = 1;
   };
 
+  let painted = 0;
   const frame = (time) => {
     const dt = last ? time - last : 16;
     last = time;
     const target = state.revealed ? 1 : 0;
-    if (progress !== target) {
+    const moving = progress !== target;
+    if (moving) {
       const step = dt / SPOILER_FADE_MS;
       progress = target > progress ? Math.min(target, progress + step) : Math.max(target, progress - step);
       apply();
     }
-    paint(time);
+    if (moving || time - painted >= SPOILER_PAINT_MS) {
+      painted = time;
+      paint(time);
+    }
     if (!host.isConnected || (progress >= 1 && target === 1)) {
       raf = 0;
       return;
