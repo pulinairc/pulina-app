@@ -1235,6 +1235,9 @@ dialog:focus {
   color: var(--dim);
   font-size: 14px;
 }
+#settings .key-result[hidden] {
+  display: none;
+}
 .key-result-icon {
   flex: none;
   display: grid;
