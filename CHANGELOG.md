@@ -3,6 +3,7 @@
 * Change Linux mark read and scroll keys to Alt
 * Change the key test to a green or red result
 * Fix imgur links showing a card instead of the picture
+* Fix idle CPU use from the now playing bars
 
 ### 1.23.1: 2026-11-13
 
