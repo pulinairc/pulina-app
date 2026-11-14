@@ -16,6 +16,7 @@ pub enum ClientMsg {
     Around { id: u64, net: String, buffer: String, line: i64 },
     CountUnread { id: u64, net: String, buffer: String, after: i64, before: i64 },
     Talkers { id: u64, net: String, buffer: String, since: i64, until: i64 },
+    LastSpoke { id: u64, net: String, buffer: String },
     Mentions { id: u64, words: Vec<String>, before: Option<i64> },
     Links { id: u64, net: String, buffer: String, before: Option<i64> },
     Send { id: u64, net: String, buffer: String, text: String },

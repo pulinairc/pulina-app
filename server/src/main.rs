@@ -157,6 +157,7 @@ fn answer(hub: &Arc<Hub>, path: &Path, changes: bool, msg: ClientMsg) -> Option<
         ClientMsg::Around { id, net, buffer, line } => reply(id, to_json(hub.around(&net, &buffer, line))),
         ClientMsg::CountUnread { id, net, buffer, after, before } => reply(id, to_json(hub.count_unread(&net, &buffer, after, before))),
         ClientMsg::Talkers { id, net, buffer, since, until } => reply(id, to_json(hub.talkers(&net, &buffer, since, until))),
+        ClientMsg::LastSpoke { id, net, buffer } => reply(id, to_json(hub.last_spoke(&net, &buffer))),
         ClientMsg::Mentions { id, words, before } => reply(id, to_json(hub.mentions(&words, before))),
         ClientMsg::Links { id, net, buffer, before } => reply(id, to_json(hub.links(&net, &buffer, before))),
         ClientMsg::Send { id, net, buffer, text } => reply(id, to_json(hub.send(&net, &buffer, &text))),

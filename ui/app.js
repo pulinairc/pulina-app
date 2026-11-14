@@ -896,6 +896,9 @@ function onBuffer(info) {
   b.chanModes = info.chan_modes || {};
   b.lists = info.lists || {};
   b.modeKinds = info.mode_kinds || '';
+  if (b.key === state.current) {
+    loadLastSpoke(b);
+  }
   renderHeader();
   if (el.settings.open && settingsTab === 'channel') {
     renderChannelTools();
@@ -1630,6 +1633,7 @@ function select(k) {
     }
   }
   state.current = k;
+  loadLastSpoke(b);
   try {
     localStorage.setItem(LAST_BUFFER_KEY, k);
   } catch {
@@ -3727,6 +3731,32 @@ function renameSpoke(net, from, to) {
   const ts = spoke.get(spokeKey(net, from));
   if (ts) {
     spoke.set(spokeKey(net, to), ts);
+  }
+}
+
+// When everyone in a channel last spoke, beyond the lines loaded: from the history and the public log.
+const LAST_SPOKE_REFRESH_MS = 10 * 60 * 1000;
+const lastSpokeAsked = new Map();
+
+async function loadLastSpoke(b) {
+  if (!b || !isChannel(b.name) || !b.members?.size) {
+    return;
+  }
+  if (Date.now() - (lastSpokeAsked.get(b.key) || 0) < LAST_SPOKE_REFRESH_MS) {
+    return;
+  }
+  lastSpokeAsked.set(b.key, Date.now());
+  const seen = await invoke('last_spoke', { net: b.net, buffer: b.name, nicks: [...b.members] }).catch(() => ({}));
+  let changed = false;
+  for (const [nick, ts] of Object.entries(seen)) {
+    const k = spokeKey(b.net, nick);
+    if ((spoke.get(k) || 0) < ts) {
+      spoke.set(k, ts);
+      changed = true;
+    }
+  }
+  if (changed && b.key === state.current) {
+    schedulePeople();
   }
 }
 

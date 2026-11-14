@@ -2,6 +2,7 @@
 
 use crate::store::{Line, Store};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::time::Duration;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -21,6 +22,24 @@ pub struct LogLine {
 #[derive(Deserialize)]
 struct Page {
     lines: Vec<LogLine>,
+}
+
+#[derive(Deserialize)]
+struct Seen {
+    seen: HashMap<String, i64>,
+}
+
+async fn fetch(url: &str) -> Result<String, String> {
+    let client = crate::http().timeout(TIMEOUT).build().map_err(|e| e.to_string())?;
+    client
+        .get(url)
+        .send()
+        .await
+        .and_then(reqwest::Response::error_for_status)
+        .map_err(|e| e.to_string())?
+        .text()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 /// A first start loads this many; later starts fill in only what came since.
@@ -47,19 +66,16 @@ impl Backlog {
     }
 
     async fn get(&self, query: &str) -> Result<Vec<LogLine>, String> {
-        let url = format!("{}?{query}", self.url);
-        let client = crate::http().timeout(TIMEOUT).build().map_err(|e| e.to_string())?;
-        let text = client
-            .get(url)
-            .send()
-            .await
-            .and_then(reqwest::Response::error_for_status)
-            .map_err(|e| e.to_string())?
-            .text()
-            .await
-            .map_err(|e| e.to_string())?;
-        let page: Page = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+        let page: Page = serde_json::from_str(&fetch(&format!("{}?{query}", self.url)).await?).map_err(|e| e.to_string())?;
         Ok(page.lines)
+    }
+
+    /// When each of `nicks` last spoke anywhere in the log, which goes back years; by lower-case nick.
+    pub async fn seen(&self, nicks: &[String]) -> Result<HashMap<String, i64>, String> {
+        let mut url = reqwest::Url::parse(&self.url).map_err(|e| e.to_string())?;
+        url.query_pairs_mut().append_pair("seen", &nicks.join(","));
+        let page: Seen = serde_json::from_str(&fetch(url.as_str()).await?).map_err(|e| e.to_string())?;
+        Ok(page.seen.into_iter().map(|(nick, ts)| (nick.to_lowercase(), ts)).collect())
     }
 
     fn store_lines(&self, store: &Store, net: &str, me: &str, newest: Option<i64>, lines: Vec<LogLine>) -> usize {

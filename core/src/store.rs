@@ -196,6 +196,15 @@ impl Store {
         Ok(out)
     }
 
+    /// When each person last said something in a channel, keyed by the lower-case nick.
+    pub fn last_spoke(&self, net: &str, buffer: &str) -> rusqlite::Result<HashMap<String, i64>> {
+        let conn = self.conn();
+        let mut stmt = conn.prepare(
+            "SELECT lower(nick), MAX(ts) FROM lines WHERE net = ?1 AND buffer = ?2 COLLATE NOCASE AND kind IN ('msg', 'action') GROUP BY lower(nick)",
+        )?;
+        stmt.query_map(params![net, buffer], |r| Ok((r.get(0)?, r.get(1)?)))?.collect()
+    }
+
     /// Chat lines by others between two line ids, for unread counts beyond what an app has loaded.
     pub fn count_unread(&self, net: &str, buffer: &str, after: i64, before: i64) -> rusqlite::Result<i64> {
         self.conn().query_row(
@@ -346,6 +355,23 @@ mod tests {
         say("kaisla", "join", "", 110);
         let top = store.talkers("n", "#A", 100, 200).unwrap();
         assert_eq!(top, vec![Talker { nick: "kaisla".into(), words: 4 }, Talker { nick: "otso".into(), words: 1 }]);
+    }
+
+    #[test]
+    fn knows_when_each_person_last_spoke() {
+        let store = Store::open(Path::new(":memory:")).unwrap();
+        let say = |nick: &str, kind: &str, ts: i64| {
+            store.insert(&Line { nick: nick.into(), ts, ..line("#a", kind, "x", false) }).unwrap();
+        };
+        say("kaisla", "msg", 100);
+        say("Kaisla", "action", 300);
+        say("otso", "msg", 120);
+        say("otso", "join", 500);
+        say("milla", "quit", 400);
+        let seen = store.last_spoke("n", "#A").unwrap();
+        assert_eq!(seen.get("kaisla"), Some(&300));
+        assert_eq!(seen.get("otso"), Some(&120));
+        assert_eq!(seen.get("milla"), None);
     }
 
     #[test]

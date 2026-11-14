@@ -157,6 +157,35 @@ async fn talkers(
     }
 }
 
+/// When each person last spoke in a channel: the history held, and for a brand's channel its public log too.
+#[tauri::command]
+async fn last_spoke(
+    state: State<'_, AppState>,
+    net: String,
+    buffer: String,
+    nicks: Vec<String>,
+) -> Result<std::collections::HashMap<String, i64>, String> {
+    let mut seen = match state.source() {
+        Source::Local(hub) => hub.last_spoke(&net, &buffer)?,
+        // An older lobby-server does not know the question; the log and the app's lines still answer.
+        Source::Remote(remote) => remote
+            .request(|id| ClientMsg::LastSpoke { id, net: net.clone(), buffer: buffer.clone() })
+            .await
+            .and_then(from_value)
+            .unwrap_or_default(),
+        Source::Unconfigured => Default::default(),
+    };
+    if let Some(backlog) = brand().backlog.filter(|b| b.channel.eq_ignore_ascii_case(&buffer))
+        && let Ok(log) = backlog.seen(&nicks).await
+    {
+        for (nick, ts) in log {
+            let at = seen.entry(nick).or_insert(ts);
+            *at = (*at).max(ts);
+        }
+    }
+    Ok(seen)
+}
+
 #[tauri::command]
 async fn count_unread(state: State<'_, AppState>, net: String, buffer: String, after: i64, before: i64) -> Result<i64, String> {
     match state.source() {
@@ -884,6 +913,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             status,
             backlog_peek,
+            last_spoke,
             recent_buffers,
             history,
             around,

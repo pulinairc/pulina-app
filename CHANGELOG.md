@@ -5,6 +5,7 @@
 * Fix imgur links showing a card instead of the picture
 * Fix idle CPU use from the now playing bars
 * Fix windows closed with /wc coming back
+* Add last active times for everyone in the people list
 
 ### 1.23.1: 2026-11-13
 
