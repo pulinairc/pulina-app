@@ -1,0 +1,22 @@
+# up.pulina.fi uploads pass through here: HEVC videos become H.264 before they reach R2.
+# nginx proxies up.pulina.fi/pulina to 127.0.0.1:8734. Needs ffmpeg.
+# Install: /etc/systemd/system/pulina-video.service
+[Unit]
+Description=Turn HEVC uploads into H.264 for up.pulina.fi
+After=network.target
+
+[Service]
+# Its own throwaway user: a bug here reaches nobody's files.
+DynamicUser=yes
+ExecStart=/usr/bin/python3 -I /var/www/pulina.fi/scripts/pulina-video.py
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
