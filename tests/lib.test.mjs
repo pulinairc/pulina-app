@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { BRAND } from '../ui/brand.js';
 import {
+  reopensClosed,
   maskParts,
   maskWords,
   OFFENSIVE_WORDS,
@@ -627,4 +628,14 @@ test('imgur picture pages show as pictures', () => {
   assert.equal(mediaKind('https://imgur.com/63pca7j'), 'image');
   assert.equal(mediaKind('https://imgur.com/a/Xy12abc'), 'link');
   assert.equal(directLink('https://imgur.com/upload'), 'https://imgur.com/upload');
+});
+
+test('a closed window comes back for new talk or my own join, not for parts and quits', () => {
+  assert.equal(reopensClosed({ id: 11, kind: 'msg' }, 10), true);
+  assert.equal(reopensClosed({ id: 11, kind: 'action' }, 10), true);
+  assert.equal(reopensClosed({ id: 11, kind: 'join', own: true }, 10), true);
+  assert.equal(reopensClosed({ id: 11, kind: 'join' }, 10), false);
+  assert.equal(reopensClosed({ id: 11, kind: 'part', own: true }, 10), false);
+  assert.equal(reopensClosed({ id: 9, kind: 'msg' }, 10), false);
+  assert.equal(reopensClosed({ kind: 'msg' }, 10), true);
 });
