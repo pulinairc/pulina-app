@@ -279,6 +279,10 @@ impl Hub {
         self.store.talkers(net, buffer, since, until).map_err(|e| e.to_string())
     }
 
+    pub fn last_spoke(&self, net: &str, buffer: &str) -> Result<std::collections::HashMap<String, i64>, String> {
+        self.store.last_spoke(net, buffer).map_err(|e| e.to_string())
+    }
+
     pub fn count_unread(&self, net: &str, buffer: &str, after: i64, before: i64) -> Result<i64, String> {
         self.store.count_unread(net, buffer, after, before).map_err(|e| e.to_string())
     }

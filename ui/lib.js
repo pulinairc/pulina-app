@@ -926,6 +926,8 @@ export function notifyAdvice(permission) {
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
+const MONTH_MS = 30 * DAY_MS;
+const YEAR_MS = 365 * DAY_MS;
 /** Spoke this recently: talking now. */
 export const TALKING_MS = HOUR_MS;
 /** How faint someone gets the longer they stay quiet; anyone quieter than the last step is at the floor. */
@@ -963,7 +965,13 @@ export function quietFor(ts, now = Date.now()) {
   if (ms < DAY_MS) {
     return t('{n}h', { n: Math.floor(ms / HOUR_MS) });
   }
-  return t('{n}d', { n: Math.floor(ms / DAY_MS) });
+  if (ms < MONTH_MS) {
+    return t('{n}d', { n: Math.floor(ms / DAY_MS) });
+  }
+  if (ms < YEAR_MS) {
+    return t('{n}mo', { n: Math.floor(ms / MONTH_MS) });
+  }
+  return t('{n}y', { n: Math.floor(ms / YEAR_MS) });
 }
 
 /** Opacity for someone who last spoke at `ts`. */

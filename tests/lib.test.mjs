@@ -430,6 +430,8 @@ test('quiet people fade and say for how long', () => {
   assert.equal(quietFor(now - 14 * 60e3, now), '14 min');
   assert.equal(quietFor(now - 3 * 3600e3, now), '3h');
   assert.equal(quietFor(now - 4 * 86400e3, now), '4d');
+  assert.equal(quietFor(now - 45 * 86400e3, now), '1mo');
+  assert.equal(quietFor(now - 800 * 86400e3, now), '2y');
   assert.equal(fadeFor(now - 60e3, now), 1);
   assert.ok(fadeFor(now - 5 * 3600e3, now) < fadeFor(now - 2 * 3600e3, now));
   assert.equal(fadeFor(0, now), fadeFor(now - 30 * 86400e3, now));

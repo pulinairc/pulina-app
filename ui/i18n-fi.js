@@ -37,6 +37,8 @@ export const FI = {
   now: 'nyt',
   '{n}h': '{n} t',
   '{n}d': '{n} pv',
+  '{n}mo': '{n} kk',
+  '{n}y': '{n} v',
   Ops: 'Opit',
   'Talking now': 'Äänessä nyt',
   'Earlier today': 'Aiemmin tänään',
