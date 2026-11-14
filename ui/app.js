@@ -5403,6 +5403,12 @@ el.input.addEventListener('keydown', (e) => {
 // Keyboard shortcuts, each one changeable in Settings. Checked before the message box sees the key.
 let IS_MAC = false;
 const SHORTCUT_SETTING = 'shortcuts';
+// Cmd and Option mean other keys than Ctrl and Alt, so a Mac keeps its own changes apart.
+const MAC_SHORTCUT_SETTING = 'shortcuts.macos';
+
+function shortcutSetting() {
+  return IS_MAC ? MAC_SHORTCUT_SETTING : SHORTCUT_SETTING;
+}
 const SHORTCUT_ACTIONS = [
   ['switcher', t('Find a channel')],
   ['markRead', t('Mark this channel read and go to the newest')],
@@ -5429,7 +5435,7 @@ let recordingShortcut = null;
 
 function shortcuts() {
   try {
-    return { ...defaultShortcuts(PLATFORM.value), ...JSON.parse(state.settings[SHORTCUT_SETTING] || '{}') };
+    return { ...defaultShortcuts(PLATFORM.value), ...JSON.parse(state.settings[shortcutSetting()] || '{}') };
   } catch {
     return defaultShortcuts(PLATFORM.value);
   }
@@ -5544,12 +5550,12 @@ document.addEventListener(
     if (combo !== 'Escape') {
       let saved = {};
       try {
-        saved = JSON.parse(state.settings[SHORTCUT_SETTING] || '{}');
+        saved = JSON.parse(state.settings[shortcutSetting()] || '{}');
       } catch {
         /* start over */
       }
       saved[recordingShortcut] = recordingShortcut === 'channelNumber' ? comboMods(combo) || 'Alt' : combo;
-      saveSetting(SHORTCUT_SETTING, JSON.stringify(saved));
+      saveSetting(shortcutSetting(), JSON.stringify(saved));
     }
     recordingShortcut = null;
     renderShortcuts();
@@ -5559,7 +5565,7 @@ document.addEventListener(
 );
 
 el.shortcutReset.addEventListener('click', () => {
-  saveSetting(SHORTCUT_SETTING, '{}');
+  saveSetting(shortcutSetting(), '{}');
   recordingShortcut = null;
   renderShortcuts();
   refreshShortcutTips();
@@ -7051,7 +7057,7 @@ async function start() {
     if (e.payload.key === READ_SETTING) {
       applyReadSetting(e.payload.value);
     }
-    if (e.payload.key === SHORTCUT_SETTING) {
+    if (e.payload.key === shortcutSetting()) {
       refreshShortcutTips();
     }
     if ([MUTED_SETTING, CHANNELS_SETTING, HIDDEN_SETTING].includes(e.payload.key)) {
