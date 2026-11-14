@@ -5,6 +5,14 @@ export const GROUP_GAP_MS = 5 * 60 * 1000;
 export const EVENT_KINDS = new Set(['join', 'part', 'quit', 'nick', 'kick', 'mode']);
 export const CHAT_KINDS = new Set(['msg', 'action', 'notice']);
 
+/** A window closed with /wc after line `closedAt` comes back for new talk or for joining it again. */
+export function reopensClosed(line, closedAt) {
+  if (line.id && line.id <= closedAt) {
+    return false;
+  }
+  return CHAT_KINDS.has(line.kind) || (line.kind === 'join' && Boolean(line.own));
+}
+
 const NAMES_SHOWN = 3;
 // Nick colours are spread over the whole hue circle, minus purple (kept free for nothing
 // to clash with), at one lightness that reads well on the dark background.

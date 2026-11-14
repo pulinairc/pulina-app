@@ -2,6 +2,7 @@ import { BRAND } from './brand.js';
 import { chooseLang, currentLang, LANGS, startLang, t, tv } from './i18n.js';
 import {
   CHAT_KINDS,
+  reopensClosed,
   colonOpensPicker,
   notifyAdvice,
   popupSpot,
@@ -807,6 +808,13 @@ function onLine(l) {
       toBottom();
     }
   }
+  const closedAt = closedWindows()[key(l.net, l.buffer)];
+  if (closedAt !== undefined) {
+    if (!reopensClosed(l, closedAt)) {
+      return;
+    }
+    setClosed(key(l.net, l.buffer), null);
+  }
   const b = buffer(l.net, l.buffer);
   if (l.id && b.ids.has(l.id)) {
     return;
@@ -877,6 +885,9 @@ function headerSoon() {
 }
 
 function onBuffer(info) {
+  if (isClosed(info.net, info.name)) {
+    return;
+  }
   const b = buffer(info.net, info.name);
   b.topic = info.topic;
   b.joined = info.joined;
@@ -910,6 +921,8 @@ function sortedBuffers() {
 const CHANNELS_SETTING = 'channels';
 const MUTED_SETTING = 'muted';
 const HIDDEN_SETTING = 'hidden';
+// Windows closed with /wc: key to the newest line then, so lobby-server's lists don't bring them back.
+const CLOSED_SETTING = 'closed';
 // Channels where every message, not only highlights, counts on the app icon or notifies.
 const BADGE_ALL_SETTING = 'badgeAll';
 const NOTIFY_ALL_SETTING = 'notifyAll';
@@ -1601,6 +1614,7 @@ function select(k) {
   if (!b) {
     return;
   }
+  setClosed(k, null);
   if (state.current !== k) {
     closeNicklist();
     nicklist.picked.clear();
@@ -4794,7 +4808,40 @@ function pageCard(p) {
 
 let lastCommandAt = 0;
 
+function closedWindows() {
+  try {
+    return JSON.parse(state.settings[CLOSED_SETTING] || '{}');
+  } catch {
+    return {};
+  }
+}
+
+function isClosed(net, name) {
+  return key(net, name) in closedWindows();
+}
+
+function setClosed(k, closedAt) {
+  const closed = closedWindows();
+  if (closedAt === null) {
+    if (!(k in closed)) {
+      return;
+    }
+    delete closed[k];
+  } else {
+    closed[k] = closedAt;
+  }
+  saveSetting(CLOSED_SETTING, JSON.stringify(closed));
+}
+
 function closeBuffer(b) {
+  setClosed(
+    b.key,
+    b.lines.reduce((max, l) => Math.max(max, l.id || 0), 0),
+  );
+  dropBuffer(b);
+}
+
+function dropBuffer(b) {
   state.buffers.delete(b.key);
   if (state.current === b.key) {
     state.current = null;
@@ -6983,6 +7030,11 @@ async function start() {
     if (e.payload.key === HIDDEN_SETTING) {
       renderInbox();
     }
+    if (e.payload.key === CLOSED_SETTING) {
+      for (const b of [...state.buffers.values()].filter((x) => isClosed(x.net, x.name))) {
+        dropBuffer(b);
+      }
+    }
     if (e.payload.key === NOTIFY_NICKS_SETTING) {
       el.notifyNicksField.value = commaList(e.payload.value);
     }
@@ -7029,7 +7081,9 @@ async function start() {
   await listen('resync', async () => {
     applyStatus(await invoke('status'));
     for (const r of await invoke('recent_buffers').catch(() => [])) {
-      buffer(r.net, r.buffer);
+      if (!isClosed(r.net, r.buffer)) {
+        buffer(r.net, r.buffer);
+      }
     }
     for (const b of state.buffers.values()) {
       loadHistory(b);
@@ -7039,7 +7093,9 @@ async function start() {
   applyStatus(await invoke('status'));
 
   for (const r of await invoke('recent_buffers').catch(() => [])) {
-    buffer(r.net, r.buffer);
+    if (!isClosed(r.net, r.buffer)) {
+      buffer(r.net, r.buffer);
+    }
   }
   state.started = true;
   pickFirst();
