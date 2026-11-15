@@ -1,4 +1,4 @@
-### Unreleased
+### 1.24.0: 2026-11-15
 
 * Change Linux mark read and scroll keys to Alt
 * Change the key test to a green or red result
