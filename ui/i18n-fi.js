@@ -128,6 +128,7 @@ export const FI = {
   Message: 'Viesti',
   Emoji: 'Emoji',
   'Reply style': 'Vastausten tyyli',
+  Width: 'Leveys',
   'Quote bubble only': 'Vain lainauskupla',
   'Quote bubble and highlighted nick': 'Lainauskupla ja korostettu nimimerkki',
   'Highlighted nick only': 'Vain korostettu nimimerkki',

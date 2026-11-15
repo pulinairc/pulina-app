@@ -243,10 +243,6 @@ a:focus-visible {
 :root.wide-chat {
   --column: 100%;
 }
-#settings .wide-chat-row {
-  margin-top: 16px;
-}
-
 .update-bar {
   display: flex;
   align-items: center;

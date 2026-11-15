@@ -255,10 +255,6 @@
         <span class="size-unit">%</span>
       </div>
       <button id="text-size-reset" class="link-btn" type="button">Reset</button>
-      <label class="switch-row wide-chat-row" for="wide-chat-toggle">
-        <span>Use the full window width for the conversation</span>
-        <input id="wide-chat-toggle" class="switch" type="checkbox" role="switch">
-      </label>
     </section>
     <section id="icon-section" data-tab="general">
       <h3>App icon</h3>
@@ -282,6 +278,13 @@
       <h3><label for="quit-field">Quit message</label></h3>
       <input id="quit-field" class="field" type="text" autocomplete="off" spellcheck="false">
       <p class="hint">Others see this when you close the app. Leave it empty for the one shown.</p>
+    </section>
+    <section data-tab="chat">
+      <h3>Width</h3>
+      <label class="switch-row" for="wide-chat-toggle">
+        <span>Use the full window width for the conversation</span>
+        <input id="wide-chat-toggle" class="switch" type="checkbox" role="switch">
+      </label>
     </section>
     <section data-tab="chat">
       <h3>Reply style</h3>
