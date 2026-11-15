@@ -5745,7 +5745,10 @@ function updateJumps() {
   // The jump shows whenever the New line is out of sight, pointing the way to it.
   const sep = view?.separator?.getBoundingClientRect();
   const log = el.log.getBoundingClientRect();
-  const above = sep && sep.bottom < log.top;
+  el.markRead.hidden = count === 0;
+  // A row behind the top bar's buttons is out of sight too.
+  const cover = count ? Math.max(log.top, el.markRead.getBoundingClientRect().bottom) : log.top;
+  const above = sep && sep.bottom < cover;
   const below = sep && sep.top > log.bottom;
   // Unread lines older than what is loaded: the way to them is up.
   const unloaded = Boolean(b?.unreadGap) && !view?.separator;
@@ -5757,12 +5760,11 @@ function updateJumps() {
     const more = messagesBelow(log.bottom) + (b?.window ? b.windowAfter || 0 : 0);
     el.jumpLatestLabel.textContent = more ? t('{n} more', { n: more }) : t('Latest');
   }
-  el.markRead.hidden = count === 0;
-  // Said in words in the middle, so a busy chat at the bottom still shows what is unread.
-  el.unreadCount.hidden = count === 0;
-  // With the New line above, only what is still above counts, down to nothing as you reach it.
-  const shown = above ? unreadAbove(log.top, readMap[b.key] ?? 0) : count;
-  el.unreadCount.textContent = t('{n} unread', { n: Math.max(shown, 1) });
+  // Out of sight above: the unread rows still hidden between the New line and the view, down to
+  // nothing as you scroll up to it. Below or not loaded: all of them. In sight: the line says it.
+  const shown = above ? unreadAbove(cover, readMap[b.key] ?? 0) : below || unloaded ? count : 0;
+  el.unreadCount.hidden = shown === 0;
+  el.unreadCount.textContent = t('{n} unread', { n: shown });
   const vars = { n: count, key: shortcutLabel('markRead') };
   el.markRead.dataset.tip = count === 1 ? t('Mark {n} message read ({key})', vars) : t('Mark {n} messages read ({key})', vars);
 }
