@@ -1,3 +1,7 @@
+### Unreleased
+
+* Move the full width setting to Chat
+
 ### 1.24.0: 2026-11-15
 
 * Change Linux mark read and scroll keys to Alt
