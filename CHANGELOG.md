@@ -9,6 +9,7 @@
 * Fix Mac shortcuts taking changes made on Linux
 * Change the Pulina application to ask who you are
 * Fix highlights on iPhone not jumping to the message
+* Change @nick mentions to show without the @
 
 ### 1.23.1: 2026-11-13
 

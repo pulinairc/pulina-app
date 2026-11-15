@@ -277,6 +277,22 @@ test('picks channel nicks out of text', () => {
   assert.deepEqual(splitNicks('kaislat', members), [{ type: 'text', value: 'kaislat' }]);
 });
 
+test('an @ some clients put before a nick is left out', () => {
+  const members = new Map([['kaisla', 'Kaisla']]);
+  assert.deepEqual(splitNicks('kiitos @kaisla!', members), [
+    { type: 'text', value: 'kiitos ' },
+    { type: 'nick', value: 'kaisla', nick: 'Kaisla' },
+    { type: 'text', value: '!' },
+  ]);
+  assert.deepEqual(splitNicks('@kaisla', members), [{ type: 'nick', value: 'kaisla', nick: 'Kaisla' }]);
+  assert.deepEqual(splitNicks('mail@kaisla', members), [{ type: 'text', value: 'mail@kaisla' }]);
+  assert.deepEqual(parseAddress('@kaisla: moi'), { nick: 'kaisla', rest: 'moi' });
+  assert.deepEqual(tokenize('kiitos @rolle', 'rolle'), [
+    { type: 'text', value: 'kiitos ' },
+    { type: 'mention', value: 'rolle' },
+  ]);
+});
+
 test('formats whois for a tooltip', () => {
   const w = {
     nick: 'kaisla',
