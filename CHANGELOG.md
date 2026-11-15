@@ -1,4 +1,4 @@
-### Unreleased
+### 1.24.1: 2026-11-15
 
 * Move the full width setting to Chat
 * Add a setting for the new message animation
