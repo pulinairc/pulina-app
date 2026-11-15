@@ -1,4 +1,4 @@
-### Unreleased
+### 1.24.0: 2026-11-15
 
 * Change Linux mark read and scroll keys to Alt
 * Change the key test to a green or red result
@@ -7,6 +7,11 @@
 * Fix windows closed with /wc coming back
 * Add last active times for everyone in the people list
 * Fix Mac shortcuts taking changes made on Linux
+* Change the Pulina application to ask who you are
+* Fix highlights on iPhone not jumping to the message
+* Change @nick mentions to show without the @
+* Fix a slow send going out twice on a second Enter
+* Change the top bar to one style that counts down
 
 ### 1.23.1: 2026-11-13
 

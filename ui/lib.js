@@ -314,6 +314,16 @@ export function tokenize(text, me) {
   return out;
 }
 
+const AT_BEFORE_NICK = /(^|[\s([{"'«])@$/u;
+
+/** How the text just before a nick ends: 'at' for an @ some clients put in front, 'mail' for user@host. */
+function atSign(text, index) {
+  if (text[index - 1] !== '@') {
+    return 'none';
+  }
+  return AT_BEFORE_NICK.test(text.slice(Math.max(0, index - 2), index)) ? 'at' : 'mail';
+}
+
 function splitMentions(text, words) {
   const re = wordPattern(words);
   if (!re) {
@@ -322,8 +332,9 @@ function splitMentions(text, words) {
   const out = [];
   let at = 0;
   for (const m of text.matchAll(re)) {
-    if (m.index > at) {
-      out.push({ type: 'text', value: text.slice(at, m.index) });
+    const start = atSign(text, m.index) === 'at' ? m.index - 1 : m.index;
+    if (start > at) {
+      out.push({ type: 'text', value: text.slice(at, start) });
     }
     out.push({ type: 'mention', value: m[0] });
     at = m.index + m[0].length;
@@ -402,7 +413,7 @@ export function nickMatches(word, members, rank, limit = 6) {
 }
 
 const REACTION_RE = /^([^\s:,]+)[:,]\s*((?:\p{Extended_Pictographic}|\p{Emoji_Modifier}|\p{Regional_Indicator}|️|‍)+)\s*$/u;
-const ADDRESS_RE = /^([^\s:,]+)[:,]\s+([\s\S]+)$/u;
+const ADDRESS_RE = /^@?([^\s:,@]+)[:,]\s+([\s\S]+)$/u;
 
 /** "nick: 😂" is how a reaction travels over IRC. */
 export function parseReaction(text) {
@@ -707,11 +718,13 @@ export function splitNicks(text, members) {
   let at = 0;
   for (const m of text.matchAll(NICK_WORD)) {
     const nick = members.get(m[0].toLowerCase());
-    if (!nick) {
+    const sign = atSign(text, m.index);
+    if (!nick || sign === 'mail') {
       continue;
     }
-    if (m.index > at) {
-      out.push({ type: 'text', value: text.slice(at, m.index) });
+    const start = sign === 'at' ? m.index - 1 : m.index;
+    if (start > at) {
+      out.push({ type: 'text', value: text.slice(at, start) });
     }
     out.push({ type: 'nick', value: m[0], nick });
     at = m.index + m[0].length;

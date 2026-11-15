@@ -1612,7 +1612,11 @@ function renderConnection() {
   el.statusAction.textContent = c.level === 'error' ? t('Set up') : t('Connection');
 }
 
-function select(k) {
+// Opening a highlight on a phone leaves the keyboard down: it rising would pull the chat to the newest line.
+const FOCUS_INPUT = 'input';
+const FOCUS_NONE = 'none';
+
+function select(k, focus = FOCUS_INPUT) {
   const b = state.buffers.get(k);
   if (!b) {
     return;
@@ -1646,7 +1650,9 @@ function select(k) {
     loadShelf();
   }
   renderRoom();
-  el.input.focus();
+  if (focus === FOCUS_INPUT) {
+    el.input.focus();
+  }
 }
 
 function step(offset) {
@@ -4943,7 +4949,13 @@ async function runLocal(b, text) {
   }
 }
 
+// One message at a time: a second Enter while the first is on its way would send it twice.
+let sending = false;
+
 async function send() {
+  if (sending) {
+    return;
+  }
   // A file's link sent without words keeps no space from the gap left in front of it.
   const typed = el.input.value.replace(/^ (?=https?:\/\/)/, '');
   const text = settingOn(EMOTICON_SETTING) ? convertEmoticons(typed) : typed;
@@ -4980,9 +4992,20 @@ async function send() {
       replyHints.set(out, { line: replying, row: findRow(replying) });
       rememberReply(b.net, b.name, out, replying);
     }
-    await invoke('send', { net: b.net, buffer: b.name, text: out });
-    lastSent = text;
+    // The box empties as the message leaves, so a slow answer never invites a second Enter.
+    sending = true;
     el.input.value = '';
+    try {
+      await invoke('send', { net: b.net, buffer: b.name, text: out });
+    } catch (e) {
+      if (!el.input.value) {
+        el.input.value = typed;
+      }
+      throw e;
+    } finally {
+      sending = false;
+    }
+    lastSent = text;
     stopReply();
     renderStatus();
   } catch (e) {
@@ -5682,6 +5705,21 @@ function messagesBelow(bottom) {
   return n;
 }
 
+/** Unread messages wholly above the top edge, counted down from the New line as "N more" counts up from the end. */
+function unreadAbove(top, seen) {
+  let n = 0;
+  for (const row of el.col.querySelectorAll('.text')) {
+    if (row.getBoundingClientRect().bottom > top) {
+      break;
+    }
+    const l = row.line;
+    if (l && l.id > seen && CHAT_KINDS.has(l.kind) && !l.own) {
+      n += 1;
+    }
+  }
+  return n;
+}
+
 function updateJumps() {
   const b = state.buffers.get(state.current);
   const count = b ? unreadCount(b) : 0;
@@ -5703,7 +5741,9 @@ function updateJumps() {
   el.markRead.hidden = count === 0;
   // Said in words in the middle, so a busy chat at the bottom still shows what is unread.
   el.unreadCount.hidden = count === 0;
-  el.unreadCount.textContent = t('{n} unread', { n: count });
+  // With the New line above, only what is still above counts, down to nothing as you reach it.
+  const shown = above ? unreadAbove(log.top, readMap[b.key] ?? 0) : count;
+  el.unreadCount.textContent = t('{n} unread', { n: Math.max(shown, 1) });
   const vars = { n: count, key: shortcutLabel('markRead') };
   el.markRead.dataset.tip = count === 1 ? t('Mark {n} message read ({key})', vars) : t('Mark {n} messages read ({key})', vars);
 }
@@ -8205,10 +8245,11 @@ function centerLine(id) {
 
 async function openLine(l) {
   const b = buffer(l.net, l.buffer);
+  const focus = HOVER.matches ? FOCUS_INPUT : FOCUS_NONE;
   closeShelf();
   if (b.lines.some((x) => x.id === l.id)) {
     b.window = null;
-    select(b.key);
+    select(b.key, focus);
     centerLine(l.id);
     return;
   }
@@ -8220,7 +8261,7 @@ async function openLine(l) {
   if (state.current === b.key) {
     renderLog();
   } else {
-    select(b.key);
+    select(b.key, focus);
   }
 }
 
