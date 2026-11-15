@@ -4949,7 +4949,13 @@ async function runLocal(b, text) {
   }
 }
 
+// One message at a time: a second Enter while the first is on its way would send it twice.
+let sending = false;
+
 async function send() {
+  if (sending) {
+    return;
+  }
   // A file's link sent without words keeps no space from the gap left in front of it.
   const typed = el.input.value.replace(/^ (?=https?:\/\/)/, '');
   const text = settingOn(EMOTICON_SETTING) ? convertEmoticons(typed) : typed;
@@ -4986,9 +4992,20 @@ async function send() {
       replyHints.set(out, { line: replying, row: findRow(replying) });
       rememberReply(b.net, b.name, out, replying);
     }
-    await invoke('send', { net: b.net, buffer: b.name, text: out });
-    lastSent = text;
+    // The box empties as the message leaves, so a slow answer never invites a second Enter.
+    sending = true;
     el.input.value = '';
+    try {
+      await invoke('send', { net: b.net, buffer: b.name, text: out });
+    } catch (e) {
+      if (!el.input.value) {
+        el.input.value = typed;
+      }
+      throw e;
+    } finally {
+      sending = false;
+    }
+    lastSent = text;
     stopReply();
     renderStatus();
   } catch (e) {

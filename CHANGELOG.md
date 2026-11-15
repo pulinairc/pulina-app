@@ -10,6 +10,7 @@
 * Change the Pulina application to ask who you are
 * Fix highlights on iPhone not jumping to the message
 * Change @nick mentions to show without the @
+* Fix a slow send going out twice on a second Enter
 
 ### 1.23.1: 2026-11-13
 
