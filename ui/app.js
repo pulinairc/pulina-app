@@ -1612,7 +1612,11 @@ function renderConnection() {
   el.statusAction.textContent = c.level === 'error' ? t('Set up') : t('Connection');
 }
 
-function select(k) {
+// Opening a highlight on a phone leaves the keyboard down: it rising would pull the chat to the newest line.
+const FOCUS_INPUT = 'input';
+const FOCUS_NONE = 'none';
+
+function select(k, focus = FOCUS_INPUT) {
   const b = state.buffers.get(k);
   if (!b) {
     return;
@@ -1646,7 +1650,9 @@ function select(k) {
     loadShelf();
   }
   renderRoom();
-  el.input.focus();
+  if (focus === FOCUS_INPUT) {
+    el.input.focus();
+  }
 }
 
 function step(offset) {
@@ -8205,10 +8211,11 @@ function centerLine(id) {
 
 async function openLine(l) {
   const b = buffer(l.net, l.buffer);
+  const focus = HOVER.matches ? FOCUS_INPUT : FOCUS_NONE;
   closeShelf();
   if (b.lines.some((x) => x.id === l.id)) {
     b.window = null;
-    select(b.key);
+    select(b.key, focus);
     centerLine(l.id);
     return;
   }
@@ -8220,7 +8227,7 @@ async function openLine(l) {
   if (state.current === b.key) {
     renderLog();
   } else {
-    select(b.key);
+    select(b.key, focus);
   }
 }
 
