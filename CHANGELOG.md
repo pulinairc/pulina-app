@@ -1,6 +1,8 @@
 ### Unreleased
 
 * Move the full width setting to Chat
+* Add a setting for the new message animation
+* Add a Linux setting for green NVIDIA videos
 
 ### 1.24.0: 2026-11-15
 

@@ -287,6 +287,22 @@
       </label>
     </section>
     <section data-tab="chat">
+      <h3>New messages</h3>
+      <div id="arrive-style" class="choices" role="radiogroup" aria-label="New messages">
+        <label class="choice"><input type="radio" name="arrive-style" value="smooth"><span>Glide in smoothly</span></label>
+        <label class="choice"><input type="radio" name="arrive-style" value="quick"><span>Glide in quickly</span></label>
+        <label class="choice"><input type="radio" name="arrive-style" value="off"><span>Appear at once</span></label>
+      </div>
+    </section>
+    <section id="video-section" data-tab="chat" hidden>
+      <h3>Videos</h3>
+      <label class="switch-row" for="video-safe-toggle">
+        <span>Play videos without the graphics card</span>
+        <input id="video-safe-toggle" class="switch" type="checkbox" role="switch">
+      </label>
+      <p class="hint">Turn on if videos show as solid green, which happens with NVIDIA cards. Takes effect after a restart.</p>
+    </section>
+    <section data-tab="chat">
       <h3>Reply style</h3>
       <div id="reply-style" class="choices" role="radiogroup" aria-label="Reply style">
         <label class="choice"><input type="radio" name="reply-style" value="quote"><span>Quote bubble only</span></label>

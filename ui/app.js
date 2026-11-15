@@ -1846,6 +1846,8 @@ function renderChannelAlerts() {
 }
 
 function renderSettings() {
+  showArriveStyle();
+  showVideoSafe();
   el.notifyToggle.checked = notifyOn();
   renderNotifyState();
   el.emoticonToggle.checked = settingOn(EMOTICON_SETTING);
@@ -2601,13 +2603,30 @@ el.col.addEventListener('wheel', () => {
 
 // A new message fades in while the chat glides up to it. The glide moves the scroll position
 // itself, so the chat never counts as scrolled away while it runs.
-const ARRIVE_MS = 180;
+const ARRIVE_MS = { smooth: 180, quick: 100, off: 0 };
+const ARRIVE_KEY = 'lobby.arrive';
 const ARRIVALS_PER_FRAME = 4;
 const REDUCED_MOTION = matchMedia('(prefers-reduced-motion: reduce)');
 let glide = 0;
 
+/** Per device: Linux WebKit draws the glide less smoothly, so it defaults to the quick one. */
+function arriveStyle() {
+  let saved = null;
+  try {
+    saved = localStorage.getItem(ARRIVE_KEY);
+  } catch {}
+  if (saved && Object.hasOwn(ARRIVE_MS, saved)) {
+    return saved;
+  }
+  return PLATFORM.value === 'linux' ? 'quick' : 'smooth';
+}
+
+function arriveMs() {
+  return ARRIVE_MS[arriveStyle()];
+}
+
 function calm() {
-  return REDUCED_MOTION.matches || document.hidden;
+  return REDUCED_MOTION.matches || document.hidden || arriveMs() === 0;
 }
 
 function fadeIn(tail, fresh, count) {
@@ -2623,7 +2642,7 @@ function fadeIn(tail, fresh, count) {
   // device pixels and puts the line back half a pixel off when it ends, a visible nudge on a Mac.
   const start = performance.now();
   const step = (now) => {
-    const p = Math.min((now - start) / ARRIVE_MS, 1);
+    const p = Math.min((now - start) / arriveMs(), 1);
     for (const n of added) {
       n.style.opacity = p < 1 ? String(1 - (1 - p) ** 2) : '';
     }
@@ -2646,7 +2665,7 @@ function glideDown() {
   const from = el.log.scrollTop;
   const start = performance.now();
   const step = (now) => {
-    const p = Math.min((now - start) / ARRIVE_MS, 1);
+    const p = Math.min((now - start) / arriveMs(), 1);
     if (p >= 1) {
       // The real bottom can be a fraction of a pixel below the whole-pixel sum, which a later
       // toBottom() would show as a one-pixel nudge.
@@ -8128,6 +8147,30 @@ function applyWideChat(on) {
 
 applyWideChat(wideChat());
 $('wide-chat-toggle').addEventListener('change', (e) => applyWideChat(e.target.checked));
+
+function showArriveStyle() {
+  for (const r of $('arrive-style').querySelectorAll('input')) {
+    r.checked = r.value === arriveStyle();
+  }
+}
+
+$('arrive-style').addEventListener('change', (e) => {
+  try {
+    localStorage.setItem(ARRIVE_KEY, e.target.value);
+  } catch {}
+  showArriveStyle();
+});
+
+// Linux only: WebKit's GL video sink is read once at start, so the choice waits for a restart.
+async function showVideoSafe() {
+  const on = await invoke('video_safe').catch(() => null);
+  $('video-section').hidden = on === null;
+  $('video-safe-toggle').checked = Boolean(on);
+}
+
+$('video-safe-toggle').addEventListener('change', (e) => {
+  invoke('set_video_safe', { on: e.target.checked }).catch((err) => console.error('video setting', err));
+});
 
 /** The window in the zoomed page's pixels: 100vw and 100vh ignore the zoom and overflow on iPhone. */
 function viewSize() {
