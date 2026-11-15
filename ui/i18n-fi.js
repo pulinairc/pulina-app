@@ -365,8 +365,10 @@ export const FI = {
     'Ylläpito käy hakemukset läpi. Kun tunnus hyväksytään, sovellus kirjautuu sillä itse. Siihen asti voit liittyä suoraan.',
   'e.g. aurora': 'esim. aurora',
   Password: 'Salasana',
-  'The nick people know you by on the channel': 'Nimimerkki, jolla sinut tunnetaan kanavalla',
-  'A nick or a few words about you': 'Nimimerkki tai pari sanaa itsestäsi',
+  'About you': 'Kerro itsestäsi',
+  'Your nick on the channel and a few words about you': 'Nimimerkkisi kanavalla ja pari sanaa itsestäsi',
+  'Who you are, how long you have been on IRC and why you should get an account. There is a limited number of accounts.':
+    'Kerro, kuka olet, kuinka pitkään olet irkannut ja miksi sinun pitäisi saada tunnus. Tunnuksia on rajallinen määrä.',
   'Send application': 'Lähetä hakemus',
   'Sign in': 'Kirjaudu',
   'I want my own {host} account →': 'Haluan oman {host}-tunnuksen →',
