@@ -11,6 +11,7 @@
 * Fix highlights on iPhone not jumping to the message
 * Change @nick mentions to show without the @
 * Fix a slow send going out twice on a second Enter
+* Change the top bar to one style that counts down
 
 ### 1.23.1: 2026-11-13
 

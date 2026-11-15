@@ -5705,6 +5705,21 @@ function messagesBelow(bottom) {
   return n;
 }
 
+/** Unread messages wholly above the top edge, counted down from the New line as "N more" counts up from the end. */
+function unreadAbove(top, seen) {
+  let n = 0;
+  for (const row of el.col.querySelectorAll('.text')) {
+    if (row.getBoundingClientRect().bottom > top) {
+      break;
+    }
+    const l = row.line;
+    if (l && l.id > seen && CHAT_KINDS.has(l.kind) && !l.own) {
+      n += 1;
+    }
+  }
+  return n;
+}
+
 function updateJumps() {
   const b = state.buffers.get(state.current);
   const count = b ? unreadCount(b) : 0;
@@ -5726,7 +5741,9 @@ function updateJumps() {
   el.markRead.hidden = count === 0;
   // Said in words in the middle, so a busy chat at the bottom still shows what is unread.
   el.unreadCount.hidden = count === 0;
-  el.unreadCount.textContent = t('{n} unread', { n: count });
+  // With the New line above, only what is still above counts, down to nothing as you reach it.
+  const shown = above ? unreadAbove(log.top, readMap[b.key] ?? 0) : count;
+  el.unreadCount.textContent = t('{n} unread', { n: Math.max(shown, 1) });
   const vars = { n: count, key: shortcutLabel('markRead') };
   el.markRead.dataset.tip = count === 1 ? t('Mark {n} message read ({key})', vars) : t('Mark {n} messages read ({key})', vars);
 }
