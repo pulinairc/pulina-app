@@ -83,6 +83,7 @@ const EMOTICON_SETTING = 'emoticons';
 // Tab completes nicks either way; these only choose when the list opens by itself.
 const NICK_MENU_SETTINGS = { at: 'nick_menu_at', word: 'nick_menu_word' };
 const HOVER_CARD_SETTING = 'hover_cards';
+const NP_EDIT_SETTING = 'np_edit';
 const HOVER_CARD_WAIT_SETTING = 'hover_card_wait';
 const BOTS_SETTING = 'bots';
 const HIGHLIGHT_WORDS_SETTING = 'highlightWords';
@@ -1854,6 +1855,7 @@ function renderSettings() {
   $('nick-at-toggle').checked = settingOn(NICK_MENU_SETTINGS.at);
   $('nick-word-toggle').checked = settingOn(NICK_MENU_SETTINGS.word);
   $('hover-card-toggle').checked = settingOn(HOVER_CARD_SETTING);
+  $('np-edit-toggle').checked = settingOn(NP_EDIT_SETTING);
   $('pm-highlight-toggle').checked = settingOn(PM_HIGHLIGHT_SETTING);
   $('hover-wait-toggle').checked = settingOn(HOVER_CARD_WAIT_SETTING);
   $('hover-wait-toggle').disabled = !settingOn(HOVER_CARD_SETTING);
@@ -9165,6 +9167,7 @@ for (const [id, key] of [
   ['hover-card-toggle', HOVER_CARD_SETTING],
   ['hover-wait-toggle', HOVER_CARD_WAIT_SETTING],
   ['pm-highlight-toggle', PM_HIGHLIGHT_SETTING],
+  ['np-edit-toggle', NP_EDIT_SETTING],
 ]) {
   $(id).addEventListener('change', (e) => saveSetting(key, e.target.checked ? 'on' : 'off'));
 }
@@ -9473,6 +9476,7 @@ function fillNp() {
 
 function openNp() {
   fillNp();
+  el.npEdit.hidden = !settingOn(NP_EDIT_SETTING);
   el.npCard.hidden = false;
   el.npBtn.setAttribute('aria-expanded', 'true');
 }
