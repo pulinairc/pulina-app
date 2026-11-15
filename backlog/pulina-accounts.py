@@ -90,7 +90,7 @@ CODE_SECONDS = 600
 # No 0/O or 1/I: the code is typed off a screen.
 CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 CODE_LEN = 6
-MAX_KNOWN = 200
+MAX_KNOWN = 600
 MAX_BODY = 4096
 SCRYPT = dict(n=2 ** 14, r=8, p=1, dklen=32)
 
@@ -508,7 +508,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.html(200, name, f'<h1>Tunnus {name} on käytössä.</h1>{note}')
         if row['status'] == 'rejected':
             return self.html(200, name, f'<h1>Hakemus hylätty.</h1>{note}')
-        body = (f'<h1>{name} hakee pulina.fi-tunnusta</h1><p>Kanavalla tunnetaan nimellä: {html.escape(row["known"]) or "–"}</p>'
+        body = (f'<h1>{name} hakee pulina.fi-tunnusta</h1><p><b>Hakija kertoo:</b><br>{html.escape(row["known"]) or "–"}</p>'
                 f'<form method="post"><input type="hidden" name="decision" value="approve"><button class="go">Hyväksy</button></form>'
                 f'<form method="post"><input type="hidden" name="decision" value="reject"><button class="no">Hylkää</button></form>{note}')
         self.html(200, name, body)
