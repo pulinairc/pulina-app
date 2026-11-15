@@ -1,4 +1,4 @@
-### Unreleased
+### 1.24.2: 2026-11-15
 
 * Fix the top bar unread count
 * Add a setting to hide "Put in the message box"
