@@ -124,6 +124,7 @@ export const FI = {
   'Now playing': 'Nyt soi',
   Send: 'Lähetä',
   'Put in the message box': 'Lisää viestikenttään',
+  'Show "Put in the message box" next to Send': 'Näytä Lähetä-napin vieressä ”Lisää viestikenttään”',
   'Attach a file': 'Liitä tiedosto',
   Message: 'Viesti',
   Emoji: 'Emoji',
