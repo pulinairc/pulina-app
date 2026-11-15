@@ -13,6 +13,7 @@ mod remote;
 mod sftp;
 mod tunnel;
 mod update;
+mod video;
 
 use lobby_core::hub::{Event, Hub, Snapshot};
 use lobby_core::now_ms;
@@ -840,6 +841,10 @@ fn fit_to_screen(window: &tauri::WebviewWindow) -> tauri::Result<()> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let context = tauri::generate_context!();
+    config::use_name(&context.package_info().name);
+    #[cfg(target_os = "linux")]
+    video::apply();
     // With two TLS backends compiled in rustls will not choose, and a wss:// lobby-server link panics.
     let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
     let builder = tauri::Builder::default().plugin(tauri_plugin_opener::init()).plugin(tauri_plugin_notification::init());
@@ -912,6 +917,8 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             status,
+            video::video_safe,
+            video::set_video_safe,
             backlog_peek,
             last_spoke,
             recent_buffers,
@@ -954,7 +961,7 @@ pub fn run() {
             account_call,
             reset_app
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("failed to start Lobby")
         .run(|app, event| {
             if let tauri::RunEvent::ExitRequested { .. } | tauri::RunEvent::Exit = event {
