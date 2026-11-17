@@ -1,3 +1,7 @@
+### Unreleased
+
+* Fix update check erroring before the Mac build
+
 ### 1.25.1: 2026-11-17
 
 * Fix Summarize not showing the summary
