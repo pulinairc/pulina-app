@@ -1,6 +1,8 @@
-### Unreleased
+### 1.25.2: 2026-11-17
 
 * Fix update check erroring before the Mac build
+* Fix English "you" in other-language summaries
+* Fix stray comma before full stops
 
 ### 1.25.1: 2026-11-17
 

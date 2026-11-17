@@ -682,6 +682,11 @@ test('a summary drops message numbers written outside a link', async () => {
   ]);
 });
 
+test('a summary drops a comma left in front of a full stop', async () => {
+  const { summaryParts } = await import('../ui/lib.js');
+  assert.deepEqual(summaryParts('Live-USB tai fstab-viilaukset, [12].'), [[{ type: 'text', value: 'Live-USB tai fstab-viilaukset.' }]]);
+});
+
 test('a long summary ends after its last whole sentence that fits', async () => {
   const { summaryParts, clipSummary } = await import('../ui/lib.js');
   const paras = summaryParts('One two. Three [four](3) five.\n\nSix seven eight.');
