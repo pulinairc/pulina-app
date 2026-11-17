@@ -2277,8 +2277,17 @@ function renderLog() {
   if (!b.lines.length && isChannel(b.name)) {
     el.col.append(h('p', 'log-empty', t('You are on {channel}. New messages show up here.', { channel: b.name })));
   }
+  const notes = b.window ? [] : (b.notes ?? []);
+  for (const n of notes.filter((n) => n.after === null)) {
+    appendNote(n.text);
+  }
   for (const l of b.window ?? b.lines) {
     appendLine(l);
+    for (const n of notes) {
+      if (n.after === l.id) {
+        appendNote(n.text);
+      }
+    }
   }
   el.windowBar.hidden = !b.window;
   document.body.classList.toggle('windowed', Boolean(b.window));
@@ -4912,9 +4921,24 @@ function dropBuffer(b) {
   renderHeader();
 }
 
+/** Answers the app shows itself, such as /whois. Kept per window so a redraw does not drop them. */
+const NOTES_KEPT = 20;
+
 function localNote(text) {
-  el.col.append(h('div', 'events info', text));
+  const b = state.buffers.get(state.current);
+  if (b) {
+    b.notes = [...(b.notes ?? []), { after: lastId(b) ?? null, text }].slice(-NOTES_KEPT);
+  }
+  appendNote(text);
   toBottom();
+}
+
+function appendNote(text) {
+  el.col.append(h('div', 'events info', text));
+  // The next message starts its own group below the note.
+  view.group = null;
+  view.events = null;
+  view.command = null;
 }
 
 /** Commands the app handles itself. Returns true when handled. */

@@ -1,3 +1,7 @@
+### Unreleased
+
+* Fix /whois answers disappearing
+
 ### 1.24.2: 2026-11-15
 
 * Fix the top bar unread count
