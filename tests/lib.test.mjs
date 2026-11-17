@@ -671,6 +671,17 @@ test('summary text splits into paragraphs, links and you', async () => {
   ]);
 });
 
+test('a summary drops message numbers written outside a link', async () => {
+  const { summaryParts } = await import('../ui/lib.js');
+  assert.deepEqual(summaryParts('Scaha_ [50] and sumu [53, 54] asked [in the evening](56) [56].'), [
+    [
+      { type: 'text', value: 'Scaha_ and sumu asked ' },
+      { type: 'link', value: 'in the evening', n: 56 },
+      { type: 'text', value: '.' },
+    ],
+  ]);
+});
+
 test('a long summary ends after its last whole sentence that fits', async () => {
   const { summaryParts, clipSummary } = await import('../ui/lib.js');
   const paras = summaryParts('One two. Three [four](3) five.\n\nSix seven eight.');

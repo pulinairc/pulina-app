@@ -1,3 +1,10 @@
+### 1.25.1: 2026-11-17
+
+* Fix Summarize not showing the summary
+* Fix summary check not going to the newest
+* Fix message numbers showing in summaries
+* Change summary times to looser wording
+
 ### 1.25.0: 2026-11-17
 
 * Add AI summaries of unread messages

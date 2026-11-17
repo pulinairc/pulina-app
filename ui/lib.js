@@ -1199,12 +1199,14 @@ export const SUMMARY_MAX_CHARS = 500;
 /** Chat read aloud in the head runs about this fast. */
 const READ_WORDS_PER_MIN = 200;
 const SUMMARY_MARKUP = /\[([^\]]+)\]\((\d+)\)|\*\*([^*]+)\*\*/g;
+// A message number the model wrote as plain text, like "[56]" or "[16, 17]".
+const BARE_NUMBERS = /\s*\[\d+(?:\s*,\s*\d+)*\](?!\()/g;
 
 /** The model's text as paragraphs of parts: plain text, `[phrase](N)` links to line N, `**you**`. */
 export function summaryParts(text) {
   return text
     .split(/\n\s*\n/)
-    .map((p) => p.replace(/\s+/g, ' ').trim())
+    .map((p) => p.replace(BARE_NUMBERS, '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .map((p) => {
       const out = [];
