@@ -1206,7 +1206,13 @@ const BARE_NUMBERS = /\s*\[\d+(?:\s*,\s*\d+)*\](?!\()/g;
 export function summaryParts(text) {
   return text
     .split(/\n\s*\n/)
-    .map((p) => p.replace(BARE_NUMBERS, '').replace(/\s+/g, ' ').trim())
+    .map((p) =>
+      p
+        .replace(BARE_NUMBERS, '')
+        .replace(/\s*,\s*([.!?])/g, '$1')
+        .replace(/\s+/g, ' ')
+        .trim(),
+    )
     .filter(Boolean)
     .map((p) => {
       const out = [];

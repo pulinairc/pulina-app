@@ -19,7 +19,8 @@ const SUMMARY_TOKENS: u32 = 1500;
 const SUMMARY_FORMAT: &str = "Answer with the summary text only, in short paragraphs separated by a blank line, with no headings or lists. \
 When a phrase is about a particular message, link it as [phrase](N) with that message's number. \
 Never write a message number anywhere else, so no bare [N] after a name or a sentence. \
-Put the words that mean the reader, like \"you\", in double asterisks: **you**.";
+Speak to the reader directly with the word for you in the summary's own language, never by their nick and never with the English word in another language, \
+and put each such word in double asterisks, like **you** in English or **sinua** in Finnish.";
 
 #[derive(Deserialize)]
 pub struct ChatLine {
