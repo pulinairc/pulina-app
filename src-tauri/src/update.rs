@@ -31,7 +31,8 @@ pub async fn check_update(app: AppHandle) -> Result<Option<Available>, String> {
     let update = match app.updater().map_err(|e| e.to_string())?.check().await {
         Ok(update) => update,
         // The newest release is there but its update files are not (yet): saying "up to date" would be wrong.
-        Err(Error::ReleaseNotFound) => return Err(NO_UPDATE_FILES.into()),
+        // A platform missing from latest.json means its build is still on the way.
+        Err(Error::ReleaseNotFound | Error::TargetNotFound(_) | Error::TargetsNotFound(_)) => return Err(NO_UPDATE_FILES.into()),
         Err(e) => return Err(e.to_string()),
     };
     Ok(update.map(|u| Available { version: u.version, installable: can_install_updates(), notes: u.body }))
