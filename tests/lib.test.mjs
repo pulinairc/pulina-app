@@ -657,3 +657,49 @@ test('a closed window comes back for new talk or my own join, not for parts and 
   assert.equal(reopensClosed({ id: 9, kind: 'msg' }, 10), false);
   assert.equal(reopensClosed({ kind: 'msg' }, 10), true);
 });
+
+test('summary text splits into paragraphs, links and you', async () => {
+  const { summaryParts } = await import('../ui/lib.js');
+  assert.deepEqual(summaryParts('**You** were asked [a bit before four](12).\n\nThe rest:  sauna.'), [
+    [
+      { type: 'you', value: 'You' },
+      { type: 'text', value: ' were asked ' },
+      { type: 'link', value: 'a bit before four', n: 12 },
+      { type: 'text', value: '.' },
+    ],
+    [{ type: 'text', value: 'The rest: sauna.' }],
+  ]);
+});
+
+test('a long summary ends after its last whole sentence that fits', async () => {
+  const { summaryParts, clipSummary } = await import('../ui/lib.js');
+  const paras = summaryParts('One two. Three [four](3) five.\n\nSix seven eight.');
+  assert.equal(clipSummary(paras, 100), paras);
+  assert.deepEqual(clipSummary(paras, 26), paras.slice(0, 1));
+  assert.deepEqual(clipSummary(paras, 12), [[{ type: 'text', value: 'One two.' }]]);
+  assert.deepEqual(clipSummary(paras, 5), []);
+});
+
+test('summary names are found also when Finnish bends them', async () => {
+  const { summaryNicks } = await import('../ui/lib.js');
+  const members = new Map([
+    ['sumu', 'sumu'],
+    ['mikko_', 'mikko_'],
+    ['al', 'al'],
+  ]);
+  assert.deepEqual(summaryNicks('sauna sumulla, mikko_:n vahvistin', members), [
+    { type: 'text', value: 'sauna ' },
+    { type: 'nick', value: 'sumulla', nick: 'sumu' },
+    { type: 'text', value: ', ' },
+    { type: 'nick', value: 'mikko_:n', nick: 'mikko_' },
+    { type: 'text', value: ' vahvistin' },
+  ]);
+  assert.deepEqual(summaryNicks('also sumutin', members), [{ type: 'text', value: 'also sumutin' }]);
+  assert.deepEqual(summaryNicks('alla', members), [{ type: 'text', value: 'alla' }]);
+});
+
+test('reading time counts words at 200 a minute, at least a minute', async () => {
+  const { readingSecs } = await import('../ui/lib.js');
+  assert.equal(readingSecs(['hi']), 60);
+  assert.equal(readingSecs([Array(1200).fill('sana').join(' ')]), 360);
+});

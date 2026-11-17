@@ -1191,3 +1191,117 @@ export function reportMail(to, line, note = '') {
   const subject = t('Report: {channel} {nick}', { channel: line.buffer, nick: line.nick });
   return `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body.join('\n'))}`;
 }
+
+// AI summaries of unread messages.
+
+/** What a summary may show, in characters, whatever its prompt says. */
+export const SUMMARY_MAX_CHARS = 500;
+/** Chat read aloud in the head runs about this fast. */
+const READ_WORDS_PER_MIN = 200;
+const SUMMARY_MARKUP = /\[([^\]]+)\]\((\d+)\)|\*\*([^*]+)\*\*/g;
+
+/** The model's text as paragraphs of parts: plain text, `[phrase](N)` links to line N, `**you**`. */
+export function summaryParts(text) {
+  return text
+    .split(/\n\s*\n/)
+    .map((p) => p.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .map((p) => {
+      const out = [];
+      let at = 0;
+      for (const m of p.matchAll(SUMMARY_MARKUP)) {
+        if (m.index > at) {
+          out.push({ type: 'text', value: p.slice(at, m.index) });
+        }
+        out.push(m[3] ? { type: 'you', value: m[3] } : { type: 'link', value: m[1], n: Number(m[2]) });
+        at = m.index + m[0].length;
+      }
+      if (at < p.length) {
+        out.push({ type: 'text', value: p.slice(at) });
+      }
+      return out;
+    });
+}
+
+/** Paragraphs cut after the last whole sentence that fits in `max` shown characters. */
+export function clipSummary(paras, max = SUMMARY_MAX_CHARS) {
+  const shown = paras.map((p) => p.map((x) => x.value).join(''));
+  if (shown.join(' ').length <= max) {
+    return paras;
+  }
+  // The last sentence end within the limit, as [paragraph, offset in it].
+  let cut = null;
+  let before = 0;
+  shown.forEach((s, i) => {
+    for (const m of s.matchAll(/[.!?…](?=\s|$)/g)) {
+      if (before + m.index + 1 <= max) {
+        cut = [i, m.index + 1];
+      }
+    }
+    before += s.length + 1;
+  });
+  if (!cut) {
+    return [];
+  }
+  const [last, end] = cut;
+  return paras.slice(0, last + 1).map((p, i) => (i < last ? p : clipParts(p, end)));
+}
+
+function clipParts(parts, end) {
+  const out = [];
+  let at = 0;
+  for (const x of parts) {
+    if (at >= end) {
+      break;
+    }
+    const room = end - at;
+    out.push(x.value.length <= room ? x : { ...x, value: x.value.slice(0, room) });
+    at += x.value.length;
+  }
+  return out;
+}
+
+const NAME_WORD = /[\p{L}0-9_\-[\]\\`^{}|]+(?::[\p{L}]+)?/gu;
+// Finnish case endings only, so a longer word that merely starts with a nick is left alone.
+const NAME_ENDING = /^:?(n|a|ä|ta|tä|na|nä|ksi|lla|llä|lle|lta|ltä|ssa|ssä|sta|stä|seen|h?[aeiouyäö]n|kin|nkin)$/u;
+const NAME_STEM_MIN = 3;
+
+/**
+ * Text with the people in it picked out, also when Finnish bends the name: sumulla, mikko_:n.
+ * `members` maps lower-case nicks to their spelling.
+ */
+export function summaryNicks(text, members) {
+  const out = [];
+  let at = 0;
+  for (const m of text.matchAll(NAME_WORD)) {
+    const word = m[0].toLowerCase();
+    let nick = members.get(word);
+    if (!nick) {
+      let stem = '';
+      for (const n of members.keys()) {
+        if (n.length >= NAME_STEM_MIN && n.length > stem.length && word.startsWith(n) && NAME_ENDING.test(word.slice(n.length))) {
+          stem = n;
+        }
+      }
+      nick = stem && members.get(stem);
+    }
+    if (!nick) {
+      continue;
+    }
+    if (m.index > at) {
+      out.push({ type: 'text', value: text.slice(at, m.index) });
+    }
+    out.push({ type: 'nick', value: m[0], nick });
+    at = m.index + m[0].length;
+  }
+  if (at < text.length) {
+    out.push({ type: 'text', value: text.slice(at) });
+  }
+  return out;
+}
+
+/** How long reading these lines yourself would take, in whole minutes as seconds. */
+export function readingSecs(texts) {
+  const words = texts.reduce((n, s) => n + (s.match(/\S+/g)?.length ?? 0), 0);
+  return Math.max(1, Math.round(words / READ_WORDS_PER_MIN)) * 60;
+}

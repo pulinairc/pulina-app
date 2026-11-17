@@ -10,9 +10,26 @@ const MODEL: &str = "google/gemini-2.5-flash-lite";
 const TIMEOUT: Duration = Duration::from_secs(15);
 const ANSWER_TOKENS: u32 = 8;
 const REPLY_SYSTEM: &str = "You match IRC replies to the earlier message they answer. Reply with a single number.";
+// Picked on 17.11.2026: Google's replacement for the 2.5 Flash models, which are only kept for earlier users.
+const SUMMARY_MODEL: &str = "google/gemini-3.5-flash-lite";
+const SUMMARY_TIMEOUT: Duration = Duration::from_secs(90);
+// Room for the link markup; the app cuts the text itself at 500 shown characters.
+const SUMMARY_TOKENS: u32 = 1500;
+// Added after the user's own prompt, which can be edited, so an edit never breaks the links.
+const SUMMARY_FORMAT: &str = "Answer with the summary text only, in short paragraphs separated by a blank line, with no headings or lists. \
+When a phrase is about a particular message, link it as [phrase](N) with that message's number. \
+Put the words that mean the reader, like \"you\", in double asterisks: **you**.";
 
 #[derive(Deserialize)]
 pub struct ChatLine {
+    pub nick: String,
+    pub text: String,
+}
+
+/// A message to summarize, with its time as the reader would say it.
+#[derive(Deserialize)]
+pub struct SummaryLine {
+    pub at: String,
     pub nick: String,
     pub text: String,
 }
@@ -31,7 +48,7 @@ pub const KEY_REJECTED: &str = "rejected";
 
 /// Whether OpenRouter accepts the key, and its spending limit.
 pub async fn check_key(key: &str) -> Result<KeyInfo, String> {
-    let res = client()?.get(format!("{API}/key")).bearer_auth(key).send().await.map_err(|e| format!("OpenRouter: {e}"))?;
+    let res = client(TIMEOUT)?.get(format!("{API}/key")).bearer_auth(key).send().await.map_err(|e| format!("OpenRouter: {e}"))?;
     let status = res.status();
     if status == reqwest::StatusCode::UNAUTHORIZED || status == reqwest::StatusCode::FORBIDDEN {
         return Err(KEY_REJECTED.into());
@@ -65,10 +82,34 @@ pub async fn reply_target(key: &str, lines: &[ChatLine], from: &str, to: &str, t
         "max_tokens": ANSWER_TOKENS,
         "temperature": 0,
     });
-    let res = client()?
+    let answer = complete(key, &body, TIMEOUT).await?;
+    Ok(picked(&answer, &choices))
+}
+
+/// What the unread `lines` (oldest first) said, as text with `[phrase](N)` links to line N, counted from 1.
+pub async fn summary(key: &str, lines: &[SummaryLine], prompt: &str, now: &str) -> Result<String, String> {
+    let body = json!({
+        "model": SUMMARY_MODEL,
+        "messages": [{ "role": "user", "content": summary_prompt(lines, prompt, now) }],
+        "max_tokens": SUMMARY_TOKENS,
+        "temperature": 0.3,
+        // The model always thinks; the least of it is enough here, and none of it is shown.
+        "reasoning": { "effort": "minimal", "exclude": true },
+    });
+    complete(key, &body, SUMMARY_TIMEOUT).await
+}
+
+fn summary_prompt(lines: &[SummaryLine], prompt: &str, now: &str) -> String {
+    let rows: Vec<String> = lines.iter().enumerate().map(|(i, l)| format!("[{}] {} {}: {}", i + 1, l.at, l.nick, l.text)).collect();
+    format!("{prompt}\n\n{SUMMARY_FORMAT}\n\nIt is now {now}.\n\nMessages, oldest first:\n{}", rows.join("\n"))
+}
+
+/// The model's answer text, or OpenRouter's own error.
+async fn complete(key: &str, body: &Value, timeout: Duration) -> Result<String, String> {
+    let res = client(timeout)?
         .post(format!("{API}/chat/completions"))
         .bearer_auth(key)
-        .json(&body)
+        .json(body)
         .send()
         .await
         .map_err(|e| format!("OpenRouter: {e}"))?;
@@ -77,11 +118,11 @@ pub async fn reply_target(key: &str, lines: &[ChatLine], from: &str, to: &str, t
     if !status.is_success() {
         return Err(format!("OpenRouter: {}", json["error"]["message"].as_str().unwrap_or(status.as_str())));
     }
-    Ok(picked(json["choices"][0]["message"]["content"].as_str().unwrap_or(""), &choices))
+    Ok(json["choices"][0]["message"]["content"].as_str().unwrap_or("").trim().to_owned())
 }
 
-fn client() -> Result<reqwest::Client, String> {
-    lobby_core::http().timeout(TIMEOUT).build().map_err(|e| e.to_string())
+fn client(timeout: Duration) -> Result<reqwest::Client, String> {
+    lobby_core::http().timeout(timeout).build().map_err(|e| e.to_string())
 }
 
 /// The lines `to` wrote, as indexes.
@@ -131,6 +172,14 @@ mod tests {
     }
 
     #[test]
+    fn numbers_the_lines_after_the_users_prompt() {
+        let lines = [SummaryLine { at: "14.32".into(), nick: "sumu".into(), text: "saunaa?".into() }];
+        let p = summary_prompt(&lines, "Summarize for rolle.", "Tue 16.05");
+        assert!(p.starts_with("Summarize for rolle.\n\n"));
+        assert!(p.contains("[phrase](N)") && p.contains("It is now Tue 16.05.") && p.ends_with("[1] 14.32 sumu: saunaa?"));
+    }
+
+    #[test]
     fn reads_the_keys_spending_limit() {
         let info = key_info(&json!({ "data": { "usage": 0.25, "limit": 10, "limit_remaining": 9.75, "limit_reset": "monthly" } }));
         assert_eq!(
@@ -154,6 +203,18 @@ mod tests {
         let got = reply_target(key.trim(), &lines, "kaisla", "otso", "no on kyl hyvä levy").await.unwrap();
         assert_eq!(got, Some(0));
         check_key(key.trim()).await.unwrap();
+        let unread = [
+            SummaryLine { at: "Tue 14.32".into(), nick: "sumu".into(), text: "kukkuu".into() },
+            SummaryLine { at: "Tue 14.33".into(), nick: "sumu".into(), text: "lauantaina saunaa mun luona kuudelta, kuka tulee?".into() },
+            SummaryLine { at: "Tue 14.34".into(), nick: "otso".into(), text: "mä! tuon makkarat".into() },
+            SummaryLine { at: "Tue 15.47".into(), nick: "veera".into(), text: "rolle: voisitko taas pyörittää kuvalatauksia?".into() },
+        ];
+        let text =
+            summary(key.trim(), &unread, "Summarize these unread IRC messages for rolle in English, at most 500 characters.", "Tue 16.05")
+                .await
+                .unwrap();
+        println!("{text}");
+        assert!(text.contains("](") && !text.is_empty());
         assert!(check_key("sk-or-v1-wrong").await.is_err());
     }
 }

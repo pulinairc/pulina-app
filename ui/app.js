@@ -55,6 +55,10 @@ import {
   shortUrl,
   stripFormatting,
   summarize,
+  summaryParts,
+  clipSummary,
+  summaryNicks,
+  readingSecs,
   tokenize,
   youtube,
   mediaKind,
@@ -197,6 +201,7 @@ const el = {
   form: $('composer'),
   input: $('input'),
   jumpUnread: $('jump-unread'),
+  summarize: $('summarize'),
   jumpLatest: $('jump-latest'),
   jumpLatestLabel: $('jump-latest-label'),
   markRead: $('mark-read'),
@@ -1884,6 +1889,7 @@ function renderSettings() {
   el.lastfmKey.value = state.settings[LASTFM_KEY_SETTING] || '';
   $('ai-key').value = state.settings[AI_KEY_SETTING] || '';
   $('ai-replies-toggle').checked = settingOn(AI_REPLIES_SETTING);
+  renderSummarySettings();
   el.npFormat.value = state.settings[NP_FORMAT_SETTING] || '';
   const rows = state.networks.map((n) => {
     const row = h('div', 'conn');
@@ -2277,9 +2283,19 @@ function renderLog() {
   if (!b.lines.length && isChannel(b.name)) {
     el.col.append(h('p', 'log-empty', t('You are on {channel}. New messages show up here.', { channel: b.name })));
   }
+  const notes = b.window ? [] : (b.notes ?? []);
+  for (const n of notes.filter((n) => n.after === null)) {
+    appendNote(n.text);
+  }
   for (const l of b.window ?? b.lines) {
     appendLine(l);
+    for (const n of notes) {
+      if (n.after === l.id) {
+        appendNote(n.text);
+      }
+    }
   }
+  placeSummary();
   el.windowBar.hidden = !b.window;
   document.body.classList.toggle('windowed', Boolean(b.window));
   if (b.window) {
@@ -2413,7 +2429,8 @@ function toSpot(spot) {
 }
 
 function toSeparator() {
-  const top = view.separator.getBoundingClientRect().top - el.col.getBoundingClientRect().top;
+  const target = el.col.querySelector(':scope > .summary') ?? view.separator;
+  const top = target.getBoundingClientRect().top - el.col.getBoundingClientRect().top;
   el.log.scrollTop = Math.max(0, top - SEPARATOR_MARGIN_PX);
 }
 
@@ -3174,6 +3191,286 @@ aiKeyField.addEventListener('change', () => {
 });
 aiKeyTest.addEventListener('click', checkAiKey);
 $('ai-replies-toggle').addEventListener('change', (e) => saveSetting(AI_REPLIES_SETTING, e.target.checked ? 'on' : 'off'));
+
+// A written summary of a channel's unread messages, from the user's own OpenRouter key, shown above
+// the New line until it is closed or the channel is marked read.
+
+const AI_SUMMARY_SETTING = 'aiSummary';
+const AI_SUMMARY_LANG_SETTING = 'aiSummaryLang';
+const AI_SUMMARY_PROMPT_SETTING = 'aiSummaryPrompt';
+const SUMMARY_MIN_UNREAD = 20;
+// ponytail: only the newest this many unread lines are read; summarize in parts if longer nights matter.
+const SUMMARY_MAX_LINES = 2000;
+const SUMMARY_LANGS = { en: 'English', fi: 'Finnish' };
+const DEFAULT_SUMMARY_PROMPT =
+  'Summarize the unread IRC messages below for {nick}. Cover every relevant thing: decisions, plans, questions, links and anything still waiting for an answer. ' +
+  'Put what mentions {nick} or is said to them first. Leave out greetings, idle talk and noise like "kukkuu", single emojis, joins and quits. ' +
+  'Write it as flowing text, not a list. Name who said what. Say when things happened in natural words like "a bit before four", never as clock times. ' +
+  'Mention the best or funniest part worth reading, if there is one, and end by saying whether {nick} should read the whole discussion. ' +
+  'Write in {language}, at most 500 characters.';
+const SUMMARY_ICONS = {
+  up: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  check:
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  close:
+    '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>',
+};
+const summaries = new Map();
+
+function summaryLanguage() {
+  const chosen = state.settings[AI_SUMMARY_LANG_SETTING] || 'app';
+  return SUMMARY_LANGS[chosen === 'app' ? currentLang() : chosen] ?? SUMMARY_LANGS.en;
+}
+
+function summaryPrompt(b) {
+  return (state.settings[AI_SUMMARY_PROMPT_SETTING] || DEFAULT_SUMMARY_PROMPT)
+    .replaceAll('{nick}', state.me[b.net] || 'me')
+    .replaceAll('{language}', summaryLanguage());
+}
+
+/** The unread chat lines, oldest first, fetched from the history when older than what is loaded. */
+async function unreadForSummary(b) {
+  const seen = readMap[b.key] ?? 0;
+  let lines = b.lines.filter((l) => l.id > seen);
+  while (b.unreadGap && lines.length < SUMMARY_MAX_LINES) {
+    const first = lines.find((l) => l.id)?.id;
+    if (!first) {
+      break;
+    }
+    const page = await invoke('history', { net: b.net, buffer: b.name, before: first }).catch(() => []);
+    const fresh = page.filter((l) => l.id > seen);
+    lines = [...fresh, ...lines];
+    if (!page.length || fresh.length < page.length) {
+      break;
+    }
+  }
+  return lines.filter((l) => CHAT_KINDS.has(l.kind) && !isMuffled(l)).slice(-SUMMARY_MAX_LINES);
+}
+
+const whenSaid = (ts) => `${dayLabel(ts)} ${clock(ts)}`;
+
+async function summarizeUnread() {
+  const b = state.buffers.get(state.current);
+  if (!b) {
+    return;
+  }
+  const key = state.settings[AI_KEY_SETTING];
+  if (!key) {
+    return setSummary(b, { kind: 'nokey' });
+  }
+  const job = { kind: 'loading', count: unreadCount(b) };
+  setSummary(b, job);
+  const lines = await unreadForSummary(b);
+  const sent = lines.map((l) => ({
+    at: whenSaid(l.ts),
+    nick: l.kind === 'action' ? '*' : l.nick,
+    text: (l.kind === 'action' ? `${l.nick} ` : '') + stripFormatting(l.text),
+  }));
+  try {
+    const text = await invoke('ai_summary', { key, lines: sent, prompt: summaryPrompt(b), now: whenSaid(Date.now()) });
+    const paras = clipSummary(summaryParts(text));
+    if (summaries.get(b.key) !== job) {
+      return;
+    }
+    if (!paras.length) {
+      return setSummary(b, { kind: 'error', error: t('The answer was empty.') });
+    }
+    setSummary(b, { kind: 'done', count: job.count, secs: readingSecs(sent.map((l) => l.text)), paras, lines });
+  } catch (e) {
+    if (summaries.get(b.key) === job) {
+      setSummary(b, { kind: 'error', error: String(e) });
+    }
+  }
+}
+
+function setSummary(b, s) {
+  summaries.set(b.key, s);
+  if (b.key === state.current) {
+    placeSummary(s.kind === 'loading' || s.kind === 'nokey');
+  }
+  updateJumps();
+}
+
+function closeSummary(b) {
+  if (!summaries.delete(b.key)) {
+    return;
+  }
+  if (b.key === state.current) {
+    el.col.querySelector(':scope > .summary')?.remove();
+  }
+  updateJumps();
+}
+
+/** The open channel's summary, drawn just above its New line, or above the first loaded line. */
+function placeSummary(reveal = false) {
+  el.col.querySelector(':scope > .summary')?.remove();
+  const b = state.buffers.get(state.current);
+  const s = b && summaries.get(b.key);
+  if (!s) {
+    return;
+  }
+  const node = summaryNode(b, s);
+  if (view.separator?.isConnected) {
+    view.separator.before(node);
+  } else {
+    el.col.prepend(node);
+  }
+  if (reveal) {
+    const cover = el.markRead.hidden ? el.log.getBoundingClientRect().top : el.markRead.getBoundingClientRect().bottom;
+    el.log.scrollTop += node.getBoundingClientRect().top - cover - SEPARATOR_MARGIN_PX;
+  }
+}
+
+function summaryButton(cls, label, icon, run) {
+  const btn = h('button', cls);
+  btn.type = 'button';
+  btn.setAttribute('aria-label', label);
+  btn.dataset.tip = label;
+  btn.innerHTML = icon;
+  btn.addEventListener('click', run);
+  return btn;
+}
+
+function summaryHead(title, detail, fail = false) {
+  const head = h('div', 'summary-head');
+  const words = h('div', `summary-title${fail ? ' fail' : ''}`);
+  words.append(h('b', '', title));
+  if (detail) {
+    words.append(detail);
+  }
+  head.append(words);
+  return head;
+}
+
+function summaryNode(b, s) {
+  const node = h('section', 'summary');
+  node.setAttribute('aria-label', t('Summary of unread messages'));
+  const close = summaryButton('icon-btn', t('Close'), SUMMARY_ICONS.close, () => closeSummary(b));
+  if (s.kind === 'loading') {
+    const wait = h('span');
+    wait.append(h('span', 'joining-spin'), t('Reading them…'));
+    const head = summaryHead(t('Summary of {n} messages', { n: s.count }), wait);
+    head.append(close);
+    node.append(head);
+    for (const width of [94, 80, 62]) {
+      const bar = h('span', 'summary-bar');
+      bar.style.width = `${width}%`;
+      node.append(bar);
+    }
+    return node;
+  }
+  if (s.kind === 'nokey') {
+    const head = summaryHead(t('Summaries need an OpenRouter key'));
+    head.append(close);
+    const go = h('button', 'primary-btn', t('Open AI settings'));
+    go.type = 'button';
+    go.addEventListener('click', () => openSettingsTab('ai'));
+    const actions = h('div', 'summary-actions');
+    actions.append(go);
+    node.append(head, h('p', 'hint', t('Your own key means you pay OpenRouter directly and nothing goes through anyone else.')), actions);
+    return node;
+  }
+  if (s.kind === 'error') {
+    const head = summaryHead(t('No summary this time'), null, true);
+    head.append(close);
+    const again = h('button', 'wide-btn', t('Try again'));
+    again.type = 'button';
+    again.addEventListener('click', summarizeUnread);
+    const actions = h('div', 'summary-actions');
+    actions.append(again);
+    node.append(head, h('p', 'summary-error', s.error), actions);
+    return node;
+  }
+  const head = summaryHead(
+    t('Summary of {n} messages', { n: s.count }),
+    h('span', '', t('Reading them all would take about {time}', { time: span(s.secs) })),
+  );
+  head.append(close);
+  node.append(head);
+  const members = new Map(s.lines.map((l) => [l.nick.toLowerCase(), l.nick]));
+  for (const p of s.paras) {
+    const para = h('p');
+    for (const part of p) {
+      para.append(summaryPart(b, part, s.lines, members));
+    }
+    node.append(para);
+  }
+  const foot = h('div', 'summary-foot');
+  foot.append(
+    h('span', 'summary-note', t('AI can get things wrong')),
+    summaryButton('jump summary-read', t('Read from the start'), SUMMARY_ICONS.up, jumpToUnread),
+    summaryButton('jump summary-done', t('Mark all read'), SUMMARY_ICONS.check, markCurrentRead),
+  );
+  node.append(foot);
+  return node;
+}
+
+function summaryPart(b, part, lines, members) {
+  if (part.type === 'you') {
+    return h('span', 'mention', part.value);
+  }
+  const words = withNames(b, part.value, members);
+  const line = part.type === 'link' && lines[part.n - 1];
+  if (!line) {
+    return words;
+  }
+  const a = h('a', 'summary-go');
+  a.href = '#';
+  a.append(words);
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    openLine(line);
+  });
+  return a;
+}
+
+/** Plain text with each person in it shown with their avatar and colour. */
+function withNames(b, text, members) {
+  const out = document.createDocumentFragment();
+  for (const x of summaryNicks(text, members)) {
+    if (x.type !== 'nick') {
+      out.append(x.value);
+      continue;
+    }
+    const who = h('span', 'summary-who');
+    who.style.color = identity(x.nick).color;
+    who.append(avatar(x.nick), x.value);
+    personTip(who, b.net, x.nick);
+    out.append(who);
+  }
+  return out;
+}
+
+function renderSummarySettings() {
+  $('ai-summary-toggle').checked = settingOn(AI_SUMMARY_SETTING);
+  const lang = state.settings[AI_SUMMARY_LANG_SETTING] || 'app';
+  for (const btn of $('ai-summary-lang').querySelectorAll('button')) {
+    btn.setAttribute('aria-checked', String(btn.dataset.lang === lang));
+  }
+  $('ai-summary-prompt').value = state.settings[AI_SUMMARY_PROMPT_SETTING] || DEFAULT_SUMMARY_PROMPT;
+}
+
+el.summarize.addEventListener('click', summarizeUnread);
+$('ai-summary-toggle').addEventListener('change', (e) => {
+  saveSetting(AI_SUMMARY_SETTING, e.target.checked ? 'on' : 'off');
+  updateJumps();
+});
+$('ai-summary-lang').addEventListener('click', (e) => {
+  const lang = e.target.closest('button')?.dataset.lang;
+  if (lang) {
+    saveSetting(AI_SUMMARY_LANG_SETTING, lang);
+    renderSummarySettings();
+  }
+});
+// The default is saved as nothing, so a better default in a later version reaches everyone who kept it.
+$('ai-summary-prompt').addEventListener('change', (e) => {
+  const prompt = e.target.value.trim();
+  saveSetting(AI_SUMMARY_PROMPT_SETTING, prompt === DEFAULT_SUMMARY_PROMPT ? '' : prompt);
+});
+$('ai-summary-reset').addEventListener('click', () => {
+  saveSetting(AI_SUMMARY_PROMPT_SETTING, '');
+  renderSummarySettings();
+});
 
 // Reactions and replies
 
@@ -4912,9 +5209,24 @@ function dropBuffer(b) {
   renderHeader();
 }
 
+/** Answers the app shows itself, such as /whois. Kept per window so a redraw does not drop them. */
+const NOTES_KEPT = 20;
+
 function localNote(text) {
-  el.col.append(h('div', 'events info', text));
+  const b = state.buffers.get(state.current);
+  if (b) {
+    b.notes = [...(b.notes ?? []), { after: lastId(b) ?? null, text }].slice(-NOTES_KEPT);
+  }
+  appendNote(text);
   toBottom();
+}
+
+function appendNote(text) {
+  el.col.append(h('div', 'events info', text));
+  // The next message starts its own group below the note.
+  view.group = null;
+  view.events = null;
+  view.command = null;
 }
 
 /** Commands the app handles itself. Returns true when handled. */
@@ -5653,6 +5965,7 @@ function markCurrentRead() {
   }
   markRead(b);
   flushRead();
+  closeSummary(b);
   dropSeparator();
   view.separatorAfter = readMap[b.key] ?? lastId(b);
   updateJumps();
@@ -5748,6 +6061,7 @@ function updateJumps() {
   const sep = view?.separator?.getBoundingClientRect();
   const log = el.log.getBoundingClientRect();
   el.markRead.hidden = count === 0;
+  el.summarize.hidden = !(b && count >= SUMMARY_MIN_UNREAD && settingOn(AI_SUMMARY_SETTING) && !summaries.has(b.key));
   // A row behind the top bar's buttons is out of sight too.
   const cover = count ? Math.max(log.top, el.markRead.getBoundingClientRect().bottom) : log.top;
   const above = sep && sep.bottom < cover;
