@@ -320,6 +320,11 @@ async fn ai_reply(key: String, lines: Vec<ai::ChatLine>, from: String, to: Strin
 }
 
 #[tauri::command]
+async fn ai_summary(key: String, lines: Vec<ai::SummaryLine>, prompt: String, now: String) -> Result<String, String> {
+    ai::summary(&key, &lines, &prompt, &now).await
+}
+
+#[tauri::command]
 async fn now_playing(user: String, key: String) -> Result<Option<lastfm::Playing>, String> {
     lastfm::now_playing(&user, &key).await
 }
@@ -930,6 +935,7 @@ pub fn run() {
             now_playing,
             ai_check,
             ai_reply,
+            ai_summary,
             links,
             send,
             preview,

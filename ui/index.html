@@ -75,6 +75,9 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
       </button>
       <button id="unread-count" type="button" hidden></button>
+      <button id="summarize" class="jump" type="button" aria-label="Summarize" data-tip="Summarize" hidden>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h12M4 18h7"/></svg>
+      </button>
       <button id="mark-read" class="jump" type="button" aria-label="Mark as read" data-tip="Ctrl+Enter" hidden>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
       </button>
@@ -398,6 +401,27 @@
         <input id="ai-replies-toggle" class="switch" type="checkbox" role="switch">
       </label>
       <p class="hint">When someone answers a person who has said several things, AI picks the message the reply is about.</p>
+      <label class="switch-row ai-row" for="ai-summary-toggle">
+        <span>Summarize unread discussions</span>
+        <input id="ai-summary-toggle" class="switch" type="checkbox" role="switch">
+      </label>
+      <p class="hint">A summarize button shows next to Mark as read when a channel has 20 or more unread messages. Nothing is sent until you press it.</p>
+    </section>
+    <section data-tab="ai">
+      <h3>Summaries</h3>
+      <span class="field-label">Language</span>
+      <div id="ai-summary-lang" class="segments" role="radiogroup" aria-label="Summary language">
+        <button type="button" role="radio" data-lang="app">Same as the app</button>
+        <button type="button" role="radio" data-lang="en">English</button>
+        <button type="button" role="radio" data-lang="fi">Suomi</button>
+      </div>
+      <p class="hint">The language summaries are written in, whatever language the channel talks in.</p>
+      <div class="prompt-head">
+        <label class="field-label" for="ai-summary-prompt">Prompt</label>
+        <button id="ai-summary-reset" class="link-btn" type="button">Restore default</button>
+      </div>
+      <textarea id="ai-summary-prompt" class="field mono-field" rows="9" spellcheck="false"></textarea>
+      <p class="hint"><span class="mono">{nick}</span> is your nick and <span class="mono">{language}</span> the language above. The app adds the answer format itself, so editing the prompt cannot break the links to messages.</p>
     </section>
     <section data-tab="music">
       <h3>Last.fm</h3>

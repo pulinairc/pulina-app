@@ -1,5 +1,6 @@
-### Unreleased
+### 1.25.0: 2026-11-17
 
+* Add AI summaries of unread messages
 * Fix /whois answers disappearing
 
 ### 1.24.2: 2026-11-15
