@@ -3205,7 +3205,8 @@ const SUMMARY_LANGS = { en: 'English', fi: 'Finnish' };
 const DEFAULT_SUMMARY_PROMPT =
   'Summarize the unread IRC messages below for {nick}. Cover every relevant thing: decisions, plans, questions, links and anything still waiting for an answer. ' +
   'Put what mentions {nick} or is said to them first. Leave out greetings, idle talk and noise like "kukkuu", single emojis, joins and quits. ' +
-  'Write it as flowing text, not a list. Name who said what. Say when things happened in natural words like "a bit before four", never as clock times. ' +
+  'Write it as flowing text, not a list. Name who said what. Say when things happened only loosely, by the part of the day or how long ago, like "in the evening" or "an hour ago", never as clock times. ' +
+  'Write plain readable text without message numbers. ' +
   'Mention the best or funniest part worth reading, if there is one, and end by saying whether {nick} should read the whole discussion. ' +
   'Write in {language}, at most 500 characters.';
 const SUMMARY_ICONS = {
@@ -3286,7 +3287,7 @@ async function summarizeUnread() {
 function setSummary(b, s) {
   summaries.set(b.key, s);
   if (b.key === state.current) {
-    placeSummary(s.kind === 'loading' || s.kind === 'nokey');
+    placeSummary(true);
   }
   updateJumps();
 }
@@ -3316,8 +3317,9 @@ function placeSummary(reveal = false) {
     el.col.prepend(node);
   }
   if (reveal) {
-    const cover = el.markRead.hidden ? el.log.getBoundingClientRect().top : el.markRead.getBoundingClientRect().bottom;
-    el.log.scrollTop += node.getBoundingClientRect().top - cover - SEPARATOR_MARGIN_PX;
+    stuck = false;
+    node.scrollIntoView({ block: 'center' });
+    noteAnchor();
   }
 }
 
@@ -3399,7 +3401,10 @@ function summaryNode(b, s) {
   foot.append(
     h('span', 'summary-note', t('AI can get things wrong')),
     summaryButton('jump summary-read', t('Read from the start'), SUMMARY_ICONS.up, jumpToUnread),
-    summaryButton('jump summary-done', t('Mark all read'), SUMMARY_ICONS.check, markCurrentRead),
+    summaryButton('jump summary-done', t('Mark all read'), SUMMARY_ICONS.check, () => {
+      markCurrentRead();
+      toLatest();
+    }),
   );
   node.append(foot);
   return node;
@@ -6132,13 +6137,15 @@ async function openUnread(b) {
 
 el.jumpUnread.addEventListener('click', jumpToUnread);
 el.unreadCount.addEventListener('click', jumpToUnread);
-el.jumpLatest.addEventListener('click', () => {
+function toLatest() {
   if (state.buffers.get(state.current)?.window) {
     return leaveWindow();
   }
   // Our own glide, which a channel switch stops; a native smooth scroll would carry on into the next channel.
   glideDown();
-});
+}
+
+el.jumpLatest.addEventListener('click', toLatest);
 
 let jumpFrame = 0;
 // A resize of the chat or of what is in it (a photo loading) keeps the latest message in view
