@@ -1,3 +1,10 @@
+### 1.26.0: 2026-11-18
+
+* Add summary model setting, default Gemini 3.8 Flash
+* Change summaries to cover the whole discussion
+* Add Summarize again button to summaries
+* Remove the useless jump arrow from summaries
+
 ### 1.25.2: 2026-11-17
 
 * Fix update check erroring before the Mac build

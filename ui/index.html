@@ -422,6 +422,9 @@
       </div>
       <textarea id="ai-summary-prompt" class="field mono-field" rows="9" spellcheck="false"></textarea>
       <p class="hint"><span class="mono">{nick}</span> is your nick and <span class="mono">{language}</span> the language above. The app adds the answer format itself, so editing the prompt cannot break the links to messages.</p>
+      <label class="field-label" for="ai-summary-model">Model</label>
+      <input id="ai-summary-model" class="field mono-field" type="text" autocomplete="off" spellcheck="false" placeholder="google/gemini-3.8-flash">
+      <p class="hint">Any model id from <a href="https://openrouter.ai/models">OpenRouter's model list</a>. Leave it empty for the default.</p>
     </section>
     <section data-tab="music">
       <h3>Last.fm</h3>
