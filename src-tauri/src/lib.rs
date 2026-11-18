@@ -320,8 +320,8 @@ async fn ai_reply(key: String, lines: Vec<ai::ChatLine>, from: String, to: Strin
 }
 
 #[tauri::command]
-async fn ai_summary(key: String, lines: Vec<ai::SummaryLine>, prompt: String, now: String) -> Result<String, String> {
-    ai::summary(&key, &lines, &prompt, &now).await
+async fn ai_summary(key: String, model: String, lines: Vec<ai::SummaryLine>, prompt: String, now: String) -> Result<String, String> {
+    ai::summary(&key, &model, &lines, &prompt, &now).await
 }
 
 #[tauri::command]

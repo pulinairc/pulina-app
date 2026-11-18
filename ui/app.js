@@ -3198,19 +3198,21 @@ $('ai-replies-toggle').addEventListener('change', (e) => saveSetting(AI_REPLIES_
 const AI_SUMMARY_SETTING = 'aiSummary';
 const AI_SUMMARY_LANG_SETTING = 'aiSummaryLang';
 const AI_SUMMARY_PROMPT_SETTING = 'aiSummaryPrompt';
+const AI_SUMMARY_MODEL_SETTING = 'aiSummaryModel';
 const SUMMARY_MIN_UNREAD = 20;
 // ponytail: only the newest this many unread lines are read; summarize in parts if longer nights matter.
 const SUMMARY_MAX_LINES = 2000;
 const SUMMARY_LANGS = { en: 'English', fi: 'Finnish' };
 const DEFAULT_SUMMARY_PROMPT =
-  'Summarize the unread IRC messages below for {nick}. Cover every relevant thing: decisions, plans, questions, links and anything still waiting for an answer. ' +
-  'Put what mentions {nick} or is said to them first. Leave out greetings, idle talk and noise like "kukkuu", single emojis, joins and quits. ' +
+  'Summarize the unread IRC messages below for {nick}. Tell what the channel talked about, the most discussed topics first: decisions, plans, questions, links and anything still waiting for an answer. ' +
+  'Messages that mention {nick} are already shown to them separately, so do not single those out. Leave out greetings, idle talk and noise like "kukkuu", single emojis, joins and quits. ' +
   'Write it as flowing text, not a list. Name who said what. Say when things happened only loosely, by the part of the day or how long ago, like "in the evening" or "an hour ago", never as clock times. ' +
   'Write plain readable text without message numbers. ' +
   'Mention the best or funniest part worth reading, if there is one, and end by saying whether {nick} should read the whole discussion. ' +
   'Write in {language}, at most 500 characters.';
 const SUMMARY_ICONS = {
-  up: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  again:
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
   check:
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
   close:
@@ -3268,7 +3270,13 @@ async function summarizeUnread() {
     text: (l.kind === 'action' ? `${l.nick} ` : '') + stripFormatting(l.text),
   }));
   try {
-    const text = await invoke('ai_summary', { key, lines: sent, prompt: summaryPrompt(b), now: whenSaid(Date.now()) });
+    const text = await invoke('ai_summary', {
+      key,
+      model: state.settings[AI_SUMMARY_MODEL_SETTING] || '',
+      lines: sent,
+      prompt: summaryPrompt(b),
+      now: whenSaid(Date.now()),
+    });
     const paras = clipSummary(summaryParts(text));
     if (summaries.get(b.key) !== job) {
       return;
@@ -3400,7 +3408,7 @@ function summaryNode(b, s) {
   const foot = h('div', 'summary-foot');
   foot.append(
     h('span', 'summary-note', t('AI can get things wrong')),
-    summaryButton('jump summary-read', t('Read from the start'), SUMMARY_ICONS.up, jumpToUnread),
+    summaryButton('jump summary-again', t('Summarize again'), SUMMARY_ICONS.again, summarizeUnread),
     summaryButton('jump summary-done', t('Mark all read'), SUMMARY_ICONS.check, () => {
       markCurrentRead();
       toLatest();
@@ -3453,6 +3461,7 @@ function renderSummarySettings() {
     btn.setAttribute('aria-checked', String(btn.dataset.lang === lang));
   }
   $('ai-summary-prompt').value = state.settings[AI_SUMMARY_PROMPT_SETTING] || DEFAULT_SUMMARY_PROMPT;
+  $('ai-summary-model').value = state.settings[AI_SUMMARY_MODEL_SETTING] || '';
 }
 
 el.summarize.addEventListener('click', summarizeUnread);
@@ -3472,6 +3481,7 @@ $('ai-summary-prompt').addEventListener('change', (e) => {
   const prompt = e.target.value.trim();
   saveSetting(AI_SUMMARY_PROMPT_SETTING, prompt === DEFAULT_SUMMARY_PROMPT ? '' : prompt);
 });
+$('ai-summary-model').addEventListener('change', (e) => saveSetting(AI_SUMMARY_MODEL_SETTING, e.target.value.trim()));
 $('ai-summary-reset').addEventListener('click', () => {
   saveSetting(AI_SUMMARY_PROMPT_SETTING, '');
   renderSummarySettings();

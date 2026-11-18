@@ -1,4 +1,4 @@
-//! AI features through the user's own OpenRouter key. The model is chosen here, not in Settings.
+//! AI features through the user's own OpenRouter key. Only the summary model can be changed in Settings.
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -10,8 +10,8 @@ const MODEL: &str = "google/gemini-2.5-flash-lite";
 const TIMEOUT: Duration = Duration::from_secs(15);
 const ANSWER_TOKENS: u32 = 8;
 const REPLY_SYSTEM: &str = "You match IRC replies to the earlier message they answer. Reply with a single number.";
-// Picked on 17.11.2026: Google's replacement for the 2.5 Flash models, which are only kept for earlier users.
-const SUMMARY_MODEL: &str = "google/gemini-3.5-flash-lite";
+// The default when the user has not chosen a model in Settings.
+const SUMMARY_MODEL: &str = "google/gemini-3.8-flash";
 const SUMMARY_TIMEOUT: Duration = Duration::from_secs(90);
 // Room for the link markup; the app cuts the text itself at 500 shown characters.
 const SUMMARY_TOKENS: u32 = 1500;
@@ -19,8 +19,7 @@ const SUMMARY_TOKENS: u32 = 1500;
 const SUMMARY_FORMAT: &str = "Answer with the summary text only, in short paragraphs separated by a blank line, with no headings or lists. \
 When a phrase is about a particular message, link it as [phrase](N) with that message's number. \
 Never write a message number anywhere else, so no bare [N] after a name or a sentence. \
-Speak to the reader directly with the word for you in the summary's own language, never by their nick and never with the English word in another language, \
-and put each such word in double asterisks, like **you** in English or **sinua** in Finnish.";
+Speak to the reader directly with the word for you in the summary's own language, never by their nick and never with the English word in another language.";
 
 #[derive(Deserialize)]
 pub struct ChatLine {
@@ -89,9 +88,10 @@ pub async fn reply_target(key: &str, lines: &[ChatLine], from: &str, to: &str, t
 }
 
 /// What the unread `lines` (oldest first) said, as text with `[phrase](N)` links to line N, counted from 1.
-pub async fn summary(key: &str, lines: &[SummaryLine], prompt: &str, now: &str) -> Result<String, String> {
+pub async fn summary(key: &str, model: &str, lines: &[SummaryLine], prompt: &str, now: &str) -> Result<String, String> {
+    let model = model.trim();
     let body = json!({
-        "model": SUMMARY_MODEL,
+        "model": if model.is_empty() { SUMMARY_MODEL } else { model },
         "messages": [{ "role": "user", "content": summary_prompt(lines, prompt, now) }],
         "max_tokens": SUMMARY_TOKENS,
         "temperature": 0.3,
@@ -211,10 +211,15 @@ mod tests {
             SummaryLine { at: "Tue 14.34".into(), nick: "otso".into(), text: "mä! tuon makkarat".into() },
             SummaryLine { at: "Tue 15.47".into(), nick: "veera".into(), text: "rolle: voisitko taas pyörittää kuvalatauksia?".into() },
         ];
-        let text =
-            summary(key.trim(), &unread, "Summarize these unread IRC messages for rolle in English, at most 500 characters.", "Tue 16.05")
-                .await
-                .unwrap();
+        let text = summary(
+            key.trim(),
+            "",
+            &unread,
+            "Summarize these unread IRC messages for rolle in English, at most 500 characters.",
+            "Tue 16.05",
+        )
+        .await
+        .unwrap();
         println!("{text}");
         assert!(text.contains("](") && !text.is_empty());
         assert!(check_key("sk-or-v1-wrong").await.is_err());

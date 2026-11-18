@@ -5757,7 +5757,7 @@ body.rail-settle #update-bar {
   width: 16px;
   height: 16px;
 }
-.summary .summary-read {
+.summary .summary-again {
   --tint: var(--new);
 }
 .summary .summary-done {
