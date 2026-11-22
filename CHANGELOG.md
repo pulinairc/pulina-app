@@ -1,3 +1,7 @@
+### 1.27.1: 2026-11-22
+
+* Add the clock time to relative times
+
 ### 1.27.0: 2026-11-22
 
 * Add a setting for relative timestamps
