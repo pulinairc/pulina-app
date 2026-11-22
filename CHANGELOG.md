@@ -1,3 +1,8 @@
+### 1.27.0: 2026-11-22
+
+* Add a setting for relative timestamps
+* Fix Yesterday label when the clocks change
+
 ### 1.26.1: 2026-11-22
 
 * Fix videos off screen eating gigabytes and stalling Lobby

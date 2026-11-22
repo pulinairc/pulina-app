@@ -3,6 +3,9 @@ export const FI = {
   // Chat summaries, lib.js
   Today: 'Tänään',
   Yesterday: 'Eilen',
+  Times: 'Ajat',
+  'Show relative times': 'Näytä suhteelliset ajat',
+  '5 min ago, Yesterday 18:32, 20.11.2026 09:05.': '5 min sitten, Eilen 18:32, 20.11.2026 09:05.',
   '{list} and {last}': '{list} ja {last}',
   '{who} joined': '{who} liittyi',
   '{who} joined (plural)': '{who} liittyivät',

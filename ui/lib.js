@@ -43,7 +43,10 @@ export function dayLabel(ts, now = Date.now()) {
   if (sameDay(ts, now)) {
     return t('Today');
   }
-  if (sameDay(ts, now - 86_400_000)) {
+  // Not 24 hours back: a day is 23 or 25 hours when the clocks change.
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (sameDay(ts, yesterday)) {
     return t('Yesterday');
   }
   const d = new Date(ts);
@@ -757,6 +760,11 @@ export function span(secs) {
 export function ago(ts, now = Date.now()) {
   const secs = Math.floor((now - ts) / 1000);
   return secs < MINUTE_S ? t('just now') : t('{time} ago', { time: span(secs) });
+}
+
+/** When a message was sent, counted from now for today: 5 min ago, Yesterday 18:32. */
+export function relativeTime(ts, now = Date.now()) {
+  return sameDay(ts, now) ? ago(ts, now) : `${dayLabel(ts, now)} ${clock(ts).slice(0, 5)}`;
 }
 
 /** WHOIS as tooltip lines. */
