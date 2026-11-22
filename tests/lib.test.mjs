@@ -772,10 +772,10 @@ test('an old default prompt with only its length changed follows the new default
 test('relative times count today, then name the day with the time', () => {
   const now = new Date(2026, 10, 22, 22, 14).getTime();
   const at = (...when) => new Date(2026, 10, ...when).getTime();
-  assert.equal(relativeTime(now - 20_000, now), 'just now');
-  assert.equal(relativeTime(now + 5_000, now), 'just now');
-  assert.equal(relativeTime(at(22, 22, 9), now), '5 min ago');
-  assert.equal(relativeTime(at(22, 19, 4), now), '3 h 10 min ago');
+  assert.equal(relativeTime(now - 20_000, now), 'just now (22:13)');
+  assert.equal(relativeTime(now + 5_000, now), 'just now (22:14)');
+  assert.equal(relativeTime(at(22, 22, 9), now), '5 min ago (22:09)');
+  assert.equal(relativeTime(at(22, 19, 4), now), '3 h 10 min ago (19:04)');
   assert.equal(relativeTime(at(21, 18, 32, 40), now), 'Yesterday 18:32');
   assert.equal(relativeTime(at(20, 9, 5), now), '20.11.2026 09:05');
   assert.equal(relativeTime(at(21, 23, 58), at(22, 0, 2)), 'Yesterday 23:58');

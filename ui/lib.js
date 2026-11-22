@@ -762,9 +762,10 @@ export function ago(ts, now = Date.now()) {
   return secs < MINUTE_S ? t('just now') : t('{time} ago', { time: span(secs) });
 }
 
-/** When a message was sent, counted from now for today: 5 min ago, Yesterday 18:32. */
+/** When a message was sent, counted from now for today: 3 min ago (22:20), Yesterday 18:32. */
 export function relativeTime(ts, now = Date.now()) {
-  return sameDay(ts, now) ? ago(ts, now) : `${dayLabel(ts, now)} ${clock(ts).slice(0, 5)}`;
+  const at = clock(ts).slice(0, 5);
+  return sameDay(ts, now) ? `${ago(ts, now)} (${at})` : `${dayLabel(ts, now)} ${at}`;
 }
 
 /** WHOIS as tooltip lines. */

@@ -5,7 +5,7 @@ export const FI = {
   Yesterday: 'Eilen',
   Times: 'Ajat',
   'Show relative times': 'Näytä suhteelliset ajat',
-  '5 min ago, Yesterday 18:32, 20.11.2026 09:05.': '5 min sitten, Eilen 18:32, 20.11.2026 09:05.',
+  '3 min ago (22:20), Yesterday 18:32, 20.11.2026 09:05.': '3 min sitten (22:20), Eilen 18:32, 20.11.2026 09:05.',
   '{list} and {last}': '{list} ja {last}',
   '{who} joined': '{who} liittyi',
   '{who} joined (plural)': '{who} liittyivät',
