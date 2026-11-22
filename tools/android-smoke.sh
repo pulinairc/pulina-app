@@ -13,5 +13,10 @@ if ! adb shell pidof "$package"; then
     exit 1
 fi
 adb exec-out screencap -p > android-smoke.png
-adb logcat -d | grep -iE "panic|FATAL" && exit 1
+log=$(adb logcat -d)
+echo "$log" | grep -iE -A8 "panic|FATAL" || true
+# The emulator's own apps crash now and then: only a crash in this app, or a panic, fails.
+if echo "$log" | grep -qiE "panic|Process: $package[,:]"; then
+    exit 1
+fi
 echo "$package is running"
