@@ -3,7 +3,9 @@
 set -eu
 apk=$(find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' | head -n1)
 package=$(node -p "require('./src-tauri/tauri.conf.json').identifier")
-adb install -r "$apk"
+# The cached emulator can hold a build signed with another run's debug key.
+adb uninstall "$package" > /dev/null 2>&1 || true
+adb install "$apk"
 adb shell monkey -p "$package" -c android.intent.category.LAUNCHER 1
 sleep 25
 if ! adb shell pidof "$package"; then
