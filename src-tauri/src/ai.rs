@@ -14,9 +14,9 @@ const REPLY_SYSTEM: &str = "You match IRC replies to the earlier message they an
 const SUMMARY_MODEL: &str = "google/gemini-3.8-flash";
 const SUMMARY_TIMEOUT: Duration = Duration::from_secs(90);
 // Room for the link markup; the app cuts the text itself at 500 shown characters.
-const SUMMARY_TOKENS: u32 = 1500;
+const SUMMARY_TOKENS: u32 = 8000;
 // Added after the user's own prompt, which can be edited, so an edit never breaks the links.
-const SUMMARY_FORMAT: &str = "Answer with the summary text only, in short paragraphs separated by a blank line, with no headings or lists. \
+const SUMMARY_FORMAT: &str = "Answer with the summary text only, in paragraphs separated by a blank line, with no headings or lists. \
 When a phrase is about a particular message, link it as [phrase](N) with that message's number. \
 Never write a message number anywhere else, so no bare [N] after a name or a sentence. \
 Speak to the reader directly with the word for you in the summary's own language, never by their nick and never with the English word in another language.";
@@ -95,15 +95,19 @@ pub async fn summary(key: &str, model: &str, lines: &[SummaryLine], prompt: &str
         "messages": [{ "role": "user", "content": summary_prompt(lines, prompt, now) }],
         "max_tokens": SUMMARY_TOKENS,
         "temperature": 0.3,
-        // The model always thinks; the least of it is enough here, and none of it is shown.
-        "reasoning": { "effort": "minimal", "exclude": true },
+        // A little thinking, to sort a long backlog by time and topic; none of it is shown.
+        "reasoning": { "effort": "low", "exclude": true },
     });
     complete(key, &body, SUMMARY_TIMEOUT).await
 }
 
 fn summary_prompt(lines: &[SummaryLine], prompt: &str, now: &str) -> String {
     let rows: Vec<String> = lines.iter().enumerate().map(|(i, l)| format!("[{}] {} {}: {}", i + 1, l.at, l.nick, l.text)).collect();
-    format!("{prompt}\n\n{SUMMARY_FORMAT}\n\nIt is now {now}.\n\nMessages, oldest first:\n{}", rows.join("\n"))
+    let span = match (lines.first(), lines.last()) {
+        (Some(first), Some(last)) => format!(" They run from {} to {}.", first.at, last.at),
+        _ => String::new(),
+    };
+    format!("{prompt}\n\n{SUMMARY_FORMAT}\n\nIt is now {now}.{span}\n\nMessages, oldest first:\n{}", rows.join("\n"))
 }
 
 /// The model's answer text, or OpenRouter's own error.
@@ -179,6 +183,7 @@ mod tests {
         let p = summary_prompt(&lines, "Summarize for rolle.", "Tue 16.05");
         assert!(p.starts_with("Summarize for rolle.\n\n"));
         assert!(p.contains("[phrase](N)") && p.contains("It is now Tue 16.05.") && p.ends_with("[1] 14.32 sumu: saunaa?"));
+        assert!(p.contains("They run from 14.32 to 14.32."));
     }
 
     #[test]

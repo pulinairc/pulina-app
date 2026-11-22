@@ -38,6 +38,7 @@ import {
   messageRoom,
   nickQuery,
   isCommand,
+  lazyMedia,
   splitNicks,
   duration,
   isChannel,
@@ -55,6 +56,8 @@ import {
   shortUrl,
   stripFormatting,
   summarize,
+  promptSetting,
+  summaryChars,
   summaryParts,
   clipSummary,
   summaryNicks,
@@ -3204,12 +3207,14 @@ const SUMMARY_MIN_UNREAD = 20;
 const SUMMARY_MAX_LINES = 2000;
 const SUMMARY_LANGS = { en: 'English', fi: 'Finnish' };
 const DEFAULT_SUMMARY_PROMPT =
-  'Summarize the unread IRC messages below for {nick}. Tell what the channel talked about, the most discussed topics first: decisions, plans, questions, links and anything still waiting for an answer. ' +
-  'Messages that mention {nick} are already shown to them separately, so do not single those out. Leave out greetings, idle talk and noise like "kukkuu", single emojis, joins and quits. ' +
-  'Write it as flowing text, not a list. Name who said what. Say when things happened only loosely, by the part of the day or how long ago, like "in the evening" or "an hour ago", never as clock times. ' +
+  'Summarize the unread IRC messages below for {nick}, so that they get the whole picture without reading them. ' +
+  'Cover the whole span from the first message to the last, in time order: a paragraph for each part of it that had talk, like last night, the night, this morning, midday, this afternoon and this evening. Give the newest part as much care as the oldest. ' +
+  'In each part cover every real topic concretely: what was said, who said it and what came of it, with decisions, plans, questions, links and anything still waiting for an answer. Never write only that something was talked about, tell what was said about it. ' +
+  'Messages that mention {nick} are already shown to them separately, so do not single those out. Leave out greetings and noise like "kukkuu", single emojis, joins and quits. ' +
+  'Write it as flowing text, not a list. Name the part of the day each paragraph is about, relative to now and telling yesterday from today, never as clock times. ' +
   'Write plain readable text without message numbers. ' +
   'Mention the best or funniest part worth reading, if there is one, and end by saying whether {nick} should read the whole discussion. ' +
-  'Write in {language}, at most 500 characters.';
+  'Write in {language}, about {chars} characters in all. Use that room for detail, and write less only if there really was less to tell.';
 const SUMMARY_ICONS = {
   again:
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
@@ -3225,8 +3230,13 @@ function summaryLanguage() {
   return SUMMARY_LANGS[chosen === 'app' ? currentLang() : chosen] ?? SUMMARY_LANGS.en;
 }
 
-function summaryPrompt(b) {
-  return (state.settings[AI_SUMMARY_PROMPT_SETTING] || DEFAULT_SUMMARY_PROMPT)
+function chosenPrompt() {
+  return promptSetting(state.settings[AI_SUMMARY_PROMPT_SETTING] || '') || DEFAULT_SUMMARY_PROMPT;
+}
+
+function summaryPrompt(b, count) {
+  return chosenPrompt()
+    .replaceAll('{chars}', summaryChars(count))
     .replaceAll('{nick}', state.me[b.net] || 'me')
     .replaceAll('{language}', summaryLanguage());
 }
@@ -3240,7 +3250,8 @@ async function unreadForSummary(b) {
     if (!first) {
       break;
     }
-    const page = await invoke('history', { net: b.net, buffer: b.name, before: first }).catch(() => []);
+    // A failed page is an error: a summary of only the newest part would pass for the whole.
+    const page = await invoke('history', { net: b.net, buffer: b.name, before: first });
     const fresh = page.filter((l) => l.id > seen);
     lines = [...fresh, ...lines];
     if (!page.length || fresh.length < page.length) {
@@ -3263,18 +3274,18 @@ async function summarizeUnread() {
   }
   const job = { kind: 'loading', count: unreadCount(b) };
   setSummary(b, job);
-  const lines = await unreadForSummary(b);
-  const sent = lines.map((l) => ({
-    at: whenSaid(l.ts),
-    nick: l.kind === 'action' ? '*' : l.nick,
-    text: (l.kind === 'action' ? `${l.nick} ` : '') + stripFormatting(l.text),
-  }));
   try {
+    const lines = await unreadForSummary(b);
+    const sent = lines.map((l) => ({
+      at: whenSaid(l.ts),
+      nick: l.kind === 'action' ? '*' : l.nick,
+      text: (l.kind === 'action' ? `${l.nick} ` : '') + stripFormatting(l.text),
+    }));
     const text = await invoke('ai_summary', {
       key,
       model: state.settings[AI_SUMMARY_MODEL_SETTING] || '',
       lines: sent,
-      prompt: summaryPrompt(b),
+      prompt: summaryPrompt(b, lines.length),
       now: whenSaid(Date.now()),
     });
     const paras = clipSummary(summaryParts(text));
@@ -3326,7 +3337,12 @@ function placeSummary(reveal = false) {
   }
   if (reveal) {
     stuck = false;
-    node.scrollIntoView({ block: 'center' });
+    // One taller than the chat opens at its first line.
+    const tall = node.offsetHeight > el.log.clientHeight - 2 * SEPARATOR_MARGIN_PX;
+    node.scrollIntoView({ block: tall ? 'start' : 'center' });
+    if (tall) {
+      el.log.scrollTop -= SEPARATOR_MARGIN_PX;
+    }
     noteAnchor();
   }
 }
@@ -3460,7 +3476,7 @@ function renderSummarySettings() {
   for (const btn of $('ai-summary-lang').querySelectorAll('button')) {
     btn.setAttribute('aria-checked', String(btn.dataset.lang === lang));
   }
-  $('ai-summary-prompt').value = state.settings[AI_SUMMARY_PROMPT_SETTING] || DEFAULT_SUMMARY_PROMPT;
+  $('ai-summary-prompt').value = chosenPrompt();
   $('ai-summary-model').value = state.settings[AI_SUMMARY_MODEL_SETTING] || '';
 }
 
@@ -4930,7 +4946,7 @@ function place(card, rowNode) {
   }
 }
 
-// Videos only play while they are on screen.
+// Videos load and play only while they are on screen.
 const onScreen = new IntersectionObserver(
   (entries) => {
     for (const e of entries) {
@@ -5063,15 +5079,26 @@ window.addEventListener('message', (e) => {
 function videoCard(p) {
   const box = h('div', 'vid native');
   const v = h('video');
-  Object.assign(v, { src: directLink(p.url), muted: true, loop: true, playsInline: true, preload: 'metadata' });
+  Object.assign(v, { muted: true, loop: true, playsInline: true, preload: 'metadata' });
+  const media = lazyMedia(v, directLink(p.url), () => v.play().catch(() => {}));
   v.addEventListener('error', () => box.replaceWith(pageLink(p)));
+  // The size stays when the decoder is let go, so the chat does not move.
+  v.addEventListener('loadedmetadata', () => {
+    if (!v.videoWidth || !v.videoHeight) {
+      return;
+    }
+    const ratio = v.videoWidth / v.videoHeight;
+    box.style.width = `min(var(--video-w), calc(var(--video-h) * ${ratio}), ${v.videoWidth}px)`;
+    v.style.width = '100%';
+    v.style.aspectRatio = String(ratio);
+  });
   box.append(v, openButton(p.url));
   box.visible = (on) => {
-    if (on) {
-      v.play().catch(() => {});
-    } else {
-      v.pause();
+    // One you started keeps its place while it is still in the chat.
+    if (!on && box.isConnected && box.classList.contains('playing')) {
+      return v.pause();
     }
+    media.show(on);
   };
   onScreen.observe(box);
 
@@ -5082,6 +5109,7 @@ function videoCard(p) {
     }
     delete box.dataset.tip;
     box.classList.add('playing');
+    media.load();
     v.muted = false;
     v.controls = true;
     v.currentTime = 0;
@@ -5100,7 +5128,15 @@ function pageLink(p) {
 function audioCard(p) {
   const box = h('div', 'aud');
   const audio = h('audio');
-  Object.assign(audio, { src: directLink(p.url), preload: 'metadata' });
+  audio.preload = 'metadata';
+  const media = lazyMedia(audio, directLink(p.url));
+  let started = false;
+  box.visible = (on) => {
+    if (!started) {
+      media.show(on);
+    }
+  };
+  onScreen.observe(box);
   const play = h('button', 'aud-play');
   play.type = 'button';
   play.innerHTML = ICONS.play;
@@ -5115,7 +5151,11 @@ function audioCard(p) {
   main.append(name, bar);
   box.append(play, main, time, audio);
 
-  play.addEventListener('click', () => (audio.paused ? audio.play().catch(() => {}) : audio.pause()));
+  play.addEventListener('click', () => {
+    started = true;
+    media.load();
+    return audio.paused ? audio.play().catch(() => {}) : audio.pause();
+  });
   audio.addEventListener('play', () => (play.innerHTML = ICONS.pause));
   audio.addEventListener('pause', () => (play.innerHTML = ICONS.play));
   audio.addEventListener('loadedmetadata', () => (time.textContent = duration(audio.duration)));
@@ -9268,7 +9308,8 @@ function shelfTile(l, url, kind) {
     const v = h('video');
     v.muted = true;
     v.preload = 'metadata';
-    v.src = `${directLink(url)}#t=0.5`;
+    tile.visible = lazyMedia(v, `${directLink(url)}#t=0.5`).show;
+    onScreen.observe(tile);
     tile.append(v);
   }
   if (kind !== 'image') {

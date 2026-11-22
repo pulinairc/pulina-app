@@ -1076,6 +1076,38 @@ export function directLink(url) {
   u.searchParams.set('raw', '1');
   return u.toString();
 }
+/** Something scrolled straight past never opens a decoder. */
+export const MEDIA_SETTLE_MS = 200;
+
+/** A video or audio element that holds its decoder only in view: each costs some 150 MB, seen or not. */
+export function lazyMedia(media, src, ready = () => {}) {
+  let timer = 0;
+  const load = () => {
+    if (!media.getAttribute('src')) {
+      media.src = src;
+    }
+  };
+  const release = () => {
+    if (!media.getAttribute('src')) {
+      return;
+    }
+    media.pause();
+    media.removeAttribute('src');
+    media.load();
+  };
+  const show = (on) => {
+    clearTimeout(timer);
+    if (!on) {
+      return release();
+    }
+    timer = setTimeout(() => {
+      load();
+      ready();
+    }, MEDIA_SETTLE_MS);
+  };
+  return { load, show };
+}
+
 const VIDEO_EXT = /\.(?:mp4|webm|mov|m4v)$/i;
 
 /** What a link shows as on the shelf: a YouTube still, a picture, a video or a plain link row. */
@@ -1194,13 +1226,38 @@ export function reportMail(to, line, note = '') {
 
 // AI summaries of unread messages.
 
-/** What a summary may show, in characters, whatever its prompt says. */
-export const SUMMARY_MAX_CHARS = 500;
+/** Only stops a runaway answer: the prompt decides the length. */
+export const SUMMARY_MAX_CHARS = 6000;
+const SUMMARY_CHARS_MIN = 800;
+const SUMMARY_CHARS_MAX = 3500;
+const SUMMARY_CHARS_PER_LINE = 5;
+/** The default up to 1.26, which is saved as the user's own once its length was edited. */
+export const OLD_SUMMARY_PROMPT =
+  'Summarize the unread IRC messages below for {nick}. Tell what the channel talked about, the most discussed topics first: decisions, plans, questions, links and anything still waiting for an answer. ' +
+  'Messages that mention {nick} are already shown to them separately, so do not single those out. Leave out greetings, idle talk and noise like "kukkuu", single emojis, joins and quits. ' +
+  'Write it as flowing text, not a list. Name who said what. Say when things happened only loosely, by the part of the day or how long ago, like "in the evening" or "an hour ago", never as clock times. ' +
+  'Write plain readable text without message numbers. ' +
+  'Mention the best or funniest part worth reading, if there is one, and end by saying whether {nick} should read the whole discussion. ' +
+  'Write in {language}, at most 500 characters.';
 /** Chat read aloud in the head runs about this fast. */
 const READ_WORDS_PER_MIN = 200;
 const SUMMARY_MARKUP = /\[([^\]]+)\]\((\d+)\)|\*\*([^*]+)\*\*/g;
 // A message number the model wrote as plain text, like "[56]" or "[16, 17]".
 const BARE_NUMBERS = /\s*\[\d+(?:\s*,\s*\d+)*\](?!\()/g;
+
+/** How long a summary of this many messages is asked to be, in characters. */
+export function summaryChars(count) {
+  return Math.min(SUMMARY_CHARS_MAX, Math.max(SUMMARY_CHARS_MIN, count * SUMMARY_CHARS_PER_LINE));
+}
+
+/** The saved prompt, or '' for the default, also when only the old default's length was raised. */
+export function promptSetting(saved = '') {
+  const length = saved.match(/at most (\d+) characters\.$/);
+  if (!length || Number(length[1]) < 500) {
+    return saved;
+  }
+  return saved.replace(length[0], 'at most 500 characters.') === OLD_SUMMARY_PROMPT ? '' : saved;
+}
 
 /** The model's text as paragraphs of parts: plain text, `[phrase](N)` links to line N, `**you**`. */
 export function summaryParts(text) {

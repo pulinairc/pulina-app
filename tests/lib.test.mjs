@@ -719,3 +719,51 @@ test('reading time counts words at 200 a minute, at least a minute', async () =>
   assert.equal(readingSecs(['hi']), 60);
   assert.equal(readingSecs([Array(1200).fill('sana').join(' ')]), 360);
 });
+
+test('media holds a decoder only while it stays in view', async (c) => {
+  const { lazyMedia, MEDIA_SETTLE_MS } = await import('../ui/lib.js');
+  c.mock.timers.enable({ apis: ['setTimeout'] });
+  const calls = [];
+  const media = {
+    src: '',
+    getAttribute: () => media.src || null,
+    removeAttribute: () => (media.src = ''),
+    pause: () => calls.push('pause'),
+    load: () => calls.push('load'),
+  };
+  const lazy = lazyMedia(media, 'a.mp4', () => calls.push('ready'));
+  assert.equal(media.src, '', 'off screen nothing loads');
+
+  lazy.show(true);
+  lazy.show(false);
+  c.mock.timers.tick(MEDIA_SETTLE_MS);
+  assert.equal(media.src, '', 'scrolled straight past nothing loads');
+
+  lazy.show(true);
+  c.mock.timers.tick(MEDIA_SETTLE_MS);
+  assert.deepEqual([media.src, calls], ['a.mp4', ['ready']]);
+
+  lazy.show(false);
+  assert.deepEqual([media.src, calls], ['', ['ready', 'pause', 'load']]);
+});
+
+test('a summary grows with the backlog and is never cut at what was asked for', async () => {
+  const { summaryChars, clipSummary, summaryParts } = await import('../ui/lib.js');
+  assert.deepEqual([summaryChars(20), summaryChars(300), summaryChars(2000)], [800, 1500, 3500]);
+  const long = summaryParts(
+    Array(8)
+      .fill(`${'sana '.repeat(98)}loppu.`)
+      .join('\n\n'),
+  );
+  assert.equal(clipSummary(long), long, 'the last part of the day stays');
+});
+
+test('an old default prompt with only its length changed follows the new default', async () => {
+  const { promptSetting, OLD_SUMMARY_PROMPT } = await import('../ui/lib.js');
+  assert.equal(promptSetting(OLD_SUMMARY_PROMPT), '');
+  assert.equal(promptSetting(OLD_SUMMARY_PROMPT.replace('500 characters', '800 characters')), '');
+  const own = OLD_SUMMARY_PROMPT.replace('kukkuu', 'huomenta');
+  assert.equal(promptSetting(own), own);
+  const shorter = OLD_SUMMARY_PROMPT.replace('500 characters', '200 characters');
+  assert.equal(promptSetting(shorter), shorter);
+});
