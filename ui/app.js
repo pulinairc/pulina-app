@@ -11,6 +11,7 @@ import {
   commandMatches,
   continues,
   dayLabel,
+  relativeTime,
   defaultShortcuts,
   ANIMALS,
   animalFor,
@@ -1866,6 +1867,7 @@ function renderSettings() {
   $('np-edit-toggle').checked = settingOn(NP_EDIT_SETTING);
   $('pm-highlight-toggle').checked = settingOn(PM_HIGHLIGHT_SETTING);
   $('hover-wait-toggle').checked = settingOn(HOVER_CARD_WAIT_SETTING);
+  $('relative-time-toggle').checked = relativeTimes();
   $('hover-wait-toggle').disabled = !settingOn(HOVER_CARD_SETTING);
   for (const r of el.replyStyle.querySelectorAll('input')) {
     r.checked = r.value === replyStyle();
@@ -2488,7 +2490,7 @@ function appendLine(l) {
     }
     view.events.list.push(l);
     renderEvents(view.events);
-    view.events.node.dataset.tip = clock(l.ts);
+    timeTip(view.events.node, () => messageTime(l.ts));
     view.group = null;
   } else if (CHAT_KINDS.has(l.kind) && answersCommand(l, prev)) {
     // A bot answering the command just asked: inside that command's card.
@@ -2776,7 +2778,7 @@ function narration(l) {
 function row(l) {
   const r = h('div', `text ${l.kind}`);
   r.classList.toggle('own', l.own || l.nick === state.me[l.net]);
-  r.dataset.tip = clock(l.ts);
+  timeTip(r, () => messageTime(l.ts));
   r.line = l;
 
   // "nick: text" right after that nick spoke reads as a reply: show what it answers.
@@ -2947,7 +2949,7 @@ function personCard(net, nick, { spoke = true } = {}) {
     rows.push([t('With you'), about.chans.join(' ')]);
   }
   if (spoke && about.last) {
-    rows.push([t('Spoke'), ago(about.last.ts)]);
+    rows.push([t('Spoke'), relativeTimes() ? relativeTime(about.last.ts) : ago(about.last.ts)]);
   }
   if (w?.idle_secs != null) {
     rows.push([t('Idle'), span(w.idle_secs)]);
@@ -4899,7 +4901,7 @@ function note(l) {
   };
   const text = said[l.kind] ?? l.text;
   const n = h('div', 'events', text);
-  n.dataset.tip = clock(l.ts);
+  timeTip(n, () => messageTime(l.ts));
   return n;
 }
 
@@ -7526,6 +7528,10 @@ async function start() {
     if (e.payload.key === HIGHLIGHTS_SETTING) {
       renderInbox();
     }
+    if (e.payload.key === RELATIVE_TIME_SETTING) {
+      $('relative-time-toggle').checked = relativeTimes();
+      refreshTimes();
+    }
     if (e.payload.key === REPLY_STYLE_SETTING) {
       renderLog();
     }
@@ -7615,6 +7621,12 @@ const CARD_REST_MS = 400;
 let cardTimer = 0;
 let cardPinned = false;
 
+/** Keeps a time's text current: read again when its tooltip opens, or on each refresh of the times. */
+function timeTip(node, text) {
+  node.tipText = text;
+  node.dataset.tip = text();
+}
+
 function showTip(target, x, { fresh = false, ask = true } = {}) {
   tipX = x;
   if (target !== tipFor || fresh) {
@@ -7628,7 +7640,7 @@ function showTip(target, x, { fresh = false, ask = true } = {}) {
     } else if (target.tipNode) {
       tip.replaceChildren(target.tipNode.cloneNode(true));
     } else if (target.dataset.tip) {
-      tip.textContent = target.dataset.tip;
+      tip.textContent = target.tipText?.() ?? target.dataset.tip;
     } else {
       return hideTip();
     }
@@ -8454,6 +8466,43 @@ function settingOn(key) {
   return state.settings[key] !== 'off';
 }
 
+// Times, synced like the other settings. Off unless asked for.
+const RELATIVE_TIME_SETTING = 'relativeTime';
+const TIMES_EVERY_MS = 30_000;
+
+function relativeTimes() {
+  return state.settings[RELATIVE_TIME_SETTING] === 'on';
+}
+
+function messageTime(ts) {
+  return relativeTimes() ? relativeTime(ts) : clock(ts);
+}
+
+function liveTime(node, text) {
+  node.dataset.time = '';
+  node.timeText = text;
+  node.textContent = text();
+  return node;
+}
+
+function refreshTimes() {
+  for (const node of document.querySelectorAll('[data-time]')) {
+    const text = node.timeText();
+    if (node.textContent !== text) {
+      node.textContent = text;
+    }
+  }
+  if (!tip.hidden && tipFor?.tipText) {
+    tip.textContent = tipFor.tipText();
+  }
+}
+
+setInterval(refreshTimes, TIMES_EVERY_MS);
+$('relative-time-toggle').addEventListener('change', (e) => {
+  saveSetting(RELATIVE_TIME_SETTING, e.target.checked ? 'on' : 'off');
+  refreshTimes();
+});
+
 // Text size, per device: the whole window zooms, so everything keeps its proportions.
 const TEXT_SIZE_KEY = 'lobby.textSize';
 const TEXT_SIZE_DEFAULT = 100;
@@ -8864,8 +8913,11 @@ const FOUND_PAGE = 200;
 const SWIPE_DONE_PX = 80;
 const inbox = { lines: new Map(), archive: false, older: true, timer: 0 };
 
-/** Today as 14:02, earlier days as their date. */
+/** Today as 14:02, earlier days as their date, unless relative times are on. */
 function shortWhen(ts) {
+  if (relativeTimes()) {
+    return relativeTime(ts);
+  }
   return sameDay(ts, Date.now()) ? clock(ts).slice(0, 5) : dayLabel(ts);
 }
 
@@ -9001,7 +9053,10 @@ function inboxRow(l, fresh) {
   row.line = l;
   row.fresh = fresh;
   const head = h('div', 'inbox-meta');
-  head.append(h('span', 'inbox-nick', l.nick), h('span', 'inbox-where', `${l.buffer} · ${shortWhen(l.ts)}`));
+  head.append(
+    h('span', 'inbox-nick', l.nick),
+    liveTime(h('span', 'inbox-where'), () => `${l.buffer} · ${shortWhen(l.ts)}`),
+  );
   const body = h('div', 'inbox-body');
   body.append(head, inboxText(l));
   row.append(avatar(l.nick, l.mask), body);
@@ -9292,13 +9347,14 @@ function renderShelf(keepFromBottom = null) {
 }
 
 function shelfTip(l) {
-  return `${l.nick} · ${dayLabel(l.ts)} ${clock(l.ts)}`;
+  const when = relativeTimes() ? relativeTime(l.ts) : `${dayLabel(l.ts)} ${clock(l.ts)}`;
+  return `${l.nick} · ${when}`;
 }
 
 function shelfTile(l, url, kind) {
   const tile = h('button', `shelf-tile ${kind}`);
   tile.type = 'button';
-  tile.dataset.tip = shelfTip(l);
+  timeTip(tile, () => shelfTip(l));
   const yt = kind === 'youtube' ? youtube(url) : null;
   if (yt) {
     tile.append(image(`https://i.ytimg.com/vi/${yt.id}/mqdefault.jpg`));
@@ -9325,7 +9381,11 @@ function shelfLink(l, url) {
   const who = h('button', 'shelf-who');
   who.type = 'button';
   who.dataset.tip = t('Show in the chat');
-  who.append(avatar(l.nick, l.mask), h('span', 'shelf-nick', l.nick), h('span', 'shelf-time', shortWhen(l.ts)));
+  who.append(
+    avatar(l.nick, l.mask),
+    h('span', 'shelf-nick', l.nick),
+    liveTime(h('span', 'shelf-time'), () => shortWhen(l.ts)),
+  );
   who.addEventListener('click', () => openLine(l));
   // Every card keeps three lines, so cards filling in as they scroll into view never move the list.
   const blank = '\u00a0';
