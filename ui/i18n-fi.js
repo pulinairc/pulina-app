@@ -194,9 +194,10 @@ export const FI = {
   'Any model id from': 'Minkä tahansa mallin tunnus',
   "OpenRouter's model list": 'OpenRouterin mallilistasta',
   '. Leave it empty for the default.': '. Tyhjänä käytetään oletusta.',
-  'is your nick and': 'on nimimerkkisi ja',
-  'the language above. The app adds the answer format itself, so editing the prompt cannot break the links to messages.':
-    'yllä valittu kieli. Sovellus lisää vastauksen muodon itse, joten kehotteen muokkaus ei riko linkkejä viesteihin.',
+  'is your nick,': 'on nimimerkkisi,',
+  'the language above and': 'yllä valittu kieli ja',
+  'a length that grows with the number of messages. The app adds the answer format itself, so editing the prompt cannot break the links to messages.':
+    'viestimäärän mukaan kasvava pituus. Sovellus lisää vastauksen muodon itse, joten kehotteen muokkaus ei riko linkkejä viesteihin.',
   'Summary of unread messages': 'Yhteenveto lukemattomista viesteistä',
   'Reading them…': 'Luetaan…',
   'Summary of {n} messages': 'Yhteenveto {n} viestistä',

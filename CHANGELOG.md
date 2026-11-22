@@ -1,3 +1,9 @@
+### 1.26.1: 2026-11-22
+
+* Fix videos off screen eating gigabytes and stalling Lobby
+* Fix long summaries being cut at 500 characters
+* Change summaries to cover every part of the backlog
+
 ### 1.26.0: 2026-11-18
 
 * Add summary model setting, default Gemini 3.8 Flash
