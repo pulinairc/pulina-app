@@ -1,3 +1,7 @@
+### 1.27.2: 2026-11-23
+
+* Fix private messages staying unread after Done
+
 ### 1.27.1: 2026-11-22
 
 * Add the clock time to relative times

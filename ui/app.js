@@ -8958,7 +8958,26 @@ function saveMarks(upTo, done) {
   renderInbox();
 }
 
+/** A private message done in the highlights is read in its chat too, up to that message. */
+function readUpTo(lines) {
+  for (const l of lines) {
+    const b = state.buffers.get(key(l.net, l.buffer));
+    if (!b || !isPrivate(b) || l.id <= (readMap[b.key] ?? 0)) {
+      continue;
+    }
+    if (l.id >= lastId(b)) {
+      markRead(b);
+      continue;
+    }
+    readMap[b.key] = l.id;
+    saveReadSoon();
+    recountUnread(b);
+  }
+  renderHeader();
+}
+
 function markDone(id) {
+  readUpTo([inbox.lines.get(id)].filter(Boolean));
   const m = highlightMarks();
   m.done.add(id);
   saveMarks(m.upTo, m.done);
@@ -8966,6 +8985,7 @@ function markDone(id) {
 
 function markAllDone() {
   const newest = Math.max(0, ...inbox.lines.keys());
+  readUpTo(inbox.lines.values());
   saveMarks(Math.max(newest, highlightMarks().upTo), new Set());
 }
 
