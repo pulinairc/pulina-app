@@ -1,3 +1,7 @@
+### 1.28.1: 2026-11-25
+
+* Fix Android bars covering the app
+
 ### 1.28.0: 2026-11-25
 
 * Change unread summaries to topics with quotes
