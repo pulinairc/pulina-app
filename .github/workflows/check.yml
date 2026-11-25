@@ -147,6 +147,7 @@ jobs:
         run: |
           export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
           npx tauri android init --ci
+          sh tools/android-insets.sh
           npx tauri icon src-tauri/icons/icon.png
           npx tauri android build --ci --debug --apk --target x86_64 --config '{"bundle":{"createUpdaterArtifacts":false}}'
 
@@ -206,5 +207,5 @@ jobs:
         if: always()
         with:
           name: android-smoke
-          path: android-smoke.png
+          path: android-*.png
           if-no-files-found: ignore

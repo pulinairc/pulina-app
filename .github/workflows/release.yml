@@ -189,6 +189,7 @@ jobs:
         run: |
           export NDK_HOME="$ANDROID_NDK_LATEST_HOME"
           npx --yes @tauri-apps/cli@2 android init --ci
+          sh tools/android-insets.sh
           npx --yes @tauri-apps/cli@2 icon src-tauri/icons/icon.png
           npx --yes @tauri-apps/cli@2 android build --ci --apk
 
