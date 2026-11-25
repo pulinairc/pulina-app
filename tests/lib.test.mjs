@@ -820,7 +820,16 @@ test('reads a topic summary and keeps only real message numbers', async () => {
       {
         label: 'Last night',
         topics: [
-          { title: 'Dry hands', from: 2, to: 5, people: ['bro'], summary: 'Thick cream wins.', points: ['Cotton gloves at night'], quotes: [3, 4], heated: true },
+          {
+            title: 'Dry hands',
+            from: 2,
+            to: 5,
+            people: ['bro'],
+            summary: 'Thick cream wins.',
+            points: ['Cotton gloves at night'],
+            quotes: [3, 4],
+            heated: true,
+          },
           { title: 'Backwards', from: 9, to: 9, people: [], summary: '', points: [], quotes: [], heated: false },
         ],
       },
