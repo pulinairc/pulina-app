@@ -192,6 +192,14 @@ jobs:
             /usr/local/lib/android/sdk/system-images/android-34
           key: avd-34-google_apis-x86_64-clean
 
+      # On-screen buttons and keyboard, as on a phone, so the pictures show whether they cover the app.
+      - name: Give the emulator a navigation bar and an on-screen keyboard
+        run: |
+          for c in ~/.android/avd/*.avd/config.ini; do
+            sed -i '/^hw.keyboard=/d;/^hw.mainKeys=/d' "$c"
+            printf 'hw.keyboard=no\nhw.mainKeys=no\n' >> "$c"
+          done
+
       - name: Start the app on an emulator and see it stay up
         uses: reactivecircus/android-emulator-runner@v2
         with:

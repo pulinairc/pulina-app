@@ -22,7 +22,7 @@ if [ -n "$bounds" ]; then
 else
     size=$(adb shell wm size | sed -n 's/.*: \([0-9]*\)x\([0-9]*\).*/\1 \2/p' | tail -n1)
     set -- $size
-    x=$(( $1 / 3 )); y=$(( $2 * 82 / 100 ))
+    x=$(( $1 / 3 )); y=$(( $2 * 85 / 100 ))
 fi
 adb shell input tap "$x" "$y"
 sleep 4
