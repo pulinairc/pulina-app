@@ -78,6 +78,8 @@ button {
   padding: 8px 10px 8px 12px;
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
+  /* One height for every pill and switch on the right. */
+  --top-h: 30px;
   /* Above the unread band, which tucks one pixel under this border. */
   position: relative;
   z-index: 7;
@@ -169,9 +171,12 @@ a:focus-visible {
 }
 
 #unread {
+  flex-shrink: 0;
+  height: var(--top-h);
+  line-height: var(--top-h);
   border: 0;
   border-radius: 999px;
-  padding: 3px 10px;
+  padding: 0 10px;
   font-size: 13px;
   background: var(--raised);
   color: var(--text);
@@ -3050,8 +3055,8 @@ label.switch-row:has(.switch:disabled) {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-width: 34px;
-  height: 34px;
+  min-width: var(--top-h);
+  height: var(--top-h);
   padding: 0 9px 0 10px;
   flex-shrink: 0;
   border: 1px solid var(--line);
@@ -3591,8 +3596,7 @@ body.docked #update-bar {
 }
 .inbox-pill {
   flex-shrink: 0;
-  /* As tall and as round as the Chat and Shelf tabs beside it. */
-  height: 30px;
+  height: var(--top-h);
   padding: 0 10px;
   border: 0;
   border-radius: 9px;
@@ -3840,7 +3844,9 @@ body.docked #update-bar {
 /* Chat | Shelf */
 .views {
   display: flex;
+  align-items: center;
   flex-shrink: 0;
+  height: var(--top-h);
   gap: 2px;
   padding: 2px;
   border-radius: 9px;
@@ -3868,8 +3874,10 @@ body.docked #update-bar {
 }
 /* On a phone the switch is the people pill's twin: same height, border and round ends. */
 @media (max-width: 600px) {
+  #top {
+    --top-h: 34px;
+  }
   .inbox-pill {
-    height: 34px;
     padding: 0 8px;
     border-radius: 17px;
   }
@@ -3878,9 +3886,6 @@ body.docked #update-bar {
     display: none;
   }
   .views {
-    box-sizing: border-box;
-    height: 34px;
-    align-items: center;
     padding: 0 3px;
     border: 1px solid var(--line);
     border-radius: 999px;
