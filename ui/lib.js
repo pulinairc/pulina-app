@@ -1325,6 +1325,11 @@ export function parseSummary(text, count) {
   }
   const str = (v) => (typeof v === 'string' ? v.replace(BARE_NUMBERS, '').trim() : '');
   const strs = (v) => (Array.isArray(v) ? v.map(str).filter(Boolean) : []);
+  // A point is {text, at}, the message it comes from; a bare string has no place to open.
+  const points = (v) =>
+    (Array.isArray(v) ? v : [])
+      .map((p) => (typeof p === 'string' ? { text: str(p), at: null } : { text: str(p?.text), at: num(p?.at) }))
+      .filter((p) => p.text);
   const num = (v) => (Number.isInteger(v) && v >= 1 && v <= count ? v : null);
   const topic = (x) => {
     const title = str(x?.title);
@@ -1339,7 +1344,7 @@ export function parseSummary(text, count) {
       to: Math.max(from, num(x.to) ?? from),
       people: strs(x.people),
       summary: str(x.summary),
-      points: strs(x.points),
+      points: points(x.points),
       quotes: quotes.slice(0, SUMMARY_QUOTES),
       heated: x.heated === true,
     };
