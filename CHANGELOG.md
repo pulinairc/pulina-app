@@ -1,3 +1,7 @@
+### 1.28.0: 2026-11-25
+
+* Change unread summaries to topics with quotes
+
 ### 1.27.3: 2026-11-25
 
 * Show part and kick reasons

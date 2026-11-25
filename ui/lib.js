@@ -1308,6 +1308,48 @@ export function summaryParts(text) {
     });
 }
 
+const SUMMARY_QUOTES = 2;
+
+/**
+ * The model's topic summary, checked against the `count` lines it was given: message numbers out of
+ * range are dropped, and so is a topic without a title or a start. Null when the answer is not one.
+ */
+export function parseSummary(text, count) {
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  let data;
+  try {
+    data = JSON.parse(text.slice(start, end + 1));
+  } catch {
+    return null;
+  }
+  const str = (v) => (typeof v === 'string' ? v.replace(BARE_NUMBERS, '').trim() : '');
+  const strs = (v) => (Array.isArray(v) ? v.map(str).filter(Boolean) : []);
+  const num = (v) => (Number.isInteger(v) && v >= 1 && v <= count ? v : null);
+  const topic = (x) => {
+    const title = str(x?.title);
+    const from = num(x?.from);
+    if (!title || !from) {
+      return null;
+    }
+    const quotes = Array.isArray(x.quotes) ? [...new Set(x.quotes.map(num).filter(Boolean))] : [];
+    return {
+      title,
+      from,
+      to: Math.max(from, num(x.to) ?? from),
+      people: strs(x.people),
+      summary: str(x.summary),
+      points: strs(x.points),
+      quotes: quotes.slice(0, SUMMARY_QUOTES),
+      heated: x.heated === true,
+    };
+  };
+  const parts = (Array.isArray(data?.parts) ? data.parts : [])
+    .map((p) => ({ label: str(p?.label), topics: (Array.isArray(p?.topics) ? p.topics : []).map(topic).filter(Boolean) }))
+    .filter((p) => p.topics.length);
+  return parts.length ? { overview: str(data.overview), parts } : null;
+}
+
 /** Paragraphs cut after the last whole sentence that fits in `max` shown characters. */
 export function clipSummary(paras, max = SUMMARY_MAX_CHARS) {
   const shown = paras.map((p) => p.map((x) => x.value).join(''));

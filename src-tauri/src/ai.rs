@@ -16,9 +16,13 @@ const SUMMARY_TIMEOUT: Duration = Duration::from_secs(90);
 // Room for the link markup; the app cuts the text itself at 500 shown characters.
 const SUMMARY_TOKENS: u32 = 8000;
 // Added after the user's own prompt, which can be edited, so an edit never breaks the links.
-const SUMMARY_FORMAT: &str = "Answer with the summary text only, in paragraphs separated by a blank line, with no headings or lists. \
-When a phrase is about a particular message, link it as [phrase](N) with that message's number. \
-Never write a message number anywhere else, so no bare [N] after a name or a sentence. \
+const SUMMARY_FORMAT: &str = "Answer with one JSON object and nothing else, in this shape: \
+{\"overview\": \"two or three sentences on the whole span\", \"parts\": [{\"label\": \"the part of the day, like Last night\", \
+\"topics\": [{\"title\": \"a few words\", \"from\": 12, \"to\": 40, \"people\": [\"nick\"], \"summary\": \"two to four sentences\", \
+\"points\": [\"a decision, plan or open question\"], \"quotes\": [17], \"heated\": false}]}]}. \
+The numbers are message numbers: from is the topic's first message, to its last, and quotes are one or two messages that show the topic best, \
+said well or funny. people are the nicks who carried the topic, most active first. points may be empty. heated is true only for a real argument. \
+Never write a message number inside the texts. \
 Speak to the reader directly with the word for you in the summary's own language, never by their nick and never with the English word in another language.";
 
 #[derive(Deserialize)]
@@ -182,7 +186,7 @@ mod tests {
         let lines = [SummaryLine { at: "14.32".into(), nick: "sumu".into(), text: "saunaa?".into() }];
         let p = summary_prompt(&lines, "Summarize for rolle.", "Tue 16.05");
         assert!(p.starts_with("Summarize for rolle.\n\n"));
-        assert!(p.contains("[phrase](N)") && p.contains("It is now Tue 16.05.") && p.ends_with("[1] 14.32 sumu: saunaa?"));
+        assert!(p.contains("\"topics\"") && p.contains("It is now Tue 16.05.") && p.ends_with("[1] 14.32 sumu: saunaa?"));
         assert!(p.contains("They run from 14.32 to 14.32."));
     }
 

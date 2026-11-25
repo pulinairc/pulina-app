@@ -60,6 +60,7 @@ import {
   promptSetting,
   summaryChars,
   summaryParts,
+  parseSummary,
   clipSummary,
   summaryNicks,
   readingSecs,
@@ -3210,13 +3211,11 @@ const SUMMARY_MAX_LINES = 2000;
 const SUMMARY_LANGS = { en: 'English', fi: 'Finnish' };
 const DEFAULT_SUMMARY_PROMPT =
   'Summarize the unread IRC messages below for {nick}, so that they get the whole picture without reading them. ' +
-  'Cover the whole span from the first message to the last, in time order: a paragraph for each part of it that had talk, like last night, the night, this morning, midday, this afternoon and this evening. Give the newest part as much care as the oldest. ' +
-  'In each part cover every real topic concretely: what was said, who said it and what came of it, with decisions, plans, questions, links and anything still waiting for an answer. Never write only that something was talked about, tell what was said about it. ' +
-  'Messages that mention {nick} are already shown to them separately, so do not single those out. Leave out greetings and noise like "kukkuu", single emojis, joins and quits. ' +
-  'Write it as flowing text, not a list. Name the part of the day each paragraph is about, relative to now and telling yesterday from today, never as clock times. ' +
-  'Write plain readable text without message numbers. ' +
-  'Mention the best or funniest part worth reading, if there is one, and end by saying whether {nick} should read the whole discussion. ' +
-  'Write in {language}, about {chars} characters in all. Use that room for detail, and write less only if there really was less to tell.';
+  'Split the whole span, from the first message to the last, into the parts of the day that had talk, like last night, the night, this morning and midday, named relative to now and telling yesterday from today. ' +
+  'Within each part give every real topic in time order. Give the newest part as much care as the oldest. ' +
+  'For each topic tell concretely what was said, who said it and what came of it, with decisions, plans, questions, links and anything still waiting for an answer. Never write only that something was talked about. ' +
+  'Messages that mention {nick} are already shown to them separately. Leave out greetings and noise like "kukkuu", single emojis, joins and quits. ' +
+  'Write in {language}, about {chars} characters of text in all. Use that room for detail, and write less only if there really was less to tell.';
 const SUMMARY_ICONS = {
   again:
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"/></svg>',
@@ -3290,14 +3289,16 @@ async function summarizeUnread() {
       prompt: summaryPrompt(b, lines.length),
       now: whenSaid(Date.now()),
     });
-    const paras = clipSummary(summaryParts(text));
+    // Topics when the model kept to the asked shape; its plain text otherwise, as before.
+    const topics = parseSummary(text, lines.length);
+    const paras = topics ? [] : clipSummary(summaryParts(text));
     if (summaries.get(b.key) !== job) {
       return;
     }
-    if (!paras.length) {
+    if (!topics && !paras.length) {
       return setSummary(b, { kind: 'error', error: t('The answer was empty.') });
     }
-    setSummary(b, { kind: 'done', count: job.count, secs: readingSecs(sent.map((l) => l.text)), paras, lines });
+    setSummary(b, { kind: 'done', count: job.count, secs: readingSecs(sent.map((l) => l.text)), paras, topics, lines });
   } catch (e) {
     if (summaries.get(b.key) === job) {
       setSummary(b, { kind: 'error', error: String(e) });
@@ -3409,13 +3410,22 @@ function summaryNode(b, s) {
     node.append(head, h('p', 'summary-error', s.error), actions);
     return node;
   }
-  const head = summaryHead(
-    t('Summary of {n} messages', { n: s.count }),
-    h('span', '', t('Reading them all would take about {time}', { time: span(s.secs) })),
-  );
+  const members = new Map(s.lines.map((l) => [l.nick.toLowerCase(), l.nick]));
+  const reading = t('Reading them all would take about {time}', { time: span(s.secs) });
+  const facts = s.topics
+    ? [
+        `${hourMinute(s.lines[0].ts)}–${hourMinute(s.lines.at(-1).ts)}`,
+        t('{n} topics', { n: s.topics.parts.reduce((n, p) => n + p.topics.length, 0) }),
+        t('{n} people', { n: members.size }),
+        reading,
+      ].join(' · ')
+    : reading;
+  const head = summaryHead(t('Summary of {n} messages', { n: s.count }), h('span', '', facts));
   head.append(close);
   node.append(head);
-  const members = new Map(s.lines.map((l) => [l.nick.toLowerCase(), l.nick]));
+  if (s.topics) {
+    summaryTopics(b, s, node, members);
+  }
   for (const p of s.paras) {
     const para = h('p');
     for (const part of p) {
@@ -3434,6 +3444,110 @@ function summaryNode(b, s) {
   );
   node.append(foot);
   return node;
+}
+
+const SUMMARY_FACES = 4;
+const SUMMARY_YOU_MAX = 5;
+const SUMMARY_QUOTE_CHARS = 220;
+const FIRE_ICON =
+  '<svg class="summary-fire" width="16" height="19" viewBox="0 0 16 19" aria-hidden="true"><defs><linearGradient id="summary-flame" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff3d2e"/><stop offset="0.55" stop-color="#ff8a2a"/><stop offset="1" stop-color="#ffd35c"/></linearGradient></defs><path d="M8 1c1.2 3 5.5 5.2 5.5 10.3A5.5 5.5 0 0 1 2.5 11.3c0-2.3 1.2-3.9 2.4-4.9-.1 2 .8 3.2 2 3.4C6.4 7.3 6.2 4.2 8 1z" fill="url(#summary-flame)"/><path class="core" d="M8 9.2c1.1 1.6 2.6 2.7 2.6 4.6a2.6 2.6 0 0 1-5.2 0c0-1.8 1.5-2.9 2.6-4.6z" fill="#ffe7a3"/></svg>';
+
+const hourMinute = (ts) => clock(ts).slice(0, 5);
+
+/** The topic summary: overview, the lines for you, then each part of the day and its topics. */
+function summaryTopics(b, s, node, members) {
+  const { overview, parts } = s.topics;
+  if (overview) {
+    const p = h('p', 'summary-overview');
+    p.append(withNames(b, overview, members));
+    node.append(p);
+  }
+  const words = myWords(b.net);
+  const forYou = s.lines.filter((l) => !l.own && mentions(l.text, words)).slice(-SUMMARY_YOU_MAX);
+  if (forYou.length) {
+    const box = h('div', 'summary-you');
+    box.append(h('b', '', t('For you {n}', { n: forYou.length })), ...forYou.map((l) => summaryQuote(l)));
+    node.append(box);
+  }
+  for (const part of parts) {
+    const first = Math.min(...part.topics.map((x) => x.from));
+    const last = Math.max(...part.topics.map((x) => x.to));
+    const label = h('div', 'summary-part');
+    const when = `${hourMinute(s.lines[first - 1].ts)}–${hourMinute(s.lines[last - 1].ts)}`;
+    label.append(part.label, h('span', '', `${when} · ${t('{n} messages', { n: last - first + 1 })}`));
+    node.append(label);
+    for (const x of part.topics) {
+      node.append(summaryTopic(b, s.lines, x, members));
+    }
+  }
+}
+
+function summaryTopic(b, lines, x, members) {
+  const node = h('div', 'summary-topic');
+  const meta = h('div', 'summary-meta');
+  const start = h('button', 'summary-span', `${hourMinute(lines[x.from - 1].ts)}–${hourMinute(lines[x.to - 1].ts)}`);
+  start.type = 'button';
+  start.addEventListener('click', () => openLine(lines[x.from - 1]));
+  meta.append(start, h('span', '', t('{n} messages', { n: x.to - x.from + 1 })));
+  if (x.heated) {
+    const fire = h('span', 'summary-heat');
+    fire.innerHTML = FIRE_ICON;
+    fire.dataset.tip = t('Heated');
+    meta.append(fire);
+  }
+  meta.append(summaryFaces(lines.slice(x.from - 1, x.to), x.people));
+  node.append(meta, h('h3', 'summary-topic-title', x.title));
+  if (x.summary) {
+    const p = h('p');
+    p.append(withNames(b, x.summary, members));
+    node.append(p);
+  }
+  if (x.points.length) {
+    const list = h('ul', 'summary-points');
+    for (const point of x.points) {
+      const li = h('li');
+      li.append(withNames(b, point, members));
+      list.append(li);
+    }
+    node.append(list);
+  }
+  node.append(...x.quotes.map((n) => summaryQuote(lines[n - 1])));
+  return node;
+}
+
+/** The people in a topic, the ones the model named first, then the rest by how much they said. */
+function summaryFaces(lines, named) {
+  const said = new Map();
+  for (const l of lines) {
+    said.set(l.nick, (said.get(l.nick) ?? 0) + 1);
+  }
+  const order = (n) => named.findIndex((x) => x.toLowerCase() === n.toLowerCase());
+  const nicks = [...said.keys()].sort((a, c) => {
+    const [x, y] = [order(a), order(c)];
+    return x >= 0 || y >= 0 ? (x < 0 ? Infinity : x) - (y < 0 ? Infinity : y) : said.get(c) - said.get(a);
+  });
+  const box = h('span', 'summary-faces');
+  const faces = h('span', 'summary-face-row');
+  faces.append(...nicks.slice(0, SUMMARY_FACES).map((n) => avatar(n)));
+  box.append(faces);
+  if (nicks.length > SUMMARY_FACES) {
+    box.append(h('span', 'summary-more', `+${nicks.length - SUMMARY_FACES}`));
+  }
+  return box;
+}
+
+/** One message as said, opening it in the chat. */
+function summaryQuote(l) {
+  const q = h('button', 'summary-quote');
+  q.type = 'button';
+  const text = stripFormatting(l.text);
+  const words = h('span', 'summary-quote-text');
+  const who = h('b', '', l.nick);
+  who.style.color = identity(l.nick).color;
+  words.append(who, ` ${text.length > SUMMARY_QUOTE_CHARS ? `${text.slice(0, SUMMARY_QUOTE_CHARS)}…` : text}`);
+  q.append(avatar(l.nick), words, h('span', 'summary-quote-time', clock(l.ts)));
+  q.addEventListener('click', () => openLine(l));
+  return q;
 }
 
 function summaryPart(b, part, lines, members) {
@@ -3463,9 +3577,8 @@ function withNames(b, text, members) {
       out.append(x.value);
       continue;
     }
-    const who = h('span', 'summary-who');
+    const who = h('span', 'summary-who', x.value);
     who.style.color = identity(x.nick).color;
-    who.append(avatar(x.nick), x.value);
     personTip(who, b.net, x.nick);
     out.append(who);
   }

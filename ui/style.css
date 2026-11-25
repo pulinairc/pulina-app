@@ -5702,30 +5702,6 @@ body.rail-settle #update-bar {
   font-weight: 600;
   white-space: nowrap;
 }
-/* An avatar the height of the letters, centred on them. `middle` ignores the emoji's own
-   baseline; the nudge lifts it from the middle of lower-case letters to that of capitals. */
-.summary-who .av {
-  display: inline-flex;
-  position: relative;
-  top: -0.08em;
-  width: 1.15em;
-  height: 1.15em;
-  margin-right: 0.25em;
-  font-size: inherit;
-  vertical-align: middle;
-}
-.summary-who .av.animal {
-  font-size: 0.72em;
-  top: -0.11em;
-  width: 1.6em;
-  height: 1.6em;
-}
-.summary-who .av img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: inherit;
-}
 .summary a.summary-go {
   color: inherit;
   text-decoration: underline dotted var(--faint);
@@ -5734,6 +5710,185 @@ body.rail-settle #update-bar {
 }
 .summary a.summary-go:hover {
   text-decoration-color: var(--strong);
+}
+.summary-overview {
+  font-size: 1.06em;
+  color: var(--strong);
+}
+.summary-you {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--mention-bg);
+}
+.summary-you > b {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mention);
+}
+.summary-part {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--dim);
+}
+.summary-part span {
+  font-weight: 400;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.summary-topic {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 0 4px;
+}
+.summary-topic + .summary-topic {
+  border-top: 1px solid var(--line);
+}
+.summary-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--faint);
+}
+.summary-span {
+  margin: -2px -6px;
+  padding: 2px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: var(--dim);
+  font: inherit;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.summary-span:hover {
+  background: var(--hover);
+  color: var(--strong);
+}
+.summary-faces {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.summary-face-row {
+  display: flex;
+}
+.summary-face-row .av {
+  width: 20px;
+  height: 20px;
+  margin-left: -5px;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+.summary-face-row .av:first-child {
+  margin-left: 0;
+}
+.summary-more {
+  font-size: 12px;
+}
+.summary .summary-topic-title {
+  margin: 0;
+  font-size: 1.05em;
+  font-weight: 600;
+  color: var(--strong);
+  text-wrap: balance;
+}
+.summary-points {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--dim);
+}
+.summary-quote {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--raised);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.summary-quote:hover {
+  background: var(--hover);
+}
+.summary-quote .av {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+}
+.summary-quote-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.summary-quote-text b {
+  font-weight: 600;
+}
+.summary-quote-time {
+  padding-top: 2px;
+  font-size: 12px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.summary-quote:hover .summary-quote-time {
+  color: var(--accent);
+}
+.summary-you .summary-quote {
+  background: color-mix(in srgb, var(--mention) 8%, var(--panel));
+}
+.summary-heat {
+  display: inline-flex;
+}
+.summary-fire {
+  transform-origin: 50% 100%;
+  animation: summary-flicker 0.9s ease-in-out infinite alternate;
+  filter: drop-shadow(0 0 5px rgb(255 120 40 / 55%));
+}
+.summary-fire .core {
+  transform-origin: 50% 100%;
+  animation: summary-core 0.6s ease-in-out infinite alternate;
+}
+@keyframes summary-flicker {
+  0% {
+    transform: scale(1, 1) rotate(-3deg);
+  }
+  45% {
+    transform: scale(1.06, 0.93) rotate(2deg);
+  }
+  100% {
+    transform: scale(0.95, 1.08) rotate(-1deg);
+  }
+}
+@keyframes summary-core {
+  0% {
+    transform: scale(1, 0.9);
+    opacity: 0.85;
+  }
+  100% {
+    transform: scale(0.9, 1.1);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .summary-fire,
+  .summary-fire .core {
+    animation: none;
+  }
 }
 .summary-foot {
   display: flex;
