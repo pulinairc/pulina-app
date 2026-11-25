@@ -91,6 +91,11 @@ test('summarizes joins and quits', () => {
     summarize([ev('quit', 'a', 'Quit: Käytin Lobbya v1.8.3'), ev('quit', 'b', 'Quit: ')]),
     'b quit, a quit (Käytin Lobbya v1.8.3)',
   );
+  assert.equal(summarize([ev('part', 'a', 'nukkumaan'), ev('part', 'b')]), 'b left, a left (nukkumaan)');
+  // A kick reason that only repeats the kicker's nick is the server's default, not a reason.
+  assert.equal(summarize([ev('kick', 'a', 'rolle: flood')]), 'a was kicked by rolle (flood)');
+  assert.equal(summarize([ev('kick', 'a', 'rolle: rolle')]), 'a was kicked by rolle');
+  assert.equal(summarize([ev('kick', 'a', 'rolle: ')]), 'a was kicked by rolle');
 });
 
 test('splits links and mentions', () => {
