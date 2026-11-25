@@ -809,7 +809,7 @@ test('reads a topic summary and keeps only real message numbers', async () => {
 {"overview": "Quiet evening, a long argument at night.",
  "parts": [{"label": "Last night", "topics": [
    {"title": "Dry hands", "from": 2, "to": 5, "people": ["bro", 7], "summary": "Thick cream wins [3].",
-    "points": ["Cotton gloves at night", ""], "quotes": [3, 3, 99, 4, 5], "heated": true},
+    "points": ["Cotton gloves at night", "", {"text": "Ask the pharmacy", "at": 4}, {"text": "Out of range", "at": 50}], "quotes": [3, 3, 99, 4, 5], "heated": true},
    {"title": "", "from": 6, "to": 7},
    {"title": "Backwards", "from": 9, "to": 8, "quotes": "4"}]},
   {"label": "Empty", "topics": []}]}
@@ -826,7 +826,11 @@ test('reads a topic summary and keeps only real message numbers', async () => {
             to: 5,
             people: ['bro'],
             summary: 'Thick cream wins.',
-            points: ['Cotton gloves at night'],
+            points: [
+              { text: 'Cotton gloves at night', at: null },
+              { text: 'Ask the pharmacy', at: 4 },
+              { text: 'Out of range', at: null },
+            ],
             quotes: [3, 4],
             heated: true,
           },

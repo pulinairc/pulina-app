@@ -5711,8 +5711,14 @@ body.rail-settle #update-bar {
 .summary a.summary-go:hover {
   text-decoration-color: var(--strong);
 }
+.summary {
+  font-size: 15px;
+  line-height: 1.55;
+}
+.summary-title b {
+  font-size: 16px;
+}
 .summary-overview {
-  font-size: 1.06em;
   color: var(--strong);
 }
 .summary-you {
@@ -5737,7 +5743,9 @@ body.rail-settle #update-bar {
   font-weight: 600;
   color: var(--dim);
 }
-.summary-part span {
+.summary-part span,
+.summary-meta {
+  font-size: 13px;
   font-weight: 400;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
@@ -5755,8 +5763,7 @@ body.rail-settle #update-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: var(--faint);
+  min-height: 22px;
 }
 .summary-span {
   margin: -2px -6px;
@@ -5767,12 +5774,16 @@ body.rail-settle #update-bar {
   color: var(--dim);
   font: inherit;
   font-weight: 500;
-  font-variant-numeric: tabular-nums;
   cursor: pointer;
 }
 .summary-span:hover {
   background: var(--hover);
   color: var(--strong);
+}
+/* One size for every face: the animals and photos are drawn for the --avatar box. */
+.summary-faces,
+.summary-quote {
+  --avatar: 20px;
 }
 .summary-faces {
   display: flex;
@@ -5782,33 +5793,60 @@ body.rail-settle #update-bar {
 }
 .summary-face-row {
   display: flex;
-}
-.summary-face-row .av {
-  width: 20px;
-  height: 20px;
-  margin-left: -5px;
-  box-shadow: 0 0 0 2px var(--panel);
-}
-.summary-face-row .av:first-child {
-  margin-left: 0;
+  gap: 3px;
 }
 .summary-more {
   font-size: 12px;
 }
 .summary .summary-topic-title {
   margin: 0;
-  font-size: 1.05em;
+  font-size: 16px;
   font-weight: 600;
+  line-height: 1.35;
   color: var(--strong);
   text-wrap: balance;
+}
+.summary-topic p {
+  margin: 0;
 }
 .summary-points {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin: 0;
-  padding-left: 18px;
+  gap: 2px;
+}
+.summary-point {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  margin: 0 -8px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
   color: var(--dim);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+}
+.summary-point::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  margin: 8px 0 0 4px;
+  border-radius: 50%;
+  background: var(--faint);
+}
+button.summary-point {
+  cursor: pointer;
+}
+button.summary-point:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+.summary-point-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .summary-quote {
   display: grid;
@@ -5821,6 +5859,7 @@ body.rail-settle #update-bar {
   background: var(--raised);
   color: var(--text);
   font: inherit;
+  font-size: 14px;
   text-align: left;
   cursor: pointer;
 }
@@ -5828,9 +5867,7 @@ body.rail-settle #update-bar {
   background: var(--hover);
 }
 .summary-quote .av {
-  width: 20px;
-  height: 20px;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 .summary-quote-text {
   min-width: 0;
@@ -5840,12 +5877,13 @@ body.rail-settle #update-bar {
   font-weight: 600;
 }
 .summary-quote-time {
-  padding-top: 2px;
+  padding-top: 1px;
   font-size: 12px;
   color: var(--faint);
   font-variant-numeric: tabular-nums;
 }
-.summary-quote:hover .summary-quote-time {
+.summary-quote:hover .summary-quote-time,
+button.summary-point:hover .summary-quote-time {
   color: var(--accent);
 }
 .summary-you .summary-quote {

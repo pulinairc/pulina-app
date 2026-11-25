@@ -3503,12 +3503,8 @@ function summaryTopic(b, lines, x, members) {
     node.append(p);
   }
   if (x.points.length) {
-    const list = h('ul', 'summary-points');
-    for (const point of x.points) {
-      const li = h('li');
-      li.append(withNames(b, point, members));
-      list.append(li);
-    }
+    const list = h('div', 'summary-points');
+    list.append(...x.points.map((p) => summaryPoint(b, p, lines, members)));
     node.append(list);
   }
   node.append(...x.quotes.map((n) => summaryQuote(lines[n - 1])));
@@ -3534,6 +3530,21 @@ function summaryFaces(lines, named) {
     box.append(h('span', 'summary-more', `+${nicks.length - SUMMARY_FACES}`));
   }
   return box;
+}
+
+/** A point of the topic, opening the message it comes from when there is one. */
+function summaryPoint(b, p, lines, members) {
+  const line = p.at && lines[p.at - 1];
+  const row = h(line ? 'button' : 'div', 'summary-point');
+  const words = h('span', 'summary-point-text');
+  words.append(withNames(b, p.text, members));
+  row.append(words);
+  if (line) {
+    row.type = 'button';
+    row.append(h('span', 'summary-quote-time', clock(line.ts)));
+    row.addEventListener('click', () => openLine(line));
+  }
+  return row;
 }
 
 /** One message as said, opening it in the chat. */

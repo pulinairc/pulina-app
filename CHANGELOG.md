@@ -1,3 +1,7 @@
+### 1.28.2: 2026-11-25
+
+* Fix messy summary faces, fonts and points
+
 ### 1.28.1: 2026-11-25
 
 * Fix Android bars covering the app

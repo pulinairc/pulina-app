@@ -19,9 +19,9 @@ const SUMMARY_TOKENS: u32 = 8000;
 const SUMMARY_FORMAT: &str = "Answer with one JSON object and nothing else, in this shape: \
 {\"overview\": \"two or three sentences on the whole span\", \"parts\": [{\"label\": \"the part of the day, like Last night\", \
 \"topics\": [{\"title\": \"a few words\", \"from\": 12, \"to\": 40, \"people\": [\"nick\"], \"summary\": \"two to four sentences\", \
-\"points\": [\"a decision, plan or open question\"], \"quotes\": [17], \"heated\": false}]}]}. \
+\"points\": [{\"text\": \"a decision, plan or open question\", \"at\": 31}], \"quotes\": [17], \"heated\": false}]}]}. \
 The numbers are message numbers: from is the topic's first message, to its last, and quotes are one or two messages that show the topic best, \
-said well or funny. people are the nicks who carried the topic, most active first. points may be empty. heated is true only for a real argument. \
+said well or funny. people are the nicks who carried the topic, most active first. Each point's at is the message it comes from. points may be empty. heated is true only for a real argument. \
 Never write a message number inside the texts. \
 Speak to the reader directly with the word for you in the summary's own language, never by their nick and never with the English word in another language.";
 
