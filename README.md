@@ -19,7 +19,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/lobby.webp" width="760" alt="Lobby: the backlog back to yesterday's most active three, a highlight gliding in, a reply that gets reactions, the Today ranking with its crown, the highlights inbox filtered by a name, the shelf with links and pictures, hiding a channel, a name picked from the suggestions after @ and the slash command menu">
+  <img src="docs/lobby.webp" width="900" alt="Lobby in a busy channel of 142 people: scrolling back through pictures, link cards and a bot answer, a highlight answered with a reply that gets reactions, who talked most today, the highlights inbox filtered by a name, jumping to another channel and its shelf of pictures and links, a name picked from the suggestions and the command menu">
 </p>
 
 ## Features
