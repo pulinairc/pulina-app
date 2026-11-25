@@ -1,3 +1,7 @@
+### 1.28.3: 2026-11-26
+
+* Fix uneven heights in the top header
+
 ### 1.28.2: 2026-11-25
 
 * Fix messy summary faces, fonts and points
