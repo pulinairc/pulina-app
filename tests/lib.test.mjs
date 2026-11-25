@@ -802,3 +802,30 @@ test('yesterday is the calendar day before, also when the clocks change', () => 
     }
   }
 });
+
+test('reads a topic summary and keeps only real message numbers', async () => {
+  const { parseSummary } = await import('../ui/lib.js');
+  const answer = `\`\`\`json
+{"overview": "Quiet evening, a long argument at night.",
+ "parts": [{"label": "Last night", "topics": [
+   {"title": "Dry hands", "from": 2, "to": 5, "people": ["bro", 7], "summary": "Thick cream wins [3].",
+    "points": ["Cotton gloves at night", ""], "quotes": [3, 3, 99, 4, 5], "heated": true},
+   {"title": "", "from": 6, "to": 7},
+   {"title": "Backwards", "from": 9, "to": 8, "quotes": "4"}]},
+  {"label": "Empty", "topics": []}]}
+\`\`\``;
+  assert.deepEqual(parseSummary(answer, 10), {
+    overview: 'Quiet evening, a long argument at night.',
+    parts: [
+      {
+        label: 'Last night',
+        topics: [
+          { title: 'Dry hands', from: 2, to: 5, people: ['bro'], summary: 'Thick cream wins.', points: ['Cotton gloves at night'], quotes: [3, 4], heated: true },
+          { title: 'Backwards', from: 9, to: 9, people: [], summary: '', points: [], quotes: [], heated: false },
+        ],
+      },
+    ],
+  });
+  assert.equal(parseSummary('Just prose, no topics.', 10), null);
+  assert.equal(parseSummary('{"parts": [{"topics": [{"title": "x", "from": 40}]}]}', 10), null);
+});
