@@ -1,3 +1,7 @@
+### 1.27.3: 2026-11-25
+
+* Show part and kick reasons
+
 ### 1.27.2: 2026-11-23
 
 * Fix private messages staying unread after Done

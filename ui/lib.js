@@ -88,15 +88,26 @@ export function quitReason(text = '') {
     .slice(0, QUIT_REASON_CHARS);
 }
 
+/** Kick lines carry "kicker: reason"; a reason that only repeats the kicker is no reason. */
+function kickLine(e) {
+  const at = e.text.indexOf(':');
+  const by = at < 0 ? e.text : e.text.slice(0, at);
+  const reason = at < 0 ? '' : quitReason(e.text.slice(at + 1));
+  const vars = { nick: e.nick, by, reason };
+  return reason && reason.toLowerCase() !== by.toLowerCase()
+    ? t('{nick} was kicked by {by} ({reason})', vars)
+    : t('{nick} was kicked by {by}', vars);
+}
+
 /** One readable line for a run of joins, parts, quits and nick changes; `all` names every one of them. */
 export function summarize(events, all = false) {
   const by = { join: [], part: [], quit: [] };
   const extra = [];
   for (const e of events) {
-    // Someone who left a quit message gets a line of their own with it.
-    const reason = e.kind === 'quit' ? quitReason(e.text) : '';
+    // Someone who left with a reason gets a line of their own with it.
+    const reason = e.kind === 'quit' || e.kind === 'part' ? quitReason(e.text) : '';
     if (reason) {
-      extra.push(t('{nick} quit ({reason})', { nick: e.nick, reason }));
+      extra.push(t(e.kind === 'quit' ? '{nick} quit ({reason})' : '{nick} left ({reason})', { nick: e.nick, reason }));
     } else if (by[e.kind]) {
       by[e.kind].push(e.nick);
     }
@@ -104,7 +115,7 @@ export function summarize(events, all = false) {
       extra.push(t('{nick} is now {name}', { nick: e.nick, name: e.text }));
     }
     if (e.kind === 'kick') {
-      extra.push(t('{nick} was kicked by {by}', { nick: e.nick, by: e.text.split(':')[0] }));
+      extra.push(kickLine(e));
     }
     if (e.kind === 'mode') {
       extra.push(describeMode(e.nick, e.text));
